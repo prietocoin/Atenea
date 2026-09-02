@@ -6,21 +6,20 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuración flexible de PostgreSQL (compatible con Docker interno y externo)
-const isProduction = process.env.NODE_ENV === 'production';
+// Credenciales exactas de la red interna de Coolify
+const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://usuario:password@localhost:5432/fundablock',
-  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') && !process.env.DATABASE_URL.includes('127.0.0.1') 
-    ? { rejectUnauthorized: false } 
-    : false
+  connectionString: process.env.DATABASE_URL || DEFAULT_DB_URL,
+  ssl: false
 });
 
-// Probar conexión a la BD al arrancar el servidor
+// Verificación de conexión en logs
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('❌ ERROR CRÍTICO: No se pudo conectar a PostgreSQL:', err.message);
+    console.error('❌ Error conectando a PostgreSQL:', err.message);
   } else {
-    console.log('✅ Conexión exitosa a la base de datos PostgreSQL');
+    console.log('✅ Conectado exitosamente a la BD "automat"');
     release();
   }
 });
@@ -31,7 +30,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // -----------------------------------------------------------------------------
-// ENDPOINT DE DIAGNÓSTICO (Para probar la BD directo desde el navegador)
+// ENDPOINT DE TEST
 // -----------------------------------------------------------------------------
 app.get('/api/test-db', async (req, res) => {
   try {
@@ -44,12 +43,10 @@ app.get('/api/test-db', async (req, res) => {
       registros_en_cola_fb: countCola.rows[0].count
     });
   } catch (err) {
-    console.error('Error en /api/test-db:', err);
     res.status(500).json({
       status: 'ERROR',
       mensaje: err.message,
-      codigo: err.code,
-      detalle: 'Revisa las variables de entorno o la estructura de tablas.'
+      codigo: err.code
     });
   }
 });
@@ -114,8 +111,7 @@ app.get('/api/cola', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Error en GET /api/cola:', err.message);
-    // Devuelve el mensaje de error de SQL en el JSON para identificar si falta una columna
-    res.status(500).json({ error: err.message, detalle: 'Fallo al ejecutar la consulta SQL' });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -156,7 +152,7 @@ app.put('/api/cola/:hash_largo', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// 3. CORREGIR DATOS EXTRAÍDOS DE IA (comprobantes_fb)
+// 3. AUDITAR/CORREGIR DATOS DE COMPROBANTE (comprobantes_fb)
 // -----------------------------------------------------------------------------
 app.put('/api/comprobante/:hash_largo', async (req, res) => {
   try {
