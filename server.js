@@ -6,21 +6,56 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuración de PostgreSQL
+// Configuración flexible de PostgreSQL (compatible con Docker interno y externo)
+const isProduction = process.env.NODE_ENV === 'production';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://usuario:password@localhost:5432/fundablock',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') && !process.env.DATABASE_URL.includes('127.0.0.1') 
+    ? { rejectUnauthorized: false } 
+    : false
+});
+
+// Probar conexión a la BD al arrancar el servidor
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ ERROR CRÍTICO: No se pudo conectar a PostgreSQL:', err.message);
+  } else {
+    console.log('✅ Conexión exitosa a la base de datos PostgreSQL');
+    release();
+  }
 });
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
-
-// Servir archivos estáticos directamente desde la RAÍZ del proyecto
 app.use(express.static(__dirname));
 
 // -----------------------------------------------------------------------------
-// 1. OBTENER COLA DE COMPROBANTES (CON LEFT JOIN Y FILTROS)
+// ENDPOINT DE DIAGNÓSTICO (Para probar la BD directo desde el navegador)
+// -----------------------------------------------------------------------------
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const testQuery = await pool.query('SELECT NOW();');
+    const countCola = await pool.query('SELECT COUNT(*) FROM cola_fb;');
+    res.json({
+      status: 'OK',
+      conexion: 'Exitosa',
+      hora_servidor: testQuery.rows[0].now,
+      registros_en_cola_fb: countCola.rows[0].count
+    });
+  } catch (err) {
+    console.error('Error en /api/test-db:', err);
+    res.status(500).json({
+      status: 'ERROR',
+      mensaje: err.message,
+      codigo: err.code,
+      detalle: 'Revisa las variables de entorno o la estructura de tablas.'
+    });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 1. OBTENER COLA DE COMPROBANTES
 // -----------------------------------------------------------------------------
 app.get('/api/cola', async (req, res) => {
   try {
@@ -79,12 +114,13 @@ app.get('/api/cola', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Error en GET /api/cola:', err.message);
-    res.status(500).json({ error: 'Error al consultar la cola' });
+    // Devuelve el mensaje de error de SQL en el JSON para identificar si falta una columna
+    res.status(500).json({ error: err.message, detalle: 'Fallo al ejecutar la consulta SQL' });
   }
 });
 
 // -----------------------------------------------------------------------------
-// 2. ACTUALIZAR ASIGNACIÓN DE SOCIOS Y CAPTION (cola_fb)
+// 2. ACTUALIZAR SOCIOS Y CAPTION (cola_fb)
 // -----------------------------------------------------------------------------
 app.put('/api/cola/:hash_largo', async (req, res) => {
   try {
@@ -115,12 +151,12 @@ app.put('/api/cola/:hash_largo', async (req, res) => {
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     console.error('Error en PUT /api/cola:', err.message);
-    res.status(500).json({ error: 'Error al actualizar asignación de socio' });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // -----------------------------------------------------------------------------
-// 3. AUDITAR/CORREGIR DATOS EXTRAÍDOS DE IA (comprobantes_fb)
+// 3. CORREGIR DATOS EXTRAÍDOS DE IA (comprobantes_fb)
 // -----------------------------------------------------------------------------
 app.put('/api/comprobante/:hash_largo', async (req, res) => {
   try {
@@ -152,12 +188,12 @@ app.put('/api/comprobante/:hash_largo', async (req, res) => {
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     console.error('Error en PUT /api/comprobante:', err.message);
-    res.status(500).json({ error: 'Error al actualizar datos del comprobante' });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // -----------------------------------------------------------------------------
-// 4. OBTENER LISTA ÚNICA DE SOCIOS
+// 4. LISTA DE SOCIOS
 // -----------------------------------------------------------------------------
 app.get('/api/socios', async (req, res) => {
   try {
@@ -175,12 +211,12 @@ app.get('/api/socios', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Error en GET /api/socios:', err.message);
-    res.status(500).json({ error: 'Error al obtener la lista de socios' });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // -----------------------------------------------------------------------------
-// 5. OBTENER REPORTES CONSOLIDADOS POR SOCIO
+// 5. REPORTES
 // -----------------------------------------------------------------------------
 app.get('/api/reportes/socios', async (req, res) => {
   try {
@@ -198,12 +234,12 @@ app.get('/api/reportes/socios', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Error en GET /api/reportes/socios:', err.message);
-    res.status(500).json({ error: 'Error al obtener reportes' });
+    res.status(500).json({ error: err.message });
   }
 });
 
 // -----------------------------------------------------------------------------
-// 6. GESTIÓN DEL DIRECTORIO (nombres_fb)
+// 6. DIRECTORIO
 // -----------------------------------------------------------------------------
 app.get('/api/directorio', async (req, res) => {
   try {
@@ -211,7 +247,7 @@ app.get('/api/directorio', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('Error en GET /api/directorio:', err.message);
-    res.status(500).json({ error: 'Error al consultar directorio' });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -247,16 +283,15 @@ app.post('/api/directorio', async (req, res) => {
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     console.error('Error en POST /api/directorio:', err.message);
-    res.status(500).json({ error: 'Error al guardar en directorio' });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Ruta fallback para SPA (Apunta directamente a index.html en la raíz)
+// SPA Fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor Backend Atenea corriendo en puerto ${PORT}`);
 });
