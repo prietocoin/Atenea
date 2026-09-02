@@ -181,7 +181,6 @@
                 <template x-for="item in cola" :key="item.hash_largo">
                   <tr class="hover:bg-slate-800/40 transition-colors">
                     
-                    <!-- Imagen + Boton Abrir Enlace Directo -->
                     <td class="p-3">
                       <div class="flex items-center gap-2">
                         <img 
@@ -317,26 +316,76 @@
     </main>
   </div>
 
-  <!-- Modal Corrección Socio -->
-  <div x-show="modalCorreccion" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" x-cloak>
-    <div class="bg-fb-card border border-slate-700 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-      <h3 class="text-lg font-bold text-white">Editar Asignación de Socio</h3>
-      <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Nombre Socio 1</label>
-        <input type="text" x-model="formCorreccion.nombre_socio_1" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+  <!-- MODAL EDITAR ASIGNACIÓN DE SOCIO Y AUDITORÍA DE IMAGEN -->
+  <div x-show="modalCorreccion" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto" x-cloak>
+    <div class="bg-fb-card border border-slate-700 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl relative" @click.outside="modalCorreccion = false">
+      
+      <!-- Header Modal con Hash & Badge -->
+      <div class="flex justify-between items-start border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-lg font-black text-white">Editar Registro</h3>
+          <p class="text-xs font-mono text-purple-400 font-bold" x-text="'Hash: ' + (formCorreccion.hash_corto || 'N/A')"></p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-xs font-black shadow-sm" :class="formCorreccion.conteo > 1 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'" x-text="formCorreccion.conteo > 1 ? 'x' + formCorreccion.conteo + ' (DUPLICADO)' : 'x1'"></span>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Nombre Socio 2 (si aplica)</label>
-        <input type="text" x-model="formCorreccion.nombre_socio_2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+
+      <!-- Preview Imagen Mini + Enlace Directo R2 -->
+      <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex items-center gap-3">
+        <div class="relative group shrink-0">
+          <img 
+            :src="obtenerUrlImagen(formCorreccion)" 
+            @click="verImagenModal(obtenerUrlImagen(formCorreccion))" 
+            class="w-16 h-16 object-cover rounded-xl border border-purple-500/40 cursor-pointer hover:opacity-80 transition-opacity shadow-md" 
+            title="Clic para ver en pantalla completa"
+          >
+          <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl pointer-events-none transition-opacity">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+          </div>
+        </div>
+
+        <div class="flex-1 min-w-0 space-y-1">
+          <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Enlace Comprobante R2</p>
+          <div class="flex items-center gap-1.5">
+            <input 
+              type="text" 
+              readonly 
+              :value="obtenerUrlImagen(formCorreccion)" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-purple-300 font-mono truncate select-all focus:outline-none"
+            >
+            <a 
+              :href="obtenerUrlImagen(formCorreccion)" 
+              target="_blank" 
+              class="p-1.5 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 rounded-lg border border-purple-500/40 transition-colors shrink-0" 
+              title="Abrir en pestaña nueva"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </a>
+          </div>
+        </div>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Caption / Nota</label>
-        <textarea x-model="formCorreccion.caption" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"></textarea>
+
+      <!-- Campos de Edición -->
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Nombre Socio 1</label>
+          <input type="text" x-model="formCorreccion.nombre_socio_1" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500 font-semibold">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Nombre Socio 2 (si aplica)</label>
+          <input type="text" x-model="formCorreccion.nombre_socio_2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500 font-semibold">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Caption / Nota del Mensaje</label>
+          <textarea x-model="formCorreccion.caption" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"></textarea>
+        </div>
       </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button @click="modalCorreccion = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancelar</button>
-        <button @click="guardarCorreccion()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow">Guardar Cambios</button>
+
+      <!-- Botones -->
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button @click="modalCorreccion = false" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors">Cancelar</button>
+        <button @click="guardarCorreccion()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-900/30 transition-all">Guardar Cambios</button>
       </div>
+
     </div>
   </div>
 
@@ -372,7 +421,7 @@
     </div>
   </div>
 
-  <!-- Modal Imagen -->
+  <!-- Modal Imagen Pantalla Completa -->
   <div x-show="modalImagen" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" @click="modalImagen = false" x-cloak>
     <div class="relative max-w-3xl w-full flex flex-col items-center">
       <img :src="imagenModalUrl" class="max-h-[85vh] object-contain rounded-2xl border border-slate-700 shadow-2xl">
@@ -389,7 +438,7 @@
         socioSeleccionado: '', fechaInicio: '', hashSeleccionado: '', soloDuplicados: false,
         
         modalCorreccion: false,
-        formCorreccion: { hash_largo: '', nombre_socio_1: '', nombre_socio_2: '', caption: '' },
+        formCorreccion: { hash_largo: '', hash_corto: '', conteo: 1, url_imagen: '', nombre_socio_1: '', nombre_socio_2: '', caption: '' },
 
         modalDirectorio: false,
         formDirectorio: { id_grupo: '', nombre: '', roles: 'GRUPO', moneda_socio: '', usd: '', pen: '', cop: '', clp: '' },
@@ -444,6 +493,7 @@
         },
 
         obtenerUrlImagen(item) {
+          if (!item) return '/logo.svg';
           if (item.url_imagen && item.url_imagen.startsWith('http')) return item.url_imagen;
           if (item.hash_corto) {
             return `https://pub-49b9c87f6e6a418ba42de5ba36ddc73e.r2.dev/${item.hash_corto}.jpg`;
