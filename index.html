@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fundablock | Panel de Gestión, Auditoría y Reportes</title>
+  
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    html, body {
+      touch-action: manipulation;
+      -webkit-overflow-scrolling: touch;
+      background-color: #0f172a;
+      color: #f8fafc;
+    }
+    .bg-fb-dark { background-color: #0b0f19; }
+    .bg-fb-card { background-color: #1e293b; }
+
+    @keyframes logoPulse {
+      0%, 100% { transform: scale(1); opacity: 0.95; }
+      50% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.4)); }
+    }
+    .animate-owl-pulse {
+      animation: logoPulse 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="font-sans h-screen overflow-hidden flex" x-data="fundablockApp()" x-init="init()">
+
+  <!-- Preloader Owl -->
+  <div id="preloader" class="fixed inset-0 bg-fb-dark z-[100] flex flex-col items-center justify-center p-4 transition-all duration-700 opacity-100">
+    <div class="flex flex-col items-center max-w-xs text-center space-y-4">
+      <div class="relative flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full bg-purple-600/20 blur-2xl animate-pulse"></div>
+        <img src="/logo.svg" alt="Logo Fundablock" class="w-36 h-36 object-contain relative z-10 animate-owl-pulse">
+      </div>
+      <div class="space-y-1">
+        <h2 class="text-white text-xl font-black tracking-widest uppercase">FUNDABLOCK</h2>
+        <p class="text-purple-400 text-xs font-semibold tracking-wide">AI Management & Audit System</p>
+      </div>
+      <div class="w-48 bg-slate-800 rounded-full h-1.5 overflow-hidden border border-purple-500/30 mt-2">
+        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full w-full animate-pulse"></div>
+      </div>
+      <span class="text-[10px] text-slate-400 tracking-widest font-mono">CONECTANDO SISTEMA...</span>
+    </div>
+  </div>
+
+  <div x-show="sidebarAbierto" x-transition.opacity class="fixed inset-0 bg-black/70 z-40 md:hidden" @click="sidebarAbierto = false" x-cloak></div>
+
+  <!-- Sidebar Lateral -->
+  <aside :class="sidebarAbierto ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-fb-dark border-r border-slate-800 text-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
+    <div class="p-4 flex items-center gap-3 border-b border-slate-800 shrink-0">
+      <div class="bg-purple-900/40 p-1 rounded-xl border border-purple-500/30">
+        <img src="/logo.svg" alt="Logo Owl" class="w-10 h-10 object-contain">
+      </div>
+      <div>
+        <h2 class="font-black text-base tracking-wider text-white">FUNDABLOCK</h2>
+        <p class="text-[9px] text-purple-400 font-bold uppercase tracking-widest">Owl Auditor v2.0</p>
+      </div>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto p-3 space-y-1.5">
+      <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-2">Auditoría en Vivo</p>
+      
+      <button @click="cambiarVista('cola')" :class="vistaActiva === 'cola' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'" class="w-full flex items-center gap-3 p-2.5 rounded-xl font-semibold text-sm transition-all">
+        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        Cola de Imágenes (cola_fb)
+      </button>
+
+      <button @click="cambiarVista('reportes')" :class="vistaActiva === 'reportes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'" class="w-full flex items-center gap-3 p-2.5 rounded-xl font-semibold text-sm transition-all">
+        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Reportes por Socio
+      </button>
+
+      <div class="py-2"><hr class="border-slate-800"></div>
+      <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Base de Datos</p>
+
+      <button @click="cambiarVista('directorio')" :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'" class="w-full flex items-center gap-3 p-2.5 rounded-xl font-semibold text-sm transition-all">
+        <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Directorio (nombres_fb)
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Contenedor Principal -->
+  <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full bg-slate-900">
+    <header class="bg-fb-dark border-b border-slate-800 text-white p-3 sm:p-4 shadow-xl z-20 shrink-0">
+      <div class="max-w-7xl mx-auto flex flex-col gap-3">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <button @click="sidebarAbierto = true" class="md:hidden p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div>
+              <h1 class="text-lg sm:text-xl font-black tracking-wide text-white capitalize flex items-center gap-2">
+                <span class="text-purple-400" x-text="vistaActiva === 'cola' ? 'Visor de Imágenes' : (vistaActiva === 'reportes' ? 'Reporte Consolidado' : 'Directorio de Grupos')"></span>
+              </h1>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <span class="text-xs bg-purple-950/80 border border-purple-500/30 px-3 py-1 rounded-full text-purple-300 font-mono font-bold" x-text="vistaActiva === 'cola' ? cola.length + ' ítems' : (vistaActiva === 'reportes' ? reportesSocios.length + ' socios' : directorio.length + ' grupos')"></span>
+          </div>
+        </div>
+        
+        <div x-show="vistaActiva === 'cola'" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+          <div>
+            <select x-model="socioSeleccionado" @change="cargarCola()" class="bg-slate-800 text-slate-200 p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 w-full">
+              <option value="">Todos los Socios</option>
+              <template x-for="s in socios" :key="s.nombre">
+                <option :value="s.nombre" x-text="s.nombre"></option>
+              </template>
+            </select>
+          </div>
+
+          <div>
+            <input type="date" x-model="fechaInicio" @change="cargarCola()" class="bg-slate-800 text-slate-200 p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 w-full">
+          </div>
+
+          <div>
+            <select x-model="hashSeleccionado" @change="cargarCola()" class="bg-slate-800 text-slate-200 p-2 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 w-full">
+              <option value="">Todos los Hashes</option>
+              <template x-for="h in hashes" :key="h.hash_corto">
+                <option :value="h.hash_corto" x-text="h.hash_corto"></option>
+              </template>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+            <input type="checkbox" id="chkDup" x-model="soloDuplicados" @change="cargarCola()" class="rounded border-slate-700 text-purple-600 focus:ring-purple-500">
+            <label for="chkDup" class="text-slate-300 font-medium cursor-pointer select-none">Solo Duplicados (>1)</label>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5 w-full">
+      <!-- VISTA COLA -->
+      <div x-show="vistaActiva === 'cola'" class="max-w-7xl mx-auto space-y-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-fb-card p-4 rounded-2xl border border-slate-800 shadow-lg">
+            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Total Comprobantes</p>
+            <p class="text-xl sm:text-2xl font-black text-white mt-1" x-text="cola.length"></p>
+          </div>
+          <div class="bg-fb-card p-4 rounded-2xl border border-amber-500/20 shadow-lg">
+            <p class="text-[10px] text-amber-400 uppercase font-bold tracking-wider">Reingresos / Duplicados</p>
+            <p class="text-xl sm:text-2xl font-black text-amber-300 mt-1" x-text="cola.filter(i => i.conteo > 1).length"></p>
+          </div>
+          <div class="bg-fb-card p-4 rounded-2xl border border-purple-500/20 shadow-lg">
+            <p class="text-[10px] text-purple-400 uppercase font-bold tracking-wider">Socios Identificados</p>
+            <p class="text-xl sm:text-2xl font-black text-purple-300 mt-1" x-text="contarSociosUnicos()"></p>
+          </div>
+          <div class="bg-fb-card p-4 rounded-2xl border border-emerald-500/20 shadow-lg">
+            <p class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Subidas a Cloudflare R2</p>
+            <p class="text-xl sm:text-2xl font-black text-emerald-300 mt-1" x-text="cola.filter(i => i.url_imagen).length"></p>
+          </div>
+        </div>
+
+        <div class="bg-fb-card rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+          <div class="overflow-x-auto w-full">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
+              <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
+                <tr>
+                  <th class="p-3.5 font-bold">Imagen</th>
+                  <th class="p-3.5 font-bold">Hash Corto</th>
+                  <th class="p-3.5 font-bold">Conteo</th>
+                  <th class="p-3.5 font-bold">Socio 1</th>
+                  <th class="p-3.5 font-bold">Socio 2</th>
+                  <th class="p-3.5 font-bold">Fecha / Hora</th>
+                  <th class="p-3.5 font-bold">Caption / Mensaje</th>
+                  <th class="p-3.5 font-bold text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-sm">
+                <template x-for="item in cola" :key="item.hash_largo">
+                  <tr class="hover:bg-slate-800/40 transition-colors">
+                    <td class="p-3">
+                      <template x-if="item.url_imagen">
+                        <img :src="item.url_imagen" @click="verImagenModal(item.url_imagen)" class="w-12 h-12 object-cover rounded-xl border border-slate-700 cursor-pointer hover:scale-105 transition-transform shadow-md">
+                      </template>
+                      <template x-if="!item.url_imagen">
+                        <div class="w-12 h-12 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center text-slate-500 text-[10px] font-mono">Sin R2</div>
+                      </template>
+                    </td>
+                    <td class="p-3 font-mono font-bold text-purple-300">
+                      <span class="bg-purple-950/60 border border-purple-500/30 px-2.5 py-1 rounded-lg" x-text="item.hash_corto"></span>
+                    </td>
+                    <td class="p-3">
+                      <span class="px-2.5 py-1 rounded-full text-xs font-black shadow-sm" :class="item.conteo > 1 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'" x-text="item.conteo > 1 ? 'x' + item.conteo + ' (DUPLICADO)' : 'x1'"></span>
+                    </td>
+                    <td class="p-3">
+                      <div class="flex flex-col">
+                        <span class="font-bold text-slate-100" x-text="item.nombre_socio_1 || 'Sin Asignar'"></span>
+                        <span class="text-[10px] text-slate-500 font-mono" x-text="item.nombre_raw_1 || item.grupo_raw"></span>
+                      </div>
+                    </td>
+                    <td class="p-3">
+                      <div class="flex flex-col">
+                        <span class="font-bold text-slate-300" x-text="item.nombre_socio_2 || '-'"></span>
+                        <span class="text-[10px] text-slate-500 font-mono" x-text="item.nombre_raw_2 || item.grupo_raw_2 || ''"></span>
+                      </div>
+                    </td>
+                    <td class="p-3 text-xs text-slate-400 font-mono" x-text="formatearFecha(item.timestamp)"></td>
+                    <td class="p-3 text-xs text-slate-300 max-w-xs truncate" x-text="item.caption || 'Sin texto'"></td>
+                    <td class="p-3 text-center">
+                      <button @click="abrirModalCorreccion(item)" class="bg-slate-800 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow">
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA REPORTES -->
+      <div x-show="vistaActiva === 'reportes'" x-cloak class="max-w-7xl mx-auto space-y-4">
+        <div class="bg-fb-card rounded-2xl border border-slate-800 p-5 shadow-xl">
+          <h3 class="text-lg font-bold text-white mb-4">Consolidado por Socio</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
+                <tr>
+                  <th class="p-3 font-bold">Socio</th>
+                  <th class="p-3 font-bold text-center">Comprobantes Únicos</th>
+                  <th class="p-3 font-bold text-center">Total Recepciones</th>
+                  <th class="p-3 font-bold text-center">Intentos Duplicados</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 text-sm">
+                <template x-for="r in reportesSocios" :key="r.socio">
+                  <tr class="hover:bg-slate-800/40">
+                    <td class="p-3 font-bold text-purple-300" x-text="r.socio"></td>
+                    <td class="p-3 text-center font-bold text-slate-200" x-text="r.total_comprobantes"></td>
+                    <td class="p-3 text-center font-bold text-indigo-300" x-text="r.total_recepciones"></td>
+                    <td class="p-3 text-center font-bold text-amber-400" x-text="r.total_duplicados"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA DIRECTORIO -->
+      <div x-show="vistaActiva === 'directorio'" x-cloak class="max-w-7xl mx-auto space-y-4">
+        <div class="bg-fb-card rounded-2xl border border-slate-800 p-5 shadow-xl">
+          <h3 class="text-lg font-bold text-white mb-4">Directorio de Grupos (nombres_fb)</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
+              <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
+                <tr>
+                  <th class="p-3 font-bold">ID Grupo</th>
+                  <th class="p-3 font-bold">Nombre</th>
+                  <th class="p-3 font-bold">Rol</th>
+                  <th class="p-3 font-bold">Moneda Socio</th>
+                  <th class="p-3 font-bold">USD</th>
+                  <th class="p-3 font-bold">PEN</th>
+                  <th class="p-3 font-bold">COP</th>
+                  <th class="p-3 font-bold">CLP</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 text-sm">
+                <template x-for="g in directorio" :key="g.id_grupo">
+                  <tr class="hover:bg-slate-800/40">
+                    <td class="p-3 font-mono text-xs text-slate-400" x-text="g.id_grupo"></td>
+                    <td class="p-3 font-bold text-white" x-text="g.nombre"></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold" :class="g.roles === 'SOCIO' ? 'bg-purple-950 text-purple-300 border border-purple-500/30' : 'bg-slate-800 text-slate-400'" x-text="g.roles"></span></td>
+                    <td class="p-3 font-bold text-amber-300" x-text="g.moneda_socio"></td>
+                    <td class="p-3 font-mono text-xs" x-text="g.usd || '-'"></td>
+                    <td class="p-3 font-mono text-xs" x-text="g.pen || '-'"></td>
+                    <td class="p-3 font-mono text-xs" x-text="g.cop || '-'"></td>
+                    <td class="p-3 font-mono text-xs" x-text="g.clp || '-'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Corrección -->
+  <div x-show="modalCorreccion" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" x-cloak>
+    <div class="bg-fb-card border border-slate-700 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold text-white">Editar Asignación de Socio</h3>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Nombre Socio 1</label>
+        <input type="text" x-model="formCorreccion.nombre_socio_1" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Nombre Socio 2 (si aplica)</label>
+        <input type="text" x-model="formCorreccion.nombre_socio_2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Caption / Nota</label>
+        <textarea x-model="formCorreccion.caption" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="modalCorreccion = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancelar</button>
+        <button @click="guardarCorreccion()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Imagen -->
+  <div x-show="modalImagen" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" @click="modalImagen = false" x-cloak>
+    <div class="relative max-w-3xl w-full flex flex-col items-center">
+      <img :src="imagenModalUrl" class="max-h-[85vh] object-contain rounded-2xl border border-slate-700 shadow-2xl">
+      <p class="text-xs text-slate-400 mt-2 font-mono">Haz clic fuera para cerrar</p>
+    </div>
+  </div>
+
+  <script>
+    function fundablockApp() {
+      return {
+        vistaActiva: 'cola',
+        sidebarAbierto: false,
+        socios: [], hashes: [], cola: [], reportesSocios: [], directorio: [],
+        socioSeleccionado: '', fechaInicio: '', hashSeleccionado: '', soloDuplicados: false,
+        modalCorreccion: false,
+        formCorreccion: { hash_largo: '', nombre_socio_1: '', nombre_socio_2: '', caption: '' },
+        modalImagen: false, imagenModalUrl: '',
+
+        async init() {
+          try {
+            const resS = await fetch('/api/socios');
+            if (resS.ok) this.socios = await resS.json();
+            await this.cargarCola();
+          } catch(e) {
+            console.error(e);
+          } finally {
+            setTimeout(() => {
+              const p = document.getElementById('preloader');
+              if (p) {
+                p.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => p.remove(), 700);
+              }
+            }, 1000);
+          }
+        },
+
+        async cambiarVista(vista) {
+          this.vistaActiva = vista;
+          this.sidebarAbierto = false;
+          if (vista === 'cola') {
+            await this.cargarCola();
+          } else if (vista === 'reportes') {
+            const res = await fetch('/api/reportes/socios');
+            if (res.ok) this.reportesSocios = await res.json();
+          } else if (vista === 'directorio') {
+            const res = await fetch('/api/directorio');
+            if (res.ok) this.directorio = await res.json();
+          }
+        },
+
+        async cargarCola() {
+          const params = new URLSearchParams({
+            socio: this.socioSeleccionado,
+            fechaInicio: this.fechaInicio,
+            hash: this.hashSeleccionado,
+            soloDuplicados: this.soloDuplicados
+          });
+          const res = await fetch(`/api/cola?${params.toString()}`);
+          if (res.ok) this.cola = await res.json();
+        },
+
+        contarSociosUnicos() {
+          const setS = new Set();
+          this.cola.forEach(i => {
+            if (i.nombre_socio_1) setS.add(i.nombre_socio_1);
+            if (i.nombre_socio_2) setS.add(i.nombre_socio_2);
+          });
+          return setS.size;
+        },
+
+        formatearFecha(ts) {
+          if (!ts) return '-';
+          const d = new Date(Number(ts) * 1000);
+          return d.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        },
+
+        abrirModalCorreccion(item) {
+          this.formCorreccion = { ...item };
+          this.modalCorreccion = true;
+        },
+
+        async guardarCorreccion() {
+          await fetch(`/api/cola/${this.formCorreccion.hash_largo}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.formCorreccion)
+          });
+          this.modalCorreccion = false;
+          await this.cargarCola();
+        },
+
+        verImagenModal(url) {
+          this.imagenModalUrl = url;
+          this.modalImagen = true;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
