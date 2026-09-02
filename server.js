@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Endpoint: Obtener lista de Socios de nombres_fb
+// Obtener lista de socios para el filtro
 app.get('/api/socios', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -31,7 +31,7 @@ app.get('/api/socios', async (req, res) => {
   }
 });
 
-// Endpoint: Obtener lista de Hashes recientes de cola_fb
+// Obtener lista de hashes recientes
 app.get('/api/hashes', async (req, res) => {
   try {
     const { socio, fechaInicio, fechaFin } = req.query;
@@ -60,7 +60,7 @@ app.get('/api/hashes', async (req, res) => {
   }
 });
 
-// Endpoint Principal: Registros de cola_fb con filtros
+// Consultar registros de la tabla cola_fb
 app.get('/api/cola', async (req, res) => {
   try {
     const { socio, fechaInicio, fechaFin, hash, soloDuplicados } = req.query;
@@ -114,7 +114,7 @@ app.get('/api/cola', async (req, res) => {
   }
 });
 
-// Endpoint: Corregir Socios o Datos en cola_fb
+// Actualizar socios o nota en cola_fb
 app.put('/api/cola/:hash', async (req, res) => {
   try {
     const { hash } = req.params;
@@ -134,7 +134,7 @@ app.put('/api/cola/:hash', async (req, res) => {
   }
 });
 
-// Endpoint: Reporte Consolidado de Socios
+// Reporte consolidado de socios
 app.get('/api/reportes/socios', async (req, res) => {
   try {
     const query = `
@@ -159,7 +159,7 @@ app.get('/api/reportes/socios', async (req, res) => {
   }
 });
 
-// Endpoint: Directorio nombres_fb
+// Directorio nombres_fb
 app.get('/api/directorio', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC');
@@ -170,5 +170,31 @@ app.get('/api/directorio', async (req, res) => {
   }
 });
 
+// Crear o Actualizar Grupo en nombres_fb (UPSERT)
+app.post('/api/directorio', async (req, res) => {
+  try {
+    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp } = req.body;
+    
+    await pool.query(`
+      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ON CONFLICT (id_grupo) 
+      DO UPDATE SET 
+        nombre = EXCLUDED.nombre,
+        roles = EXCLUDED.roles,
+        moneda_socio = EXCLUDED.moneda_socio,
+        usd = EXCLUDED.usd,
+        pen = EXCLUDED.pen,
+        cop = EXCLUDED.cop,
+        clp = EXCLUDED.clp
+    `, [id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Error en POST /api/directorio:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 80;
-app.listen(PORT, () => console.log(`🚀 Fundablock Audit Panel activo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Atenea Audit Panel activo en puerto ${PORT}`));
