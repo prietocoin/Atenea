@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fundablock | Panel de Gestión, Auditoría y Reportes</title>
+  <title>Atenea | Sistema de Gestión y Auditoría Fundablock</title>
   
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
 
@@ -29,7 +29,7 @@
     }
   </style>
 </head>
-<body class="font-sans h-screen overflow-hidden flex" x-data="fundablockApp()" x-init="init()">
+<body class="font-sans h-screen overflow-hidden flex" x-data="ateneaApp()" x-init="init()">
 
   <!-- Preloader Owl -->
   <div id="preloader" class="fixed inset-0 bg-fb-dark z-[100] flex flex-col items-center justify-center p-4 transition-all duration-700 opacity-100">
@@ -40,15 +40,16 @@
       </div>
       <div class="space-y-1">
         <h2 class="text-white text-xl font-black tracking-widest uppercase">FUNDABLOCK</h2>
-        <p class="text-purple-400 text-xs font-semibold tracking-wide">AI Management & Audit System</p>
+        <p class="text-purple-400 text-xs font-semibold tracking-wide">Atenea AI Management & Audit</p>
       </div>
       <div class="w-48 bg-slate-800 rounded-full h-1.5 overflow-hidden border border-purple-500/30 mt-2">
         <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full w-full animate-pulse"></div>
       </div>
-      <span class="text-[10px] text-slate-400 tracking-widest font-mono">CONECTANDO SISTEMA...</span>
+      <span class="text-[10px] text-slate-400 tracking-widest font-mono">CONECTANDO A POSTGRESQL...</span>
     </div>
   </div>
 
+  <!-- Sidebar Overlay -->
   <div x-show="sidebarAbierto" x-transition.opacity class="fixed inset-0 bg-black/70 z-40 md:hidden" @click="sidebarAbierto = false" x-cloak></div>
 
   <!-- Sidebar Lateral -->
@@ -59,7 +60,7 @@
       </div>
       <div>
         <h2 class="font-black text-base tracking-wider text-white">FUNDABLOCK</h2>
-        <p class="text-[9px] text-purple-400 font-bold uppercase tracking-widest">Owl Auditor v2.0</p>
+        <p class="text-[9px] text-purple-400 font-bold uppercase tracking-widest">Atenea Panel v2.0</p>
       </div>
     </div>
 
@@ -139,7 +140,8 @@
     </header>
 
     <main class="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5 w-full">
-      <!-- VISTA COLA -->
+      
+      <!-- VISTA 1: COLA DE IMÁGENES -->
       <div x-show="vistaActiva === 'cola'" class="max-w-7xl mx-auto space-y-4">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div class="bg-fb-card p-4 rounded-2xl border border-slate-800 shadow-lg">
@@ -155,8 +157,8 @@
             <p class="text-xl sm:text-2xl font-black text-purple-300 mt-1" x-text="contarSociosUnicos()"></p>
           </div>
           <div class="bg-fb-card p-4 rounded-2xl border border-emerald-500/20 shadow-lg">
-            <p class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Subidas a Cloudflare R2</p>
-            <p class="text-xl sm:text-2xl font-black text-emerald-300 mt-1" x-text="cola.filter(i => i.url_imagen).length"></p>
+            <p class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Enlace R2 Generado</p>
+            <p class="text-xl sm:text-2xl font-black text-emerald-300 mt-1" x-text="cola.filter(i => i.hash_corto).length"></p>
           </div>
         </div>
 
@@ -165,7 +167,7 @@
             <table class="w-full text-left border-collapse whitespace-nowrap">
               <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
                 <tr>
-                  <th class="p-3.5 font-bold">Imagen</th>
+                  <th class="p-3.5 font-bold">Imagen & Enlace</th>
                   <th class="p-3.5 font-bold">Hash Corto</th>
                   <th class="p-3.5 font-bold">Conteo</th>
                   <th class="p-3.5 font-bold">Socio 1</th>
@@ -178,34 +180,53 @@
               <tbody class="divide-y divide-slate-800/60 text-sm">
                 <template x-for="item in cola" :key="item.hash_largo">
                   <tr class="hover:bg-slate-800/40 transition-colors">
+                    
+                    <!-- Imagen + Boton Abrir Enlace Directo -->
                     <td class="p-3">
-                      <template x-if="item.url_imagen">
-                        <img :src="item.url_imagen" @click="verImagenModal(item.url_imagen)" class="w-12 h-12 object-cover rounded-xl border border-slate-700 cursor-pointer hover:scale-105 transition-transform shadow-md">
-                      </template>
-                      <template x-if="!item.url_imagen">
-                        <div class="w-12 h-12 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center text-slate-500 text-[10px] font-mono">Sin R2</div>
-                      </template>
+                      <div class="flex items-center gap-2">
+                        <img 
+                          :src="obtenerUrlImagen(item)" 
+                          @click="verImagenModal(obtenerUrlImagen(item))" 
+                          class="w-12 h-12 object-cover rounded-xl border border-slate-700 cursor-pointer hover:scale-105 transition-transform shadow-md"
+                          title="Clic para ampliar"
+                        >
+                        <a 
+                          :href="obtenerUrlImagen(item)" 
+                          target="_blank" 
+                          class="p-2 bg-slate-800 hover:bg-purple-600/30 text-purple-300 rounded-xl border border-purple-500/30 transition-all"
+                          title="Abrir imagen en pestaña nueva"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        </a>
+                      </div>
                     </td>
+
                     <td class="p-3 font-mono font-bold text-purple-300">
                       <span class="bg-purple-950/60 border border-purple-500/30 px-2.5 py-1 rounded-lg" x-text="item.hash_corto"></span>
                     </td>
+
                     <td class="p-3">
                       <span class="px-2.5 py-1 rounded-full text-xs font-black shadow-sm" :class="item.conteo > 1 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'" x-text="item.conteo > 1 ? 'x' + item.conteo + ' (DUPLICADO)' : 'x1'"></span>
                     </td>
+
                     <td class="p-3">
                       <div class="flex flex-col">
                         <span class="font-bold text-slate-100" x-text="item.nombre_socio_1 || 'Sin Asignar'"></span>
                         <span class="text-[10px] text-slate-500 font-mono" x-text="item.nombre_raw_1 || item.grupo_raw"></span>
                       </div>
                     </td>
+
                     <td class="p-3">
                       <div class="flex flex-col">
                         <span class="font-bold text-slate-300" x-text="item.nombre_socio_2 || '-'"></span>
                         <span class="text-[10px] text-slate-500 font-mono" x-text="item.nombre_raw_2 || item.grupo_raw_2 || ''"></span>
                       </div>
                     </td>
+
                     <td class="p-3 text-xs text-slate-400 font-mono" x-text="formatearFecha(item.timestamp)"></td>
+
                     <td class="p-3 text-xs text-slate-300 max-w-xs truncate" x-text="item.caption || 'Sin texto'"></td>
+
                     <td class="p-3 text-center">
                       <button @click="abrirModalCorreccion(item)" class="bg-slate-800 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow">
                         Editar
@@ -219,7 +240,7 @@
         </div>
       </div>
 
-      <!-- VISTA REPORTES -->
+      <!-- VISTA 2: REPORTES -->
       <div x-show="vistaActiva === 'reportes'" x-cloak class="max-w-7xl mx-auto space-y-4">
         <div class="bg-fb-card rounded-2xl border border-slate-800 p-5 shadow-xl">
           <h3 class="text-lg font-bold text-white mb-4">Consolidado por Socio</h3>
@@ -248,10 +269,15 @@
         </div>
       </div>
 
-      <!-- VISTA DIRECTORIO -->
+      <!-- VISTA 3: DIRECTORIO DE GRUPOS -->
       <div x-show="vistaActiva === 'directorio'" x-cloak class="max-w-7xl mx-auto space-y-4">
         <div class="bg-fb-card rounded-2xl border border-slate-800 p-5 shadow-xl">
-          <h3 class="text-lg font-bold text-white mb-4">Directorio de Grupos (nombres_fb)</h3>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-white">Directorio de Grupos (nombres_fb)</h3>
+            <button @click="abrirModalDirectorio()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow">
+              + Agregar / Editar Grupo
+            </button>
+          </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
               <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
@@ -264,6 +290,7 @@
                   <th class="p-3 font-bold">PEN</th>
                   <th class="p-3 font-bold">COP</th>
                   <th class="p-3 font-bold">CLP</th>
+                  <th class="p-3 font-bold text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800 text-sm">
@@ -277,6 +304,9 @@
                     <td class="p-3 font-mono text-xs" x-text="g.pen || '-'"></td>
                     <td class="p-3 font-mono text-xs" x-text="g.cop || '-'"></td>
                     <td class="p-3 font-mono text-xs" x-text="g.clp || '-'"></td>
+                    <td class="p-3 text-center">
+                      <button @click="editarGrupoDirectorio(g)" class="bg-slate-800 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-xl text-xs font-bold">Editar</button>
+                    </td>
                   </tr>
                 </template>
               </tbody>
@@ -287,7 +317,7 @@
     </main>
   </div>
 
-  <!-- Modal Corrección -->
+  <!-- Modal Corrección Socio -->
   <div x-show="modalCorreccion" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" x-cloak>
     <div class="bg-fb-card border border-slate-700 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
       <h3 class="text-lg font-bold text-white">Editar Asignación de Socio</h3>
@@ -310,6 +340,38 @@
     </div>
   </div>
 
+  <!-- Modal Gestión Directorio -->
+  <div x-show="modalDirectorio" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" x-cloak>
+    <div class="bg-fb-card border border-slate-700 rounded-2xl p-6 max-w-md w-full space-y-3 shadow-2xl">
+      <h3 class="text-lg font-bold text-white">Gestionar Grupo / Socio</h3>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">ID Grupo (JID de WhatsApp)</label>
+        <input type="text" x-model="formDirectorio.id_grupo" placeholder="120363xxx@g.us" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-sm text-white focus:outline-none focus:border-purple-500">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-400 mb-1">Nombre del Grupo / Socio</label>
+        <input type="text" x-model="formDirectorio.nombre" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-sm text-white focus:outline-none focus:border-purple-500">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Rol</label>
+          <select x-model="formDirectorio.roles" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-sm text-white focus:outline-none focus:border-purple-500">
+            <option value="GRUPO">GRUPO</option>
+            <option value="SOCIO">SOCIO</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Moneda Principal</label>
+          <input type="text" x-model="formDirectorio.moneda_socio" placeholder="USD / PEN / COP" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-sm text-white focus:outline-none focus:border-purple-500">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="modalDirectorio = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancelar</button>
+        <button @click="guardarDirectorio()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Imagen -->
   <div x-show="modalImagen" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" @click="modalImagen = false" x-cloak>
     <div class="relative max-w-3xl w-full flex flex-col items-center">
@@ -319,14 +381,19 @@
   </div>
 
   <script>
-    function fundablockApp() {
+    function ateneaApp() {
       return {
         vistaActiva: 'cola',
         sidebarAbierto: false,
         socios: [], hashes: [], cola: [], reportesSocios: [], directorio: [],
         socioSeleccionado: '', fechaInicio: '', hashSeleccionado: '', soloDuplicados: false,
+        
         modalCorreccion: false,
         formCorreccion: { hash_largo: '', nombre_socio_1: '', nombre_socio_2: '', caption: '' },
+
+        modalDirectorio: false,
+        formDirectorio: { id_grupo: '', nombre: '', roles: 'GRUPO', moneda_socio: '', usd: '', pen: '', cop: '', clp: '' },
+
         modalImagen: false, imagenModalUrl: '',
 
         async init() {
@@ -356,8 +423,7 @@
             const res = await fetch('/api/reportes/socios');
             if (res.ok) this.reportesSocios = await res.json();
           } else if (vista === 'directorio') {
-            const res = await fetch('/api/directorio');
-            if (res.ok) this.directorio = await res.json();
+            await this.cargarDirectorio();
           }
         },
 
@@ -370,6 +436,19 @@
           });
           const res = await fetch(`/api/cola?${params.toString()}`);
           if (res.ok) this.cola = await res.json();
+        },
+
+        async cargarDirectorio() {
+          const res = await fetch('/api/directorio');
+          if (res.ok) this.directorio = await res.json();
+        },
+
+        obtenerUrlImagen(item) {
+          if (item.url_imagen && item.url_imagen.startsWith('http')) return item.url_imagen;
+          if (item.hash_corto) {
+            return `https://pub-49b9c87f6e6a418ba42de5ba36ddc73e.r2.dev/${item.hash_corto}.jpg`;
+          }
+          return '/logo.svg';
         },
 
         contarSociosUnicos() {
@@ -400,6 +479,26 @@
           });
           this.modalCorreccion = false;
           await this.cargarCola();
+        },
+
+        abrirModalDirectorio() {
+          this.formDirectorio = { id_grupo: '', nombre: '', roles: 'GRUPO', moneda_socio: '', usd: '', pen: '', cop: '', clp: '' };
+          this.modalDirectorio = true;
+        },
+
+        editarGrupoDirectorio(g) {
+          this.formDirectorio = { ...g };
+          this.modalDirectorio = true;
+        },
+
+        async guardarDirectorio() {
+          await fetch('/api/directorio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.formDirectorio)
+          });
+          this.modalDirectorio = false;
+          await this.cargarDirectorio();
         },
 
         verImagenModal(url) {
