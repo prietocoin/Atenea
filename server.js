@@ -15,7 +15,9 @@ const pool = new Pool({
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Servir archivos estáticos directamente desde la RAÍZ del proyecto
+app.use(express.static(__dirname));
 
 // -----------------------------------------------------------------------------
 // 1. OBTENER COLA DE COMPROBANTES (CON LEFT JOIN Y FILTROS)
@@ -48,14 +50,12 @@ app.get('/api/cola', async (req, res) => {
     const values = [];
     let paramIndex = 1;
 
-    // Filtro por Socio
     if (socio) {
       query += ` AND (c.nombre_socio_1 = $${paramIndex} OR c.nombre_socio_2 = $${paramIndex})`;
       values.push(socio);
       paramIndex++;
     }
 
-    // Filtro por Fecha ( Timestamp unix o date )
     if (fechaInicio) {
       const startTimestamp = Math.floor(new Date(fechaInicio).getTime() / 1000);
       query += ` AND c.timestamp >= $${paramIndex}`;
@@ -63,14 +63,12 @@ app.get('/api/cola', async (req, res) => {
       paramIndex++;
     }
 
-    // Filtro por Hash corto
     if (hash) {
       query += ` AND c.hash_corto = $${paramIndex}`;
       values.push(hash);
       paramIndex++;
     }
 
-    // Filtro por Duplicados (>1)
     if (soloDuplicados === 'true') {
       query += ` AND c.conteo > 1`;
     }
@@ -159,7 +157,7 @@ app.put('/api/comprobante/:hash_largo', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// 4. OBTENER LISTA ÚNICA DE SOCIOS PARA FILTROS
+// 4. OBTENER LISTA ÚNICA DE SOCIOS
 // -----------------------------------------------------------------------------
 app.get('/api/socios', async (req, res) => {
   try {
@@ -253,9 +251,9 @@ app.post('/api/directorio', async (req, res) => {
   }
 });
 
-// Ruta fallback para SPA (Single Page Application)
+// Ruta fallback para SPA (Apunta directamente a index.html en la raíz)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Iniciar servidor
