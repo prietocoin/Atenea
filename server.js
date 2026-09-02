@@ -1,185 +1,230 @@
 const express = require('express');
-const { Pool } = require('pg');
+const cors = require('cors');
 const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
-app.use(express.json());
-app.use(express.static(__dirname));
+const PORT = process.env.PORT || 3000;
 
+// Configuración de PostgreSQL
 const pool = new Pool({
-  host: process.env.DB_HOST || 'automat_postgres-db',
-  port: process.env.DB_PORT || 5432,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME || 'automat',
+  connectionString: process.env.DATABASE_URL || 'postgres://usuario:password@localhost:5432/fundablock',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Obtener lista de socios para el filtro
-app.get('/api/socios', async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      "SELECT DISTINCT nombre FROM nombres_fb WHERE roles = 'SOCIO' AND nombre IS NOT NULL ORDER BY nombre"
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('❌ Error en /api/socios:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Obtener lista de hashes recientes
-app.get('/api/hashes', async (req, res) => {
-  try {
-    const { socio, fechaInicio, fechaFin } = req.query;
-    let query = `SELECT DISTINCT hash_corto FROM cola_fb WHERE hash_corto IS NOT NULL AND hash_corto != ''`;
-    let params = [];
-
-    if (socio) {
-      params.push(socio);
-      query += ` AND (nombre_socio_1 = $${params.length} OR nombre_socio_2 = $${params.length})`;
-    }
-    if (fechaInicio) {
-      params.push(fechaInicio);
-      query += ` AND to_timestamp(timestamp)::date >= $${params.length}`;
-    }
-    if (fechaFin) {
-      params.push(fechaFin);
-      query += ` AND to_timestamp(timestamp)::date <= $${params.length}`;
-    }
-
-    query += ' ORDER BY hash_corto DESC LIMIT 100';
-    const { rows } = await pool.query(query, params);
-    res.json(rows);
-  } catch (err) {
-    console.error('❌ Error en /api/hashes:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Consultar registros de la tabla cola_fb
+// -----------------------------------------------------------------------------
+// 1. OBTENER COLA DE COMPROBANTES (CON LEFT JOIN Y FILTROS)
+// -----------------------------------------------------------------------------
 app.get('/api/cola', async (req, res) => {
   try {
-    const { socio, fechaInicio, fechaFin, hash, soloDuplicados } = req.query;
+    const { socio, fechaInicio, hash, soloDuplicados } = req.query;
+
     let query = `
       SELECT 
-        hash_largo,
-        hash_corto,
-        grupo_raw,
-        grupo_raw_2,
-        usuario_raw,
-        nombre AS usuario_push,
-        caption,
-        timestamp,
-        to_timestamp(timestamp) AS fecha_hora,
-        conteo,
-        nombre_raw_1,
-        nombre_raw_2,
-        nombre_socio_1,
-        nombre_socio_2,
-        url_imagen
-      FROM cola_fb 
-      WHERE 1=1`;
-    let params = [];
+        c.hash_largo, 
+        c.hash_corto, 
+        c.url_imagen, 
+        c.nombre_socio_1, 
+        c.nombre_socio_2, 
+        c.caption, 
+        c.timestamp, 
+        c.conteo,
+        f.monto, 
+        f.moneda, 
+        f.banco, 
+        f.referencia, 
+        f.titular, 
+        f.procesado_ia
+      FROM cola_fb c
+      LEFT JOIN comprobantes_fb f ON c.hash_largo = f.hash_largo
+      WHERE 1=1
+    `;
 
+    const values = [];
+    let paramIndex = 1;
+
+    // Filtro por Socio
     if (socio) {
-      params.push(socio);
-      query += ` AND (nombre_socio_1 = $${params.length} OR nombre_socio_2 = $${params.length})`;
-    }
-    if (fechaInicio) {
-      params.push(fechaInicio);
-      query += ` AND to_timestamp(timestamp)::date >= $${params.length}`;
-    }
-    if (fechaFin) {
-      params.push(fechaFin);
-      query += ` AND to_timestamp(timestamp)::date <= $${params.length}`;
-    }
-    if (hash) {
-      params.push(hash);
-      query += ` AND (hash_corto = $${params.length} OR hash_largo = $${params.length})`;
-    }
-    if (soloDuplicados === 'true') {
-      query += ` AND conteo > 1`;
+      query += ` AND (c.nombre_socio_1 = $${paramIndex} OR c.nombre_socio_2 = $${paramIndex})`;
+      values.push(socio);
+      paramIndex++;
     }
 
-    query += ' ORDER BY timestamp DESC LIMIT 200';
-    const { rows } = await pool.query(query, params);
+    // Filtro por Fecha ( Timestamp unix o date )
+    if (fechaInicio) {
+      const startTimestamp = Math.floor(new Date(fechaInicio).getTime() / 1000);
+      query += ` AND c.timestamp >= $${paramIndex}`;
+      values.push(startTimestamp);
+      paramIndex++;
+    }
+
+    // Filtro por Hash corto
+    if (hash) {
+      query += ` AND c.hash_corto = $${paramIndex}`;
+      values.push(hash);
+      paramIndex++;
+    }
+
+    // Filtro por Duplicados (>1)
+    if (soloDuplicados === 'true') {
+      query += ` AND c.conteo > 1`;
+    }
+
+    query += ` ORDER BY c.timestamp DESC;`;
+
+    const { rows } = await pool.query(query, values);
     res.json(rows);
   } catch (err) {
-    console.error('❌ Error en /api/cola:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('Error en GET /api/cola:', err.message);
+    res.status(500).json({ error: 'Error al consultar la cola' });
   }
 });
 
-// Actualizar socios o nota en cola_fb
-app.put('/api/cola/:hash', async (req, res) => {
+// -----------------------------------------------------------------------------
+// 2. ACTUALIZAR ASIGNACIÓN DE SOCIOS Y CAPTION (cola_fb)
+// -----------------------------------------------------------------------------
+app.put('/api/cola/:hash_largo', async (req, res) => {
   try {
-    const { hash } = req.params;
+    const { hash_largo } = req.params;
     const { nombre_socio_1, nombre_socio_2, caption } = req.body;
 
-    await pool.query(
-      `UPDATE cola_fb 
-       SET nombre_socio_1 = $1, nombre_socio_2 = $2, caption = $3
-       WHERE hash_largo = $4 OR hash_corto = $4`,
-      [nombre_socio_1, nombre_socio_2, caption, hash]
-    );
+    const query = `
+      UPDATE cola_fb
+      SET 
+        nombre_socio_1 = $1,
+        nombre_socio_2 = $2,
+        caption = $3
+      WHERE hash_largo = $4
+      RETURNING *;
+    `;
 
-    res.json({ success: true });
+    const { rows } = await pool.query(query, [
+      nombre_socio_1 || null,
+      nombre_socio_2 || null,
+      caption || null,
+      hash_largo
+    ]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Registro no encontrado en cola_fb' });
+    }
+
+    res.json({ success: true, data: rows[0] });
   } catch (err) {
-    console.error('❌ Error en /api/cola/:hash:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('Error en PUT /api/cola:', err.message);
+    res.status(500).json({ error: 'Error al actualizar asignación de socio' });
   }
 });
 
-// Reporte consolidado de socios
+// -----------------------------------------------------------------------------
+// 3. AUDITAR/CORREGIR DATOS EXTRAÍDOS DE IA (comprobantes_fb)
+// -----------------------------------------------------------------------------
+app.put('/api/comprobante/:hash_largo', async (req, res) => {
+  try {
+    const { hash_largo } = req.params;
+    const { monto, moneda, banco, referencia, titular } = req.body;
+
+    const query = `
+      INSERT INTO comprobantes_fb (hash_largo, monto, moneda, banco, referencia, titular, procesado_ia)
+      VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+      ON CONFLICT (hash_largo) DO UPDATE SET
+        monto = EXCLUDED.monto,
+        moneda = EXCLUDED.moneda,
+        banco = EXCLUDED.banco,
+        referencia = EXCLUDED.referencia,
+        titular = EXCLUDED.titular,
+        procesado_ia = TRUE
+      RETURNING *;
+    `;
+
+    const { rows } = await pool.query(query, [
+      hash_largo,
+      monto !== undefined && monto !== '' ? monto : null,
+      moneda || null,
+      banco ? banco.toUpperCase() : null,
+      referencia || null,
+      titular ? titular.toUpperCase() : null
+    ]);
+
+    res.json({ success: true, data: rows[0] });
+  } catch (err) {
+    console.error('Error en PUT /api/comprobante:', err.message);
+    res.status(500).json({ error: 'Error al actualizar datos del comprobante' });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 4. OBTENER LISTA ÚNICA DE SOCIOS PARA FILTROS
+// -----------------------------------------------------------------------------
+app.get('/api/socios', async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT nombre FROM (
+        SELECT nombre_socio_1 AS nombre FROM cola_fb WHERE nombre_socio_1 IS NOT NULL AND nombre_socio_1 != ''
+        UNION
+        SELECT nombre_socio_2 AS nombre FROM cola_fb WHERE nombre_socio_2 IS NOT NULL AND nombre_socio_2 != ''
+        UNION
+        SELECT nombre FROM nombres_fb WHERE roles = 'SOCIO'
+      ) s
+      ORDER BY nombre ASC;
+    `;
+    const { rows } = await pool.query(query);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error en GET /api/socios:', err.message);
+    res.status(500).json({ error: 'Error al obtener la lista de socios' });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 5. OBTENER REPORTES CONSOLIDADOS POR SOCIO
+// -----------------------------------------------------------------------------
 app.get('/api/reportes/socios', async (req, res) => {
   try {
     const query = `
       SELECT 
-        COALESCE(s.socio, 'SIN ASIGNAR') AS socio,
-        COUNT(*) AS total_comprobantes,
+        COALESCE(c.nombre_socio_1, 'Sin Asignar') AS socio,
+        COUNT(DISTINCT c.hash_largo) AS total_comprobantes,
         SUM(c.conteo) AS total_recepciones,
-        SUM(CASE WHEN c.conteo > 1 THEN 1 ELSE 0 END) AS total_duplicados
+        SUM(GREATEST(c.conteo - 1, 0)) AS total_duplicados
       FROM cola_fb c
-      CROSS JOIN LATERAL (
-        VALUES (c.nombre_socio_1), (c.nombre_socio_2)
-      ) AS s(socio)
-      WHERE s.socio IS NOT NULL AND s.socio != ''
-      GROUP BY s.socio
+      GROUP BY COALESCE(c.nombre_socio_1, 'Sin Asignar')
       ORDER BY total_comprobantes DESC;
     `;
     const { rows } = await pool.query(query);
     res.json(rows);
   } catch (err) {
-    console.error('❌ Error en /api/reportes/socios:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('Error en GET /api/reportes/socios:', err.message);
+    res.status(500).json({ error: 'Error al obtener reportes' });
   }
 });
 
-// Directorio nombres_fb
+// -----------------------------------------------------------------------------
+// 6. GESTIÓN DEL DIRECTORIO (nombres_fb)
+// -----------------------------------------------------------------------------
 app.get('/api/directorio', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC');
+    const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC;');
     res.json(rows);
   } catch (err) {
-    console.error('❌ Error en /api/directorio:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('Error en GET /api/directorio:', err.message);
+    res.status(500).json({ error: 'Error al consultar directorio' });
   }
 });
 
-// Crear o Actualizar Grupo en nombres_fb (UPSERT)
 app.post('/api/directorio', async (req, res) => {
   try {
     const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp } = req.body;
-    
-    await pool.query(`
+
+    const query = `
       INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (id_grupo) 
-      DO UPDATE SET 
+      ON CONFLICT (id_grupo) DO UPDATE SET
         nombre = EXCLUDED.nombre,
         roles = EXCLUDED.roles,
         moneda_socio = EXCLUDED.moneda_socio,
@@ -187,14 +232,33 @@ app.post('/api/directorio', async (req, res) => {
         pen = EXCLUDED.pen,
         cop = EXCLUDED.cop,
         clp = EXCLUDED.clp
-    `, [id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp]);
+      RETURNING *;
+    `;
 
-    res.json({ success: true });
+    const { rows } = await pool.query(query, [
+      id_grupo,
+      nombre,
+      roles || 'GRUPO',
+      moneda_socio || null,
+      usd || null,
+      pen || null,
+      cop || null,
+      clp || null
+    ]);
+
+    res.json({ success: true, data: rows[0] });
   } catch (err) {
-    console.error('❌ Error en POST /api/directorio:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('Error en POST /api/directorio:', err.message);
+    res.status(500).json({ error: 'Error al guardar en directorio' });
   }
 });
 
-const PORT = process.env.PORT || 80;
-app.listen(PORT, () => console.log(`🚀 Atenea Audit Panel activo en puerto ${PORT}`));
+// Ruta fallback para SPA (Single Page Application)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Iniciar servidor
+app.listen(PORT, () => {
+  console.log(`Servidor Backend Atenea corriendo en puerto ${PORT}`);
+});
