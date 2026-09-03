@@ -36,11 +36,13 @@ app.get('/api/test-db', async (req, res) => {
   try {
     const testQuery = await pool.query('SELECT NOW();');
     const countMaster = await pool.query('SELECT COUNT(*) FROM comprobantes_fb;');
+    const countCola = await pool.query('SELECT COUNT(*) FROM cola_fb;');
     res.json({
       status: 'OK',
       conexion: 'Exitosa',
       hora_servidor: testQuery.rows[0].now,
-      registros_tabla_maestra: countMaster.rows[0].count
+      registros_tabla_maestra: countMaster.rows[0].count,
+      registros_cola_staging: countCola.rows[0].count
     });
   } catch (err) {
     res.status(500).json({ status: 'ERROR', mensaje: err.message, codigo: err.code });
@@ -48,9 +50,9 @@ app.get('/api/test-db', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// 1. LECTURA PRINCIPAL: TABLA MAESTRA (comprobantes_fb)
+// 1. LECTURA PRINCIPAL: TABLA MAESTRA (comprobantes_fb + METADATA DE cola_fb)
 // -----------------------------------------------------------------------------
-app.get('/api/comprobantes', async (req, res) => {
+const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash, soloDuplicados } = req.query;
 
@@ -109,7 +111,11 @@ app.get('/api/comprobantes', async (req, res) => {
     console.error('Error en GET /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
-});
+};
+
+// Endpoints asignados (Mantiene compatibilidad con llamadas a /api/cola)
+app.get('/api/comprobantes', getComprobantesHandler);
+app.get('/api/cola', getComprobantesHandler);
 
 // -----------------------------------------------------------------------------
 // 2. EDICIÓN / AUDITORÍA DIRECTA EN TABLA MAESTRA
@@ -141,7 +147,6 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
       hash_largo
     ]);
 
-    // Mantiene la asignación del socio en la tabla de soporte
     if (nombre_socio_1 !== undefined || nombre_socio_2 !== undefined) {
       await pool.query(
         `UPDATE cola_fb SET nombre_socio_1 = $1, nombre_socio_2 = $2 WHERE hash_largo = $3;`,
@@ -168,6 +173,9 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Registro no encontrado en comprobantes_fb' });
     }
+
+    // Marca el registro inerte en la cola
+    await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
 
     res.json({ success: true, message: 'Comprobante eliminado de la tabla maestra' });
   } catch (err) {
@@ -200,7 +208,7 @@ app.get('/api/socios', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// 5. REPORTES CONSOLIDADOS (BASADOS EN REGISTROS VALIDADOS)
+// 5. REPORTES CONSOLIDADOS (TABLA MAESTRA)
 // -----------------------------------------------------------------------------
 app.get('/api/reportes/socios', async (req, res) => {
   try {
