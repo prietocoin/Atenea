@@ -1,283 +1,184 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Atenea | Sistema de Gestión y Auditoría Fundablock</title>
-  
-  <link rel="icon" type="image/svg+xml" href="/logo.svg">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atenea Panel - Gestión de Comprobantes</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <style>
-    [x-cloak] { display: none !important; }
-    html, body {
-      touch-action: manipulation;
-      -webkit-overflow-scrolling: touch;
-      background-color: #0f172a;
-      color: #f8fafc;
+  <style>[x-cloak] { display: none !important; }</style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { brand: { dark: '#0d0f1d', card: '#16192b', border: '#262a42', accent: '#8b5cf6' } }
+        }
+      }
     }
-    .bg-fb-dark { background-color: #0b0f19; }
-    .bg-fb-card { background-color: #1e293b; }
-
-    @keyframes logoPulse {
-      0%, 100% { transform: scale(1); opacity: 0.95; }
-      50% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.4)); }
-    }
-    .animate-owl-pulse {
-      animation: logoPulse 2.5s infinite ease-in-out;
-    }
-  </style>
+  </script>
 </head>
-<body class="font-sans h-screen overflow-hidden flex" x-data="ateneaApp()" x-init="init()">
+<body class="bg-[#0b0d19] text-slate-200 font-sans antialiased min-h-screen" x-data="app()" x-init="init()">
 
-  <!-- Preloader Owl -->
-  <div id="preloader" class="fixed inset-0 bg-fb-dark z-[100] flex flex-col items-center justify-center p-4 transition-all duration-700 opacity-100">
-    <div class="flex flex-col items-center max-w-xs text-center space-y-4">
-      <div class="relative flex items-center justify-center">
-        <div class="absolute inset-0 rounded-full bg-purple-600/20 blur-2xl animate-pulse"></div>
-        <img src="/logo.svg" alt="Logo Fundablock" class="w-36 h-36 object-contain relative z-10 animate-owl-pulse">
-      </div>
-      <div class="space-y-1">
-        <h2 class="text-white text-xl font-black tracking-widest uppercase">FUNDABLOCK</h2>
-        <p class="text-purple-400 text-xs font-semibold tracking-wide">Atenea AI Management & Audit</p>
-      </div>
-      <div class="w-48 bg-slate-800 rounded-full h-1.5 overflow-hidden border border-purple-500/30 mt-2">
-        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full w-full animate-pulse"></div>
-      </div>
-      <span class="text-[10px] text-slate-400 tracking-widest font-mono">CONECTANDO A POSTGRESQL...</span>
-    </div>
-  </div>
-
-  <!-- Sidebar Overlay (Móvil) -->
-  <div x-show="sidebarAbierto" x-transition.opacity class="fixed inset-0 bg-black/70 z-40 md:hidden" @click="sidebarAbierto = false" x-cloak></div>
-
-  <!-- Sidebar Lateral -->
-  <aside :class="sidebarAbierto ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-fb-dark border-r border-slate-800 text-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
-    <div class="p-4 flex items-center gap-3 border-b border-slate-800 shrink-0">
-      <div class="bg-purple-900/40 p-1 rounded-xl border border-purple-500/30">
-        <img src="/logo.svg" alt="Logo Owl" class="w-10 h-10 object-contain">
-      </div>
+  <div class="flex flex-col md:flex-row min-h-screen">
+    
+    <!-- BARRA LATERAL NAV -->
+    <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
       <div>
-        <h2 class="font-black text-base tracking-wider text-white">FUNDABLOCK</h2>
-        <p class="text-[9px] text-purple-400 font-bold uppercase tracking-widest">Atenea Panel v2.0</p>
-      </div>
-    </div>
+        <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
+          <div class="w-10 h-10 rounded-xl bg-purple-900/50 border border-purple-500/40 flex items-center justify-center text-purple-300 font-bold text-lg shadow-lg">🦉</div>
+          <div>
+            <h1 class="font-extrabold text-white text-base tracking-wide">FUNDABLOCK</h1>
+            <p class="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Atenea Panel v2.0</p>
+          </div>
+        </div>
 
-    <nav class="flex-1 overflow-y-auto p-3 space-y-1.5">
-      <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-2">Auditoría en Vivo</p>
-      
-      <button @click="cambiarVista('cola')" :class="vistaActiva === 'cola' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'" class="w-full flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all">
-        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-        Cola & Extracción IA
-      </button>
+        <nav class="space-y-1">
+          <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Auditoría en Vivo</p>
+          
+          <button @click="vistaActiva = 'comprobantes'" :class="vistaActiva === 'comprobantes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Gestión de Comprobantes
+          </button>
 
-      <button @click="cambiarVista('reportes')" :class="vistaActiva === 'reportes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'" class="w-full flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all">
-        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        Reportes por Socio
-      </button>
+          <button @click="vistaActiva = 'reportes'" :class="vistaActiva === 'reportes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Reportes por Socio
+          </button>
 
-      <div class="py-2"><hr class="border-slate-800"></div>
-      <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Base de Datos</p>
-
-      <button @click="cambiarVista('directorio')" :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'" class="w-full flex items-center gap-3 p-3 rounded-xl font-semibold text-sm transition-all">
-        <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        Directorio (nombres_fb)
-      </button>
-    </nav>
-  </aside>
-
-  <!-- Contenedor Principal -->
-  <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full bg-slate-900">
-    <header class="bg-fb-dark border-b border-slate-800 text-white p-3 sm:p-4 shadow-xl z-20 shrink-0">
-      <div class="max-w-7xl mx-auto flex flex-col gap-3">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center gap-3">
-            <button @click="sidebarAbierto = true" class="md:hidden p-2.5 bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          <div class="pt-4">
+            <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Base de Datos</p>
+            <button @click="vistaActiva = 'directorio'" :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
+              <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              Directorio (nombres_fb)
             </button>
-            <div>
-              <h1 class="text-base sm:text-xl font-black tracking-wide text-white capitalize flex items-center gap-2">
-                <span class="text-purple-400" x-text="vistaActiva === 'cola' ? 'Gestión de Comprobantes & IA' : (vistaActiva === 'reportes' ? 'Reporte Consolidado' : 'Directorio de Grupos')"></span>
-              </h1>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 p-3 md:p-6 overflow-x-hidden">
+      <template x-if="vistaActiva === 'comprobantes'">
+        <div class="space-y-4">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 class="text-lg font-bold text-white tracking-wide">Gestión De Comprobantes & IA</h2>
+            <div class="flex items-center gap-2">
+              <button @click="cargarComprobantes()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/60 active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              </button>
+              <span class="px-2.5 py-1 rounded-xl bg-purple-900/40 text-purple-300 text-xs font-semibold border border-purple-500/30">
+                <span x-text="comprobantes.length"></span> ítems
+              </span>
             </div>
           </div>
-          
-          <div class="flex items-center gap-2">
-            <button @click="cargarCola()" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-xl border border-slate-700 transition-colors" title="Recargar datos">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-            </button>
-            <span class="text-xs bg-purple-950/80 border border-purple-500/30 px-3 py-1.5 rounded-full text-purple-300 font-mono font-bold" x-text="vistaActiva === 'cola' ? cola.length + ' ítems' : (vistaActiva === 'reportes' ? reportesSocios.length + ' socios' : directorio.length + ' grupos')"></span>
-          </div>
-        </div>
-        
-        <!-- Filtros Móvil/Desktop -->
-        <div x-show="vistaActiva === 'cola'" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-          <div>
-            <select x-model="socioSeleccionado" @change="cargarCola()" class="bg-slate-800 text-slate-200 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 w-full font-medium">
+
+          <!-- FILTROS -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800">
+            <select x-model="filtroSocio" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 outline-none">
               <option value="">Todos los Socios</option>
-              <template x-for="s in socios" :key="s.nombre">
-                <option :value="s.nombre" x-text="s.nombre"></option>
+              <template x-for="s in socios" :key="s">
+                <option :value="s" x-text="s"></option>
               </template>
             </select>
+
+            <input type="date" x-model="filtroFecha" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 outline-none" />
+
+            <input type="text" x-model="filtroHash" @input.debounce.300ms="cargarComprobantes()" placeholder="Buscar Hash..." class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 outline-none" />
+
+            <label class="flex items-center gap-2 px-2.5 py-1.5 bg-[#1a1d33] border border-slate-700/80 rounded-lg cursor-pointer text-xs text-slate-300">
+              <input type="checkbox" x-model="soloDuplicados" @change="cargarComprobantes()" class="rounded bg-slate-800 border-slate-600 text-purple-600 focus:ring-purple-500">
+              <span>Duplicados (>1)</span>
+            </label>
           </div>
 
-          <div>
-            <input type="date" x-model="fechaInicio" @change="cargarCola()" class="bg-slate-800 text-slate-200 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 w-full font-medium">
+          <!-- METRICAS -->
+          <div class="grid grid-cols-4 gap-2">
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-slate-400 uppercase">RECIBIDOS</p>
+              <p class="text-lg font-extrabold text-white mt-0.5" x-text="metricas.recibidos"></p>
+            </div>
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-emerald-400 uppercase">IA OK</p>
+              <p class="text-lg font-extrabold text-emerald-400 mt-0.5" x-text="metricas.iaOk"></p>
+            </div>
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-rose-400 uppercase">DESCARTADOS</p>
+              <p class="text-lg font-extrabold text-rose-400 mt-0.5" x-text="metricas.descartados"></p>
+            </div>
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-amber-400 uppercase">DUPLICADOS</p>
+              <p class="text-lg font-extrabold text-amber-400 mt-0.5" x-text="metricas.duplicados"></p>
+            </div>
           </div>
 
-          <div>
-            <select x-model="hashSeleccionado" @change="cargarCola()" class="bg-slate-800 text-slate-200 p-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-500 w-full font-medium">
-              <option value="">Todos los Hashes</option>
-              <template x-for="h in hashes" :key="h.hash_corto">
-                <option :value="h.hash_corto" x-text="h.hash_corto"></option>
-              </template>
-            </select>
-          </div>
-
-          <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700 col-span-1">
-            <input type="checkbox" id="chkDup" x-model="soloDuplicados" @change="cargarCola()" class="w-4 h-4 rounded border-slate-700 text-purple-600 focus:ring-purple-500">
-            <label for="chkDup" class="text-slate-300 font-medium cursor-pointer select-none text-[11px] sm:text-xs">Duplicados (>1)</label>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main class="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5 w-full">
-      
-      <!-- VISTA 1: COLA & EXTRACCIÓN IA -->
-      <div x-show="vistaActiva === 'cola'" class="max-w-7xl mx-auto space-y-4">
-        
-        <!-- KPIs informativos -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div class="bg-fb-card p-3.5 rounded-2xl border border-slate-800 shadow-lg">
-            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Recibidos</p>
-            <p class="text-xl sm:text-2xl font-black text-white mt-0.5" x-text="cola.length"></p>
-          </div>
-          <div class="bg-fb-card p-3.5 rounded-2xl border border-emerald-500/20 shadow-lg">
-            <p class="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">IA OK</p>
-            <p class="text-xl sm:text-2xl font-black text-emerald-300 mt-0.5" x-text="cola.filter(i => i.procesado_ia && i.monto).length"></p>
-          </div>
-          <div class="bg-fb-card p-3.5 rounded-2xl border border-rose-500/20 shadow-lg">
-            <p class="text-[10px] text-rose-400 uppercase font-bold tracking-wider">Descartados</p>
-            <p class="text-xl sm:text-2xl font-black text-rose-300 mt-0.5" x-text="cola.filter(i => i.procesado_ia === false || (i.procesado_ia && !i.monto)).length"></p>
-          </div>
-          <div class="bg-fb-card p-3.5 rounded-2xl border border-amber-500/20 shadow-lg">
-            <p class="text-[10px] text-amber-400 uppercase font-bold tracking-wider">Duplicados</p>
-            <p class="text-xl sm:text-2xl font-black text-amber-300 mt-0.5" x-text="cola.filter(i => i.conteo > 1).length"></p>
-          </div>
-        </div>
-
-        <!-- CONTENEDOR HÍBRIDO MÓVIL (90%) Y DESKTOP (10%) -->
-        <div class="space-y-3">
-          
-          <!-- VISTA MÓVIL (90% del uso): Tarjetas apiladas táctiles -->
-          <div class="grid grid-cols-1 gap-3 md:hidden">
-            <template x-for="item in cola" :key="item.hash_largo">
-              <div class="bg-fb-card p-4 rounded-2xl border border-slate-800 space-y-3 shadow-lg">
-                
-                <!-- Header de Tarjeta -->
-                <div class="flex justify-between items-center border-b border-slate-800/80 pb-2.5">
-                  <div class="flex items-center gap-2">
-                    <span class="bg-purple-950/80 border border-purple-500/30 px-2.5 py-1 rounded-lg font-mono font-bold text-purple-300 text-xs" x-text="item.hash_corto"></span>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black" :class="item.conteo > 1 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'" x-text="item.conteo > 1 ? 'x' + item.conteo : 'x1'"></span>
-                  </div>
-                  
-                  <template x-if="item.monto">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">✓ IA OK</span>
-                  </template>
-                  <template x-if="item.procesado_ia === false">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-500/40">✕ INVÁLIDO</span>
-                  </template>
-                  <template x-if="!item.monto && item.procesado_ia !== false">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">⏱ PENDIENTE</span>
-                  </template>
-                </div>
-
-                <!-- Cuerpo de Tarjeta: Foto + Datos Extracción -->
-                <div class="flex gap-3 items-center">
-                  <img 
-                    :src="obtenerUrlImagen(item)" 
-                    @click="verImagenModal(obtenerUrlImagen(item))" 
-                    class="w-20 h-20 object-cover rounded-xl border border-slate-700 shrink-0 cursor-pointer shadow"
-                  >
-                  <div class="flex-1 min-w-0 space-y-0.5">
-                    <template x-if="item.monto">
-                      <div class="flex items-baseline gap-1">
-                        <span class="text-lg font-black text-emerald-400" x-text="formatearMonto(item.monto)"></span>
-                        <span class="text-xs font-bold text-slate-300" x-text="item.moneda"></span>
-                      </div>
-                    </template>
-                    <p class="text-xs font-bold text-white uppercase truncate" x-text="item.banco || 'Banco no detectado'"></p>
-                    <p class="text-xs text-slate-400 uppercase font-mono truncate" x-text="item.titular || 'Sin titular'"></p>
-                    <p class="text-[11px] text-indigo-300 font-mono" x-text="'Ref: ' + (item.referencia || '-')"></p>
-                  </div>
-                </div>
-
-                <!-- Footer de Tarjeta -->
-                <div class="flex justify-between items-center pt-2.5 border-t border-slate-800/80">
-                  <div class="text-xs">
-                    <span class="text-slate-500">Socio: </span>
-                    <span class="font-bold text-purple-300" x-text="item.nombre_socio_1 || 'Sin Asignar'"></span>
-                  </div>
-                  <button @click="abrirModalCorreccion(item)" class="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow">
-                    Auditar / Editar
-                  </button>
-                </div>
-
-              </div>
-            </template>
-          </div>
-
-          <!-- VISTA DESKTOP (10% del uso): Tabla de Alta Densidad -->
-          <div class="hidden md:block bg-fb-card rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
-            <div class="overflow-x-auto w-full">
-              <table class="w-full text-left border-collapse whitespace-nowrap">
-                <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
-                  <tr>
-                    <th class="p-3.5 font-bold">Imagen & R2</th>
-                    <th class="p-3.5 font-bold">Hash / Estado</th>
-                    <th class="p-3.5 font-bold">Monto & Moneda</th>
-                    <th class="p-3.5 font-bold">Banco / Titular</th>
-                    <th class="p-3.5 font-bold">Referencia</th>
-                    <th class="p-3.5 font-bold">Socios</th>
-                    <th class="p-3.5 font-bold">Fecha / Hora</th>
-                    <th class="p-3.5 font-bold text-center">Acción</th>
+          <!-- TABLA -->
+          <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px] tracking-wider">
+                    <th class="px-3 py-2.5">IMAGEN & R2</th>
+                    <th class="px-3 py-2.5">HASH / ESTADO</th>
+                    <th class="px-3 py-2.5">MONTO & MONEDA</th>
+                    <th class="px-3 py-2.5">BANCO / TITULAR</th>
+                    <th class="px-3 py-2.5">REFERENCIA</th>
+                    <th class="px-3 py-2.5">SOCIO 1 & TIPO</th>
+                    <th class="px-3 py-2.5">FECHA / HORA</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800/60 text-sm">
-                  <template x-for="item in cola" :key="item.hash_largo">
-                    <tr class="hover:bg-slate-800/40 transition-colors">
-                      <td class="p-3">
-                        <div class="flex items-center gap-2">
-                          <img :src="obtenerUrlImagen(item)" @click="verImagenModal(obtenerUrlImagen(item))" class="w-10 h-10 object-cover rounded-xl border border-slate-700 cursor-pointer hover:scale-105 transition-transform shadow">
-                          <a :href="obtenerUrlImagen(item)" target="_blank" class="p-1.5 bg-slate-800 hover:bg-purple-600/30 text-purple-300 rounded-lg border border-purple-500/30 transition-all">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
+                  <template x-for="item in comprobantes" :key="item.hash_largo">
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <div class="flex items-center gap-1.5">
+                          <img :src="item.url_imagen" class="w-8 h-8 object-cover rounded-lg border border-slate-700/60 bg-slate-900" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
+                          <a :href="item.url_imagen" target="_blank" class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                           </a>
                         </div>
                       </td>
-                      <td class="p-3">
-                        <div class="flex flex-col gap-1 items-start">
-                          <span class="bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded font-mono font-bold text-purple-300 text-xs" x-text="item.hash_corto"></span>
-                          <div class="flex items-center gap-1">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black" :class="item.conteo > 1 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'" x-text="item.conteo > 1 ? 'x' + item.conteo : 'x1'"></span>
-                            <template x-if="item.monto">
-                              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">✓ IA OK</span>
-                            </template>
-                          </div>
+
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <div class="flex items-center gap-1">
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 font-mono text-[10px] border border-purple-500/30 font-bold" x-text="item.hash_corto"></span>
+                          <button @click="abrirModal(item)" class="p-1 rounded text-slate-400 hover:text-purple-300 hover:bg-purple-900/40 active:scale-95 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                        </div>
+                        <div class="flex items-center gap-1 mt-0.5">
+                          <span class="px-1 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-bold" x-text="'x' + item.conteo"></span>
+                          <template x-if="item.procesado_ia">
+                            <span class="px-1 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">✓ IA OK</span>
+                          </template>
                         </div>
                       </td>
-                      <td class="p-3 font-bold text-emerald-400" x-text="item.monto ? formatearMonto(item.monto) + ' ' + item.moneda : '-'"></td>
-                      <td class="p-3 uppercase text-xs">
-                        <div class="font-bold text-white" x-text="item.banco || '-'"></div>
-                        <div class="text-slate-400 font-mono text-[11px]" x-text="item.titular || '-'"></div>
+
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <span class="font-bold text-emerald-400 text-xs" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></span>
                       </td>
-                      <td class="p-3 font-mono text-xs text-indigo-300" x-text="item.referencia || '-'"></td>
-                      <td class="p-3 font-bold text-purple-300 text-xs" x-text="item.nombre_socio_1 || 'Sin Asignar'"></td>
-                      <td class="p-3 text-xs text-slate-400 font-mono" x-text="formatearFecha(item.timestamp)"></td>
-                      <td class="p-3 text-center">
-                        <button @click="abrirModalCorreccion(item)" class="bg-slate-800 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-bold text-xs">Auditar</button>
+
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <p class="font-bold text-slate-200 uppercase text-[11px]" x-text="item.banco || '-'"></p>
+                        <p class="text-[9px] text-slate-400 uppercase" x-text="item.titular || '-'"></p>
                       </td>
+
+                      <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
+
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-bold text-purple-300" x-text="item.nombre_socio_1 || '-'"></span>
+                          <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                            <span :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.2 rounded text-[9px] font-black border uppercase tracking-wider" x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
+                          </template>
+                        </div>
+                        <template x-if="item.nombre_socio_2">
+                          <p class="text-[9px] text-pink-400/80 font-semibold" x-text="'+ ' + item.nombre_socio_2"></p>
+                        </template>
+                      </td>
+
+                      <td class="px-3 py-2 align-middle text-slate-400 text-[10px] whitespace-nowrap" x-text="formatFecha(item.timestamp)"></td>
                     </tr>
                   </template>
                 </tbody>
@@ -286,364 +187,215 @@
           </div>
 
         </div>
+      </template>
 
-      </div>
-
-      <!-- VISTA 2: REPORTES -->
-      <div x-show="vistaActiva === 'reportes'" x-cloak class="max-w-7xl mx-auto space-y-4">
-        <div class="bg-fb-card rounded-2xl border border-slate-800 p-4 sm:p-5 shadow-xl">
-          <h3 class="text-base sm:text-lg font-bold text-white mb-4">Consolidado por Socio</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
-                <tr>
-                  <th class="p-3 font-bold">Socio</th>
-                  <th class="p-3 font-bold text-center">Comprobantes</th>
-                  <th class="p-3 font-bold text-center">Recepciones</th>
-                  <th class="p-3 font-bold text-center">Duplicados</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-800 text-sm">
-                <template x-for="r in reportesSocios" :key="r.socio">
-                  <tr class="hover:bg-slate-800/40">
-                    <td class="p-3 font-bold text-purple-300" x-text="r.socio"></td>
-                    <td class="p-3 text-center font-bold text-slate-200" x-text="r.total_comprobantes"></td>
-                    <td class="p-3 text-center font-bold text-indigo-300" x-text="r.total_recepciones"></td>
-                    <td class="p-3 text-center font-bold text-amber-400" x-text="r.total_duplicados"></td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
+      <!-- MODAL AUDITORÍA -->
+      <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-white text-sm">Auditar Comprobante</h3>
+              <span class="text-xs text-purple-400 font-mono font-bold" x-text="itemEdicion ? itemEdicion.hash_corto : ''"></span>
+              <template x-if="itemEdicion && getCodigoOperativo(itemEdicion.nombre_socio_1, itemEdicion.moneda)">
+                <span :class="claseInsignia(getCodigoOperativo(itemEdicion.nombre_socio_1, itemEdicion.moneda))" class="px-2 py-0.5 rounded text-[10px] font-black border uppercase tracking-wider" x-text="'TIPO ' + getCodigoOperativo(itemEdicion.nombre_socio_1, itemEdicion.moneda)"></span>
+              </template>
+            </div>
+            <button @click="modalAbierto = false" class="text-slate-400 hover:text-white text-sm">✕</button>
           </div>
+
+          <template x-if="itemEdicion">
+            <div class="space-y-2.5">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Monto</label>
+                  <input type="number" step="0.01" x-model="itemEdicion.monto" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Moneda</label>
+                  <select x-model="itemEdicion.moneda" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase outline-none focus:border-purple-500">
+                    <option value="">Seleccionar</option>
+                    <template x-for="m in listaMonedas" :key="m">
+                      <option :value="m" x-text="m" :selected="m === itemEdicion.moneda"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Banco</label>
+                <input type="text" x-model="itemEdicion.banco" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase">
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Referencia</label>
+                  <input type="text" x-model="itemEdicion.referencia" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Titular</label>
+                  <input type="text" x-model="itemEdicion.titular" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+                <div>
+                  <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Socio 1</label>
+                  <input type="text" x-model="itemEdicion.nombre_socio_1" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-purple-200 uppercase">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Socio 2</label>
+                  <input type="text" x-model="itemEdicion.nombre_socio_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-200 uppercase">
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                <button @click="eliminarComprobante(itemEdicion.hash_largo)" class="px-3 py-1.5 bg-rose-600/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-bold hover:bg-rose-600/40 active:scale-95 transition-all">Eliminar</button>
+                <div class="flex gap-2">
+                  <button @click="modalAbierto = false" class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">Cancelar</button>
+                  <button @click="guardarCambios()" class="px-3.5 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-500 active:scale-95 transition-all">Guardar</button>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
-
-      <!-- VISTA 3: DIRECTORIO DE GRUPOS -->
-      <div x-show="vistaActiva === 'directorio'" x-cloak class="max-w-7xl mx-auto space-y-4">
-        <div class="bg-fb-card rounded-2xl border border-slate-800 p-4 sm:p-5 shadow-xl">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-base sm:text-lg font-bold text-white">Directorio (nombres_fb)</h3>
-            <button @click="abrirModalDirectorio()" class="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow">
-              + Agregar Grupo
-            </button>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse whitespace-nowrap">
-              <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
-                <tr>
-                  <th class="p-3 font-bold">ID Grupo</th>
-                  <th class="p-3 font-bold">Nombre</th>
-                  <th class="p-3 font-bold">Rol</th>
-                  <th class="p-3 font-bold">Moneda</th>
-                  <th class="p-3 font-bold text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-800 text-sm">
-                <template x-for="g in directorio" :key="g.id_grupo">
-                  <tr class="hover:bg-slate-800/40">
-                    <td class="p-3 font-mono text-xs text-slate-400" x-text="g.id_grupo"></td>
-                    <td class="p-3 font-bold text-white" x-text="g.nombre"></td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold" :class="g.roles === 'SOCIO' ? 'bg-purple-950 text-purple-300 border border-purple-500/30' : 'bg-slate-800 text-slate-400'" x-text="g.roles"></span></td>
-                    <td class="p-3 font-bold text-amber-300" x-text="g.moneda_socio"></td>
-                    <td class="p-3 text-center">
-                      <button @click="editarGrupoDirectorio(g)" class="bg-slate-800 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-xl text-xs font-bold">Editar</button>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
     </main>
   </div>
 
-  <!-- MODAL MÓVIL/DESKTOP DE AUDITORÍA & EDICIÓN INTEGRAL -->
-  <div x-show="modalCorreccion" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto" x-cloak>
-    <div class="bg-fb-card border border-slate-700 rounded-2xl p-4 sm:p-6 max-w-xl w-full space-y-4 shadow-2xl relative my-auto max-h-[95vh] overflow-y-auto" @click.outside="modalCorreccion = false">
-      
-      <!-- Header Modal -->
-      <div class="flex justify-between items-start border-b border-slate-800 pb-3">
-        <div>
-          <h3 class="text-base sm:text-lg font-black text-white">Auditoría & Gestión</h3>
-          <p class="text-xs font-mono text-purple-400 font-bold" x-text="'Hash: ' + (formCorreccion.hash_corto || 'N/A')"></p>
-        </div>
-        <button @click="modalCorreccion = false" class="text-slate-400 hover:text-white p-1">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-
-      <!-- Preview Imagen + Link R2 -->
-      <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex items-center gap-3">
-        <img 
-          :src="obtenerUrlImagen(formCorreccion)" 
-          @click="verImagenModal(obtenerUrlImagen(formCorreccion))" 
-          class="w-16 h-16 object-cover rounded-xl border border-purple-500/40 cursor-pointer shadow shrink-0" 
-          title="Tocar para ampliar"
-        >
-        <div class="flex-1 min-w-0 space-y-1">
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">URL Imagen R2</p>
-          <div class="flex items-center gap-1.5">
-            <input type="text" readonly :value="obtenerUrlImagen(formCorreccion)" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-purple-300 font-mono truncate select-all focus:outline-none">
-            <a :href="obtenerUrlImagen(formCorreccion)" target="_blank" class="p-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 rounded-lg border border-purple-500/40 shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- BLOQUE 1: SOCIOS -->
-      <div class="bg-slate-900/40 p-3.5 rounded-xl border border-slate-800/80 space-y-2.5">
-        <p class="text-xs font-bold text-purple-400 uppercase tracking-wider">1. Asignación de Socios</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Socio Principal</label>
-            <input type="text" x-model="formCorreccion.nombre_socio_1" placeholder="Ej: JAIPY" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-semibold">
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Socio Secundario</label>
-            <input type="text" x-model="formCorreccion.nombre_socio_2" placeholder="Ej: MERLI" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500 font-semibold">
-          </div>
-        </div>
-      </div>
-
-      <!-- BLOQUE 2: EXTRACCIÓN FINANCIERA -->
-      <div class="bg-slate-900/40 p-3.5 rounded-xl border border-slate-800/80 space-y-2.5">
-        <p class="text-xs font-bold text-emerald-400 uppercase tracking-wider">2. Datos Extraídos (IA / Manual)</p>
-        
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Monto</label>
-            <input type="number" step="0.01" x-model="formCorreccion.monto" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-emerald-300 font-mono font-bold focus:outline-none focus:border-emerald-500">
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Moneda</label>
-            <select x-model="formCorreccion.moneda" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-bold focus:outline-none focus:border-purple-500">
-              <option value="">Seleccionar</option>
-              <option value="USD">USD</option>
-              <option value="VES">VES</option>
-              <option value="PEN">PEN</option>
-              <option value="COP">COP</option>
-              <option value="CLP">CLP</option>
-              <option value="USDT">USDT</option>
-            </select>
-          </div>
-          <div class="col-span-2 sm:col-span-1">
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Banco / Plataforma</label>
-            <input type="text" x-model="formCorreccion.banco" placeholder="BINANCE / YAPE" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white uppercase focus:outline-none focus:border-purple-500 font-semibold">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Nº Referencia / Operación</label>
-            <input type="text" x-model="formCorreccion.referencia" placeholder="12345678" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-indigo-300 font-mono focus:outline-none focus:border-purple-500">
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-400 mb-1">Titular / Identificación</label>
-            <input type="text" x-model="formCorreccion.titular" placeholder="NOMBRE O DOCUMENTO" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white uppercase focus:outline-none focus:border-purple-500">
-          </div>
-        </div>
-      </div>
-
-      <!-- Caption -->
-      <div>
-        <label class="block text-[11px] font-bold text-slate-400 mb-1">Comentario Adicional</label>
-        <textarea x-model="formCorreccion.caption" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-purple-500"></textarea>
-      </div>
-
-      <!-- Botones Táctiles -->
-      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-        <button @click="modalCorreccion = false" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors">Cancelar</button>
-        <button @click="guardarCorreccion()" class="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-900/30 transition-all">Guardar Cambios</button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Modal Gestión Directorio -->
-  <div x-show="modalDirectorio" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" x-cloak>
-    <div class="bg-fb-card border border-slate-700 rounded-2xl p-5 max-w-md w-full space-y-3 shadow-2xl">
-      <h3 class="text-base font-bold text-white">Gestionar Grupo / Socio</h3>
-      <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">ID Grupo (WhatsApp JID)</label>
-        <input type="text" x-model="formDirectorio.id_grupo" placeholder="120363xxx@g.us" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-400 mb-1">Nombre</label>
-        <input type="text" x-model="formDirectorio.nombre" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
-      </div>
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="block text-xs font-bold text-slate-400 mb-1">Rol</label>
-          <select x-model="formDirectorio.roles" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
-            <option value="GRUPO">GRUPO</option>
-            <option value="SOCIO">SOCIO</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-400 mb-1">Moneda Principal</label>
-          <input type="text" x-model="formDirectorio.moneda_socio" placeholder="USD / PEN" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button @click="modalDirectorio = false" class="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancelar</button>
-        <button @click="guardarDirectorio()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Imagen Full-Screen -->
-  <div x-show="modalImagen" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" @click="modalImagen = false" x-cloak>
-    <div class="relative max-w-3xl w-full flex flex-col items-center">
-      <img :src="imagenModalUrl" class="max-h-[85vh] object-contain rounded-2xl border border-slate-700 shadow-2xl">
-      <p class="text-xs text-slate-400 mt-2 font-mono">Toca fuera para cerrar</p>
-    </div>
-  </div>
-
   <script>
-    function ateneaApp() {
+    function app() {
       return {
-        vistaActiva: 'cola',
-        sidebarAbierto: false,
-        socios: [], hashes: [], cola: [], reportesSocios: [], directorio: [],
-        socioSeleccionado: '', fechaInicio: '', hashSeleccionado: '', soloDuplicados: false,
-        
-        modalCorreccion: false,
-        formCorreccion: { 
-          hash_largo: '', hash_corto: '', conteo: 1, url_imagen: '', 
-          nombre_socio_1: '', nombre_socio_2: '', caption: '',
-          monto: '', moneda: '', banco: '', referencia: '', titular: ''
-        },
+        vistaActiva: 'comprobantes',
+        comprobantes: [],
+        socios: [],
+        directorio: [],
+        filtroSocio: '',
+        filtroFecha: '',
+        filtroHash: '',
+        soloDuplicados: true,
+        modalAbierto: false,
+        itemEdicion: null,
 
-        modalDirectorio: false,
-        formDirectorio: { id_grupo: '', nombre: '', roles: 'GRUPO', moneda_socio: '', usd: '', pen: '', cop: '', clp: '' },
+        listaMonedas: [
+          'USD', 'EUR', 'USDT', 'PEN', 'COP', 'CLP', 'ARS', 'MXN', 'BRL', 'VES',
+          'PYG', 'DOP', 'CRC', 'CAD', 'ECU', 'PAN', 'BOB', 'UYU', 'GTQ', 'HNL',
+          'NIO', 'PAB'
+        ],
 
-        modalImagen: false, imagenModalUrl: '',
+        metricas: { recibidos: 0, iaOk: 0, descartados: 0, duplicados: 0 },
 
         async init() {
+          await this.cargarSocios();
+          await this.cargarDirectorio();
+          await this.cargarComprobantes();
+        },
+
+        async cargarComprobantes() {
+          const params = new URLSearchParams();
+          if (this.filtroSocio) params.append('socio', this.filtroSocio);
+          if (this.filtroFecha) params.append('fechaInicio', this.filtroFecha);
+          if (this.filtroHash) params.append('hash', this.filtroHash);
+          if (this.soloDuplicados) params.append('soloDuplicados', 'true');
+
           try {
-            const resS = await fetch('/api/socios');
-            if (resS.ok) this.socios = await resS.json();
-            await this.cargarCola();
-          } catch(e) {
-            console.error(e);
-          } finally {
-            setTimeout(() => {
-              const p = document.getElementById('preloader');
-              if (p) {
-                p.classList.add('opacity-0', 'pointer-events-none');
-                setTimeout(() => p.remove(), 700);
-              }
-            }, 800);
+            const res = await fetch(`/api/comprobantes?${params.toString()}`);
+            if (res.ok) {
+              this.comprobantes = await res.json();
+              this.calcularMetricas();
+            }
+          } catch (err) {
+            console.error("Error al cargar comprobantes:", err);
           }
         },
 
-        async cambiarVista(vista) {
-          this.vistaActiva = vista;
-          this.sidebarAbierto = false;
-          if (vista === 'cola') {
-            await this.cargarCola();
-          } else if (vista === 'reportes') {
-            const res = await fetch('/api/reportes/socios');
-            if (res.ok) this.reportesSocios = await res.json();
-          } else if (vista === 'directorio') {
-            await this.cargarDirectorio();
+        async cargarSocios() {
+          try {
+            const res = await fetch('/api/socios');
+            if (res.ok) this.socios = (await res.json()).map(s => s.nombre);
+          } catch (err) {
+            console.error("Error al cargar socios:", err);
           }
-        },
-
-        async cargarCola() {
-          const params = new URLSearchParams({
-            socio: this.socioSeleccionado,
-            fechaInicio: this.fechaInicio,
-            hash: this.hashSeleccionado,
-            soloDuplicados: this.soloDuplicados
-          });
-          const res = await fetch(`/api/cola?${params.toString()}`);
-          if (res.ok) this.cola = await res.json();
         },
 
         async cargarDirectorio() {
-          const res = await fetch('/api/directorio');
-          if (res.ok) this.directorio = await res.json();
-        },
-
-        obtenerUrlImagen(item) {
-          if (!item) return '/logo.svg';
-          if (item.url_imagen && item.url_imagen.startsWith('http')) return item.url_imagen;
-          if (item.hash_corto) {
-            return `https://pub-49b9c87f6e6a418ba42de5ba36ddc73e.r2.dev/${item.hash_corto}.jpg`;
+          try {
+            const res = await fetch('/api/directorio');
+            if (res.ok) this.directorio = await res.json();
+          } catch (err) {
+            console.error("Error al cargar directorio:", err);
           }
-          return '/logo.svg';
         },
 
-        formatearMonto(val) {
-          if (!val && val !== 0) return '-';
-          return Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        getCodigoOperativo(nombreSocio, moneda) {
+          if (!nombreSocio || !moneda || !this.directorio.length) return null;
+          const socioNorm = nombreSocio.trim().toUpperCase();
+          const monedaNorm = moneda.trim().toUpperCase();
+          const registroSocio = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          if (!registroSocio) return null;
+          const codigo = registroSocio[monedaNorm] || registroSocio[monedaNorm.toLowerCase()];
+          return codigo ? codigo.toUpperCase() : null;
         },
 
-        formatearFecha(ts) {
+        claseInsignia(codigo) {
+          const mapa = {
+            'D': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+            'P': 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+            'A': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+            'C': 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+          };
+          return mapa[codigo] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
+        },
+
+        calcularMetricas() {
+          this.metricas.recibidos = this.comprobantes.length;
+          this.metricas.iaOk = this.comprobantes.filter(c => c.procesado_ia).length;
+          this.metricas.descartados = 0;
+          this.metricas.duplicados = this.comprobantes.filter(c => c.conteo > 1).length;
+        },
+
+        abrirModal(item) {
+          this.itemEdicion = { ...item };
+          this.modalAbierto = true;
+        },
+
+        async guardarCambios() {
+          try {
+            const res = await fetch(`/api/comprobantes/${this.itemEdicion.hash_largo}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.itemEdicion)
+            });
+            if (res.ok) {
+              this.modalAbierto = false;
+              await this.cargarComprobantes();
+            }
+          } catch (err) {
+            console.error("Error al guardar cambios:", err);
+          }
+        },
+
+        async eliminarComprobante(hash_largo) {
+          if (!confirm('¿Deseas eliminar este comprobante de la tabla maestra?')) return;
+          try {
+            const res = await fetch(`/api/comprobantes/${hash_largo}`, { method: 'DELETE' });
+            if (res.ok) {
+              this.modalAbierto = false;
+              await this.cargarComprobantes();
+            }
+          } catch (err) {
+            console.error("Error al eliminar comprobante:", err);
+          }
+        },
+
+        formatMonto(val) {
+          if (!val) return '0.00';
+          return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        formatFecha(ts) {
           if (!ts) return '-';
-          const d = new Date(Number(ts) * 1000);
-          return d.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        },
-
-        abrirModalCorreccion(item) {
-          this.formCorreccion = { ...item };
-          this.modalCorreccion = true;
-        },
-
-        async guardarCorreccion() {
-          await fetch(`/api/cola/${this.formCorreccion.hash_largo}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              nombre_socio_1: this.formCorreccion.nombre_socio_1,
-              nombre_socio_2: this.formCorreccion.nombre_socio_2,
-              caption: this.formCorreccion.caption
-            })
-          });
-
-          await fetch(`/api/comprobante/${this.formCorreccion.hash_largo}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              monto: this.formCorreccion.monto ? parseFloat(this.formCorreccion.monto) : null,
-              moneda: this.formCorreccion.moneda,
-              banco: this.formCorreccion.banco,
-              referencia: this.formCorreccion.referencia,
-              titular: this.formCorreccion.titular
-            })
-          });
-
-          this.modalCorreccion = false;
-          await this.cargarCola();
-        },
-
-        abrirModalDirectorio() {
-          this.formDirectorio = { id_grupo: '', nombre: '', roles: 'GRUPO', moneda_socio: '', usd: '', pen: '', cop: '', clp: '' };
-          this.modalDirectorio = true;
-        },
-
-        editarGrupoDirectorio(g) {
-          this.formDirectorio = { ...g };
-          this.modalDirectorio = true;
-        },
-
-        async guardarDirectorio() {
-          await fetch('/api/directorio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.formDirectorio)
-          });
-          this.modalDirectorio = false;
-          await this.cargarDirectorio();
-        },
-
-        verImagenModal(url) {
-          this.imagenModalUrl = url;
-          this.modalImagen = true;
+          const date = new Date(ts * 1000);
+          return `${date.getDate()}/${date.getMonth()+1}, ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
         }
       }
     }
