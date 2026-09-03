@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atenea Panel - Gestión de Comprobantes</title>
   
-  <!-- FAVICON IDENTIDAD OFICIAL logo.svg -->
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <link rel="shortcut icon" href="/logo.svg">
   
@@ -30,7 +29,6 @@
     <!-- BARRA LATERAL NAV -->
     <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
       <div>
-        <!-- LOGO OFICIAL RESTAURADO -->
         <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
           <div class="w-10 h-10 rounded-xl border border-purple-500/40 bg-[#16192b] p-1 flex items-center justify-center shadow-lg shrink-0">
             <img src="/logo.svg" alt="Fundablock Logo" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=FB';">
@@ -473,20 +471,17 @@
           this.mensajeTasas = 'Consultando Hoo (/radar)...';
           try {
             const res = await fetch('/api/tasas/fetch-hoo');
-            if (res.ok) {
-              const data = await res.json();
-              if (data.success && data.tasas && Object.keys(data.tasas).length > 0) {
-                this.tasasBaul = data.tasas;
-                this.mensajeTasas = '';
-              } else {
-                this.mensajeTasas = data.msg || 'No se recibieron tasas activas.';
-              }
+            const data = await res.json();
+            
+            if (data.success && data.tasas && Object.keys(data.tasas).length > 0) {
+              this.tasasBaul = data.tasas;
+              this.mensajeTasas = '';
             } else {
-              this.mensajeTasas = 'Error al comunicarse con el servidor.';
+              this.mensajeTasas = data.msg || data.error || 'No se recibieron tasas del monitor Hoo.';
             }
           } catch (err) {
             console.error("Error al consultar tasas:", err);
-            this.mensajeTasas = 'Error de conexión con el backend.';
+            this.mensajeTasas = 'Error de conexión interno con el panel Express.';
           } finally {
             this.cargandoTasas = false;
           }
