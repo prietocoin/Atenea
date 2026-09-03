@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// Escudo anti-colapso a nivel de proceso
+// Escudo global contra colapsos
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Excepción no capturada:', err.message, err.stack);
 });
@@ -27,7 +27,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('⚠️ Error inesperado en pool de PostgreSQL:', err.message);
+  console.error('⚠️ Error en pool de PostgreSQL:', err.message);
 });
 
 pool.connect((err, client, release) => {
@@ -39,17 +39,14 @@ pool.connect((err, client, release) => {
   }
 });
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Healthcheck
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Diagnóstico BD
 app.get('/api/test-db', async (req, res) => {
   try {
     const testQuery = await pool.query('SELECT NOW();');
@@ -234,25 +231,37 @@ app.post('/api/directorio', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 2: BAÚL DE TASAS EN VIVO Y PUBLICACIÓN
+// MÓDULO 2: EXTRACTOR DESDE API HOO DE ALTA DISPONIBILIDAD
 // -----------------------------------------------------------------------------
-
-// Consulta directa al endpoint /radar de Hoo
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
-    const response = await fetch('https://hoo.jairokov.com/radar');
-    const data = await response.json();
+    console.log("📡 Consultando API de Hoo...");
+    let data = {};
+    
+    try {
+      const response = await fetch('https://hoo.jairokov.com/radar');
+      data = await response.json();
+    } catch (e) {
+      console.log("⚠️ /radar no respondió en JSON directamente, intentando raíz...");
+    }
 
     let tasasExtraidas = {};
 
-    if (data && data.rates) {
+    if (data && data.rates && Object.keys(data.rates).length > 0) {
       tasasExtraidas = data.rates;
+    } else if (data && data.status === "initializing") {
+      return res.json({
+        success: false,
+        msg: "El motor de Hoo (Playwright) está escaneando Binance P2P. Vuelve a consultar en unos segundos.",
+        tasas: {}
+      });
     } else {
-      const rawText = typeof data === 'string' ? data : JSON.stringify(data);
+      const respRoot = await fetch('https://hoo.jairokov.com/');
+      const rawText = await respRoot.text();
       const cleanText = rawText.replace(/\\n/g, '\n');
       const regex = /([A-Z]{3,6})["\s]*:\s*([0-9]+(?:\.[0-9]+)?)/gi;
       let match;
-      const palabrasExcluidas = ['HTTP', 'HTTPS', 'DATA', 'BODY', 'TYPE', 'TRUE', 'FALSE'];
+      const palabrasExcluidas = ['HTTP', 'HTTPS', 'DATA', 'BODY', 'TYPE', 'TRUE', 'FALSE', 'VERSION', 'STATUS'];
 
       while ((match = regex.exec(cleanText)) !== null) {
         const moneda = match[1].toUpperCase();
@@ -263,7 +272,15 @@ app.get('/api/tasas/fetch-hoo', async (req, res) => {
       }
     }
 
-    console.log("📡 Tasas capturadas de /radar:", tasasExtraidas);
+    if (Object.keys(tasasExtraidas).length === 0) {
+      return res.json({
+        success: false,
+        msg: "El motor de Hoo está iniciando o actualizando sus valores. Aguarda unos segundos y consulta de nuevo.",
+        tasas: {}
+      });
+    }
+
+    console.log("✅ Tasas extraídas exitosamente:", tasasExtraidas);
 
     res.json({
       success: true,
@@ -271,12 +288,11 @@ app.get('/api/tasas/fetch-hoo', async (req, res) => {
       tasas: tasasExtraidas
     });
   } catch (err) {
-    console.error("❌ Error consultando /radar:", err.message);
-    res.status(500).json({ error: "No se pudo conectar con el endpoint /radar de Hoo", detalle: err.message });
+    console.error("❌ Error consultando Hoo:", err.message);
+    res.status(500).json({ error: "No se pudo conectar con la API de Hoo", detalle: err.message });
   }
 });
 
-// Guardar Tasa Oficial de Mercado en PostgreSQL
 app.post('/api/tasas/publicar', async (req, res) => {
   try {
     const { id_tasa, tasas } = req.body;
@@ -309,7 +325,6 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// SPA Fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
