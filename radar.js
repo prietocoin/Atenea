@@ -1,19 +1,15 @@
-const puppeteer = require('puppeteer');
+const { ProxyAgent } = require('undici');
 
-const BINANCE_URLS = {
-  PEN: "https://p2p.binance.com/trade/all-payments/USDT?fiat=PEN",
-  COP: "https://p2p.binance.com/trade/all-payments/USDT?fiat=COP",
-  CLP: "https://p2p.binance.com/trade/all-payments/USDT?fiat=CLP",
-  ARS: "https://p2p.binance.com/trade/all-payments/USDT?fiat=ARS",
-  MXN: "https://p2p.binance.com/trade/all-payments/USDT?fiat=MXN",
-  VES: "https://p2p.binance.com/trade/all-payments/USDT?fiat=VES",
-  PYG: "https://p2p.binance.com/trade/all-payments/USDT?fiat=PYG",
-  DOP: "https://p2p.binance.com/trade/all-payments/USDT?fiat=DOP",
-  CRC: "https://p2p.binance.com/trade/all-payments/USDT?fiat=CRC",
-  EUR: "https://p2p.binance.com/trade/all-payments/USDT?fiat=EUR",
-  CAD: "https://p2p.binance.com/trade/all-payments/USDT?fiat=CAD",
-  BRL: "https://p2p.binance.com/trade/all-payments/USDT?fiat=BRL"
-};
+const BINANCE_URLS_FIAT = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BRL"];
+
+// Configuración de Proxy (Variables de Entorno con Fallback Exacto a Easypanel)
+const PROXY_IP = process.env.PROXY_IP || '46.203.210.178';
+const PROXY_PORT = process.env.PROXY_PORT || '5625';
+const PROXY_USER = process.env.PROXY_USER || 'ttsctjnu';
+const PROXY_PASS = process.env.PROXY_PASS || 'ul2gxifzz0pk';
+
+const PROXY_URL = `http://${PROXY_USER}:${PROXY_PASS}@${PROXY_IP}:${PROXY_PORT}`;
+const proxyAgent = new ProxyAgent(PROXY_URL);
 
 function calcularPromedioPurificado(prices) {
   if (!prices || prices.length === 0) return 0.0;
@@ -33,42 +29,55 @@ function calcularPromedioPurificado(prices) {
   return avg;
 }
 
-async function escanearFiat(browser, fiat, url) {
-  let page;
+async function obtenerPreciosBinanceApi(fiat) {
   try {
-    page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 35000 });
-    await new Promise(r => setTimeout(r, 4000));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const prices = await page.evaluate(() => {
-      const results = [];
-      const rows = Array.from(document.querySelectorAll('.bn-web-table-row, [role="row"]'));
-      rows.forEach(row => {
-        const text = row.innerText.replace(/,/g, '');
-        const matches = text.match(/(\d+\.\d{2,})/g);
-        if (matches) {
-          matches.forEach(m => {
-            const val = parseFloat(m);
-            if (val > 0.1) results.push(val);
-          });
-        }
-      });
-      return results;
+    const response = await fetch('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', {
+      method: 'POST',
+      dispatcher: proxyAgent,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+      },
+      body: JSON.stringify({
+        asset: 'USDT',
+        fiat: fiat,
+        merchantCheck: false,
+        page: 1,
+        payTypes: [],
+        publisherType: null,
+        rows: 15,
+        tradeType: 'BUY'
+      })
     });
+    clearTimeout(timeout);
 
-    await page.close();
-    return prices.slice(0, 15);
+    if (!response.ok) {
+      console.warn(`⚠️ Petición a Binance P2P (${fiat}) retornó estado: HTTP ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    if (data && data.data && Array.isArray(data.data)) {
+      return data.data
+        .map(item => parseFloat(item?.adv?.price))
+        .filter(price => !isNaN(price) && price > 0.1);
+    }
+    return [];
   } catch (err) {
-    console.error(`⚠️ Error escaneando ${fiat}:`, err.message);
-    if (page) await page.close().catch(() => {});
+    console.error(`⚠️ Error consultando BAPI Binance (${fiat}) mediante Proxy:`, err.message);
     return [];
   }
 }
 
 async function obtenerBrlFallback() {
   try {
-    const res = await fetch("https://economia.awesomeapi.com.br/json/last/USDT-BRL");
+    const res = await fetch("https://economia.awesomeapi.com.br/json/last/USDT-BRL", {
+      dispatcher: proxyAgent
+    });
     const data = await res.json();
     return [parseFloat(data.USDTBRL.bid)];
   } catch {
@@ -76,15 +85,16 @@ async function obtenerBrlFallback() {
   }
 }
 
-async function obtenerBCV(browser) {
-  let page;
+async function obtenerBCV() {
   try {
-    page = await browser.newPage();
-    await page.goto("https://www.tcambio.app/", { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await new Promise(r => setTimeout(r, 3000));
-    const text = await page.evaluate(() => document.body.innerText);
-    await page.close();
-
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch("https://www.tcambio.app/", { 
+      dispatcher: proxyAgent,
+      signal: controller.signal 
+    });
+    clearTimeout(timeout);
+    const text = await res.text();
     const match = text.match(/(?:BCV|Central|Dólar).*?([\d,.]+)/i);
     if (match) {
       let val = match[1].replace(',', '.');
@@ -95,37 +105,17 @@ async function obtenerBCV(browser) {
       return parseFloat(val);
     }
     return 0.0;
-  } catch (err) {
-    console.error("⚠️ Error escaneando BCV:", err.message);
-    if (page) await page.close().catch(() => {});
+  } catch {
     return 0.0;
   }
 }
 
 async function ejecutarRadarCompleto() {
-  console.log("🚀 [Atenea Radar] Iniciando ciclo de escaneo nativo...");
-  
-  const launchOptions = {
-    headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
-  };
-
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-
-  let browser;
-  try {
-    browser = await puppeteer.launch(launchOptions);
-  } catch (e) {
-    console.error("❌ Error al iniciar Puppeteer Browser:", e.message);
-    return {};
-  }
-
+  console.log(`🚀 [Atenea Radar] Escaneando divisas a través de Proxy (${PROXY_IP}:${PROXY_PORT})...`);
   const resultados = {};
 
-  for (const [fiat, url] of Object.entries(BINANCE_URLS)) {
-    let precios = await escanearFiat(browser, fiat, url);
+  for (const fiat of BINANCE_URLS_FIAT) {
+    let precios = await obtenerPreciosBinanceApi(fiat);
     if (precios.length === 0 && fiat === "BRL") {
       precios = await obtenerBrlFallback();
     }
@@ -138,11 +128,10 @@ async function ejecutarRadarCompleto() {
     }
   }
 
-  const bcv = await obtenerBCV(browser);
+  const bcv = await obtenerBCV();
   if (bcv > 0) resultados["BCV"] = bcv;
 
-  await browser.close().catch(() => {});
-  console.log("✅ [Atenea Radar] Ciclo finalizado. Tasas capturadas:", resultados);
+  console.log("✅ [Atenea Radar] Escaneo completado exitosamente con Proxy:", resultados);
   return resultados;
 }
 
