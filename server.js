@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// 🛡️ ESCUDO GLOBAL ANTI-COLAPSO DEL PROCESO
+// Escudo anti-colapso a nivel de proceso
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Excepción no capturada:', err.message, err.stack);
 });
@@ -16,7 +16,6 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ Promesa rechazada no capturada:', reason);
 });
 
-// Credenciales de la red interna de Docker / Coolify
 const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
 
 const pool = new Pool({
@@ -68,7 +67,7 @@ app.get('/api/test-db', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 1: COMPROBANTES (FUNCIONALIDAD PREVIA INTACTA)
+// MÓDULO 1: COMPROBANTES
 // -----------------------------------------------------------------------------
 const getComprobantesHandler = async (req, res) => {
   try {
@@ -238,40 +237,51 @@ app.post('/api/directorio', async (req, res) => {
 // MÓDULO 2: BAÚL DE TASAS EN VIVO Y PUBLICACIÓN
 // -----------------------------------------------------------------------------
 
-// Extractor desde la API de Hoo bajo demanda
+// Consulta directa al endpoint /radar de Hoo
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
-    const response = await fetch('https://hoo.jairokov.com/');
-    const rawText = await response.text();
+    const response = await fetch('https://hoo.jairokov.com/radar');
+    const data = await response.json();
 
-    const regex = /([A-Z]{3,6}):\s*([0-9]+(?:\.[0-9]+)?)/g;
-    const tasasExtraidas = {};
-    let match;
+    let tasasExtraidas = {};
 
-    while ((match = regex.exec(rawText)) !== null) {
-      const moneda = match[1].toUpperCase();
-      const valor = parseFloat(match[2]);
-      tasasExtraidas[moneda] = valor;
+    if (data && data.rates) {
+      tasasExtraidas = data.rates;
+    } else {
+      const rawText = typeof data === 'string' ? data : JSON.stringify(data);
+      const cleanText = rawText.replace(/\\n/g, '\n');
+      const regex = /([A-Z]{3,6})["\s]*:\s*([0-9]+(?:\.[0-9]+)?)/gi;
+      let match;
+      const palabrasExcluidas = ['HTTP', 'HTTPS', 'DATA', 'BODY', 'TYPE', 'TRUE', 'FALSE'];
+
+      while ((match = regex.exec(cleanText)) !== null) {
+        const moneda = match[1].toUpperCase();
+        const valor = parseFloat(match[2]);
+        if (!palabrasExcluidas.includes(moneda)) {
+          tasasExtraidas[moneda] = valor;
+        }
+      }
     }
+
+    console.log("📡 Tasas capturadas de /radar:", tasasExtraidas);
 
     res.json({
       success: true,
-      timestamp: Math.floor(Date.now() / 1000),
+      count: Object.keys(tasasExtraidas).length,
       tasas: tasasExtraidas
     });
   } catch (err) {
-    console.error("Error consultando API Hoo:", err.message);
-    res.status(500).json({ error: "No se pudo conectar con la API externa" });
+    console.error("❌ Error consultando /radar:", err.message);
+    res.status(500).json({ error: "No se pudo conectar con el endpoint /radar de Hoo", detalle: err.message });
   }
 });
 
-// Guardar Tasa Oficial de Mercado
+// Guardar Tasa Oficial de Mercado en PostgreSQL
 app.post('/api/tasas/publicar', async (req, res) => {
   try {
-    const { id_tasa, tasas } = req.body; // tasas: { "PEN": 3.37, "COP": 3138, ... }
+    const { id_tasa, tasas } = req.body;
     const timestamp = Math.floor(Date.now() / 1000);
 
-    // Auto-generar id_tasa si no viene informado
     let codigoTasa = id_tasa;
     if (!codigoTasa) {
       const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
@@ -299,7 +309,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// Fallback SPA
+// SPA Fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
