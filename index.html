@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atenea Panel - Gestión de Comprobantes</title>
   
-  <!-- FAVICON IDENTIDAD OFICIAL logo.svg -->
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <link rel="shortcut icon" href="/logo.svg">
   
@@ -30,9 +29,11 @@
     <!-- BARRA LATERAL NAV -->
     <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
       <div>
-        <!-- LOGO OFICIAL SVG RESTAURADO -->
+        <!-- LOGO IDENTIDAD RESTAURADO -->
         <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
-          <img src="/logo.svg" alt="Atenea Logo" class="w-10 h-10 rounded-xl border border-purple-500/40 object-contain bg-[#16192b] p-1 shadow-md">
+          <div class="w-10 h-10 rounded-xl border border-purple-500/50 bg-[#16192b] p-1 flex items-center justify-center shadow-lg shrink-0">
+            <img src="/logo.svg" alt="Fundablock Logo" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=FB';">
+          </div>
           <div>
             <h1 class="font-extrabold text-white text-base tracking-wide">FUNDABLOCK</h1>
             <p class="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Atenea Panel v2.0</p>
@@ -259,6 +260,14 @@
             </button>
           </div>
 
+          <!-- NOTIFICACIÓN DE ESTADO SI HOO SIGUE ESCANEANDO -->
+          <template x-if="mensajeTasas">
+            <div class="p-3 bg-purple-900/30 border border-purple-500/40 rounded-xl text-xs text-purple-200 font-semibold flex items-center gap-2">
+              <span class="animate-pulse">⏳</span>
+              <span x-text="mensajeTasas"></span>
+            </div>
+          </template>
+
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasas Capturadas (Paso previo a Producción)</p>
@@ -407,6 +416,7 @@
         tasasBaul: {},
         cargandoTasas: false,
         codigoTasaActual: '',
+        mensajeTasas: '',
 
         listaMonedas: [
           'USD', 'EUR', 'USDT', 'PEN', 'COP', 'CLP', 'ARS', 'MXN', 'BRL', 'VES',
@@ -460,14 +470,20 @@
 
         async consultarApiHoo() {
           this.cargandoTasas = true;
+          this.mensajeTasas = 'Escaneando API Hoo (/radar)...';
           try {
             const res = await fetch('/api/tasas/fetch-hoo');
-            if (res.ok) {
-              const data = await res.json();
-              this.tasasBaul = data.tasas || {};
+            const data = await res.json();
+            
+            if (res.ok && data.success && data.tasas && Object.keys(data.tasas).length > 0) {
+              this.tasasBaul = data.tasas;
+              this.mensajeTasas = '';
+            } else {
+              this.mensajeTasas = data.msg || data.error || 'El motor de Hoo se está inicializando. Intenta en 30 segundos.';
             }
           } catch (err) {
             console.error("Error consultando /radar:", err);
+            this.mensajeTasas = "Error de conexión con la API de Hoo.";
           } finally {
             this.cargandoTasas = false;
           }
@@ -509,7 +525,7 @@
           const mapa = {
             'D': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-cyan-900/50',
             'P': 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-amber-900/50',
-            'A': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-emerald-900/50',
+            'A': 'bg-[#10b981]/20 text-emerald-300 border-emerald-500/40 shadow-emerald-900/50',
             'C': 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-purple-900/50'
           };
           return mapa[codigo] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
@@ -576,7 +592,7 @@
           const date = new Date(ts * 1000);
           return `${date.getDate()}/${date.getMonth()+1}, ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
         }
-      }
+      };
     }
   </script>
 </body>
