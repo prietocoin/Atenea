@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atenea Panel - Gestión de Comprobantes</title>
-  <link rel="icon" type="image/png" href="/logo.png">
-  <link rel="shortcut icon" href="/logo.png">
+  
+  <!-- FAVICON IDENTIDAD OFICIAL logo.svg -->
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="shortcut icon" href="/logo.svg">
   
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -28,8 +30,9 @@
     <!-- BARRA LATERAL NAV -->
     <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
       <div>
+        <!-- LOGO OFICIAL SVG RESTAURADO -->
         <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
-          <img src="/logo.png" alt="Atenea Logo" class="w-10 h-10 rounded-xl border border-purple-500/40 object-cover bg-[#16192b]" onerror="this.onerror=null; this.src='./logo.png';">
+          <img src="/logo.svg" alt="Atenea Logo" class="w-10 h-10 rounded-xl border border-purple-500/40 object-contain bg-[#16192b] p-1 shadow-md">
           <div>
             <h1 class="font-extrabold text-white text-base tracking-wide">FUNDABLOCK</h1>
             <p class="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Atenea Panel v2.0</p>
@@ -465,7 +468,7 @@
             }
           } catch (err) {
             console.error("Error consultando /radar:", err);
-          } font-bold {
+          } finally {
             this.cargandoTasas = false;
           }
         },
