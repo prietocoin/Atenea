@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { Pool } = require('pg');
+const { ejecutarRadarCompleto } = require('./radar');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +42,31 @@ pool.connect((err, client, release) => {
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
+
+// CACHÉ LOCAL DE TASAS
+let CACHE_TASAS_ATENEA = {
+  data: {},
+  timestamp: 0,
+  estado: 'inicializando'
+};
+
+async function iniciarWorkerRadarNativo() {
+  try {
+    const tasas = await ejecutarRadarCompleto();
+    if (Object.keys(tasas).length > 0) {
+      CACHE_TASAS_ATENEA.data = tasas;
+      CACHE_TASAS_ATENEA.timestamp = Math.floor(Date.now() / 1000);
+      CACHE_TASAS_ATENEA.estado = 'listo';
+    }
+  } catch (err) {
+    console.error("❌ Fallo en Worker Radar Atenea:", err.message);
+  } finally {
+    setTimeout(iniciarWorkerRadarNativo, 5 * 60 * 1000);
+  }
+}
+
+// Inicia el worker nativo al arrancar el servidor
+iniciarWorkerRadarNativo();
 
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
@@ -230,76 +256,23 @@ app.post('/api/directorio', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 2: CONSUMO BLINDADO DE HOO CON CONTROL DE RESPUESTAS HTML/TEXTO
+// MÓDULO 2: ENDPOINT LECTURA ULTRA-RÁPIDA DE TASAS LOCALES
 // -----------------------------------------------------------------------------
-app.get('/api/tasas/fetch-hoo', async (req, res) => {
-  try {
-    console.log("📡 Consultando https://hoo.jairokov.com/radar...");
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    const response = await fetch('https://hoo.jairokov.com/radar', {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*'
-      }
-    });
-    clearTimeout(timeout);
-
-    const rawText = await response.text();
-    let data = null;
-
-    try {
-      data = JSON.parse(rawText);
-    } catch (e) {
-      console.warn("⚠️ La respuesta recibida no fue un JSON nativo:", rawText.substring(0, 120));
-    }
-
-    let tasasExtraidas = {};
-
-    if (data && data.rates && Object.keys(data.rates).length > 0) {
-      tasasExtraidas = data.rates;
-    } else {
-      // Extractor por Regex en caso de respuesta en texto plano o HTML estructurado
-      const cleanText = rawText.replace(/\\n/g, '\n');
-      const regex = /([A-Z]{3,6})["\s]*:\s*([0-9]+(?:\.[0-9]+)?)/gi;
-      let match;
-      const palabrasExcluidas = ['HTTP', 'HTTPS', 'DATA', 'BODY', 'TYPE', 'TRUE', 'FALSE', 'VERSION', 'STATUS', 'HTML', 'HEAD'];
-
-      while ((match = regex.exec(cleanText)) !== null) {
-        const moneda = match[1].toUpperCase();
-        const valor = parseFloat(match[2]);
-        if (!palabrasExcluidas.includes(moneda)) {
-          tasasExtraidas[moneda] = valor;
-        }
-      }
-    }
-
-    if (Object.keys(tasasExtraidas).length === 0) {
-      return res.status(200).json({
-        success: false,
-        msg: `Hoo respondió con estado HTTP ${response.status}. El motor está actualizando sus valores.`,
-        tasas: {}
-      });
-    }
-
-    console.log("✅ Tasas extraídas exitosamente desde Hoo:", tasasExtraidas);
-
+app.get('/api/tasas/fetch-hoo', (req, res) => {
+  if (Object.keys(CACHE_TASAS_ATENEA.data).length === 0) {
     return res.json({
-      success: true,
-      count: Object.keys(tasasExtraidas).length,
-      tasas: tasasExtraidas
-    });
-  } catch (err) {
-    console.error("❌ Error en fetch-hoo:", err.message);
-    return res.status(200).json({
       success: false,
-      msg: `No se pudo conectar con Hoo desde el servidor: ${err.message}`,
+      msg: "El escáner nativo de Atenea está ejecutando su primer barrido. Reintenta en 15 segundos.",
       tasas: {}
     });
   }
+
+  res.json({
+    success: true,
+    count: Object.keys(CACHE_TASAS_ATENEA.data).length,
+    timestamp: CACHE_TASAS_ATENEA.timestamp,
+    tasas: CACHE_TASAS_ATENEA.data
+  });
 });
 
 app.post('/api/tasas/publicar', async (req, res) => {
