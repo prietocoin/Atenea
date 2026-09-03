@@ -230,48 +230,62 @@ app.post('/api/directorio', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 2: EXTRAER TASAS DESDE HOO (/radar) CON TIMEOUT Y MANEJO BLINDADO
+// MÓDULO 2: CONSUMO BLINDADO DE HOO CON CONTROL DE RESPUESTAS HTML/TEXTO
 // -----------------------------------------------------------------------------
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
     console.log("📡 Consultando https://hoo.jairokov.com/radar...");
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch('https://hoo.jairokov.com/radar', {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'application/json'
+        'Accept': 'application/json, text/plain, */*'
       }
     });
     clearTimeout(timeout);
 
-    if (!response.ok) {
-      return res.status(200).json({
-        success: false,
-        msg: `La API de Hoo respondió con código de estado HTTP ${response.status}`,
-        tasas: {}
-      });
+    const rawText = await response.text();
+    let data = null;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      console.warn("⚠️ La respuesta recibida no fue un JSON nativo:", rawText.substring(0, 120));
     }
 
-    const data = await response.json();
     let tasasExtraidas = {};
 
     if (data && data.rates && Object.keys(data.rates).length > 0) {
       tasasExtraidas = data.rates;
+    } else {
+      // Extractor por Regex en caso de respuesta en texto plano o HTML estructurado
+      const cleanText = rawText.replace(/\\n/g, '\n');
+      const regex = /([A-Z]{3,6})["\s]*:\s*([0-9]+(?:\.[0-9]+)?)/gi;
+      let match;
+      const palabrasExcluidas = ['HTTP', 'HTTPS', 'DATA', 'BODY', 'TYPE', 'TRUE', 'FALSE', 'VERSION', 'STATUS', 'HTML', 'HEAD'];
+
+      while ((match = regex.exec(cleanText)) !== null) {
+        const moneda = match[1].toUpperCase();
+        const valor = parseFloat(match[2]);
+        if (!palabrasExcluidas.includes(moneda)) {
+          tasasExtraidas[moneda] = valor;
+        }
+      }
     }
 
     if (Object.keys(tasasExtraidas).length === 0) {
       return res.status(200).json({
         success: false,
-        msg: data.msg || "El motor Hoo no devolvió tasas activas en este momento.",
+        msg: `Hoo respondió con estado HTTP ${response.status}. El motor está actualizando sus valores.`,
         tasas: {}
       });
     }
 
-    console.log("✅ Tasas extraídas exitosamente:", tasasExtraidas);
+    console.log("✅ Tasas extraídas exitosamente desde Hoo:", tasasExtraidas);
 
     return res.json({
       success: true,
@@ -282,7 +296,7 @@ app.get('/api/tasas/fetch-hoo', async (req, res) => {
     console.error("❌ Error en fetch-hoo:", err.message);
     return res.status(200).json({
       success: false,
-      msg: `No se pudo conectar con Hoo desde el servidor Express: ${err.message}`,
+      msg: `No se pudo conectar con Hoo desde el servidor: ${err.message}`,
       tasas: {}
     });
   }
