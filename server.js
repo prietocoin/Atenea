@@ -7,7 +7,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// Escudo anti-colapso a nivel de proceso
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Excepción no capturada:', err.message, err.stack);
 });
@@ -39,17 +38,14 @@ pool.connect((err, client, release) => {
   }
 });
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Healthcheck
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Diagnóstico BD
 app.get('/api/test-db', async (req, res) => {
   try {
     const testQuery = await pool.query('SELECT NOW();');
@@ -234,21 +230,30 @@ app.post('/api/directorio', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 2: CONSUMO DE TASAS DESDE HOO (/radar)
+// MÓDULO 2: EXTRAER TASAS DESDE HOO (/radar) CON TIMEOUT Y MANEJO BLINDADO
 // -----------------------------------------------------------------------------
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
-    console.log("📡 Solicitando datos a https://hoo.jairokov.com/radar...");
-    
+    console.log("📡 Consultando https://hoo.jairokov.com/radar...");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
     const response = await fetch('https://hoo.jairokov.com/radar', {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'application/json'
       }
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
-      throw new Error(`Respuesta HTTP no válida: ${response.status}`);
+      return res.status(200).json({
+        success: false,
+        msg: `La API de Hoo respondió con código de estado HTTP ${response.status}`,
+        tasas: {}
+      });
     }
 
     const data = await response.json();
@@ -256,27 +261,29 @@ app.get('/api/tasas/fetch-hoo', async (req, res) => {
 
     if (data && data.rates && Object.keys(data.rates).length > 0) {
       tasasExtraidas = data.rates;
-    } else if (data && data.status === "initializing") {
-      return res.json({
+    }
+
+    if (Object.keys(tasasExtraidas).length === 0) {
+      return res.status(200).json({
         success: false,
-        msg: "El motor Hoo está escaneando divisas en segundo plano. Intenta en unos segundos.",
+        msg: data.msg || "El motor Hoo no devolvió tasas activas en este momento.",
         tasas: {}
       });
     }
 
-    console.log("✅ Tasas capturadas exitosamente desde Hoo:", tasasExtraidas);
+    console.log("✅ Tasas extraídas exitosamente:", tasasExtraidas);
 
-    res.json({
+    return res.json({
       success: true,
       count: Object.keys(tasasExtraidas).length,
       tasas: tasasExtraidas
     });
   } catch (err) {
-    console.error("❌ Error al consultar Hoo desde backend:", err.message);
-    res.status(500).json({ 
-      success: false, 
-      error: "No se pudo conectar con el endpoint /radar de Hoo", 
-      detalle: err.message 
+    console.error("❌ Error en fetch-hoo:", err.message);
+    return res.status(200).json({
+      success: false,
+      msg: `No se pudo conectar con Hoo desde el servidor Express: ${err.message}`,
+      tasas: {}
     });
   }
 });
