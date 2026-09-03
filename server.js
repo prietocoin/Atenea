@@ -6,7 +6,7 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Credenciales verificadas de tu contenedor en Coolify
+// Credenciales de la red interna de Coolify
 const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
 
 const pool = new Pool({
@@ -17,9 +17,9 @@ const pool = new Pool({
 // Verificación inicial de conexión
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('❌ Error de conexión en PostgreSQL:', err.message);
+    console.error('❌ Error conectando a PostgreSQL:', err.message);
   } else {
-    console.log('✅ Backend conectado correctamente a la base de datos "automat"');
+    console.log('✅ Backend conectado a la BD "automat" - Módulo Tabla Maestra');
     release();
   }
 });
@@ -30,19 +30,21 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // -----------------------------------------------------------------------------
-// DIAGNÓSTICO RÁPIDO DE BASE DE DATOS
+// DIAGNÓSTICO DE BASE DE DATOS
 // -----------------------------------------------------------------------------
 app.get('/api/test-db', async (req, res) => {
   try {
     const testQuery = await pool.query('SELECT NOW();');
-    const countMaster = await pool.query('SELECT COUNT(*) FROM comprobantes_fb;');
+    const countMaster = await pool.query(
+      'SELECT COUNT(*) FROM comprobantes_fb f INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo WHERE c.conteo > 1;'
+    );
     const countCola = await pool.query('SELECT COUNT(*) FROM cola_fb;');
     res.json({
       status: 'OK',
       conexion: 'Exitosa',
       hora_servidor: testQuery.rows[0].now,
-      registros_tabla_maestra: countMaster.rows[0].count,
-      registros_cola_staging: countCola.rows[0].count
+      registros_tabla_maestra_validos: parseInt(countMaster.rows[0].count),
+      total_cola_staging: parseInt(countCola.rows[0].count)
     });
   } catch (err) {
     res.status(500).json({ status: 'ERROR', mensaje: err.message, codigo: err.code });
@@ -50,12 +52,13 @@ app.get('/api/test-db', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// 1. LECTURA PRINCIPAL: TABLA MAESTRA (comprobantes_fb + METADATA DE cola_fb)
+// 1. LECTURA PRINCIPAL: TABLA MAESTRA (Filtro estricto: conteo > 1)
 // -----------------------------------------------------------------------------
 const getComprobantesHandler = async (req, res) => {
   try {
-    const { socio, fechaInicio, hash, soloDuplicados } = req.query;
+    const { socio, fechaInicio, hash } = req.query;
 
+    // Regla Maestra: Solo mostrar registros con más de 1 copia (gemelos, trillizos, etc.)
     let query = `
       SELECT 
         f.hash_largo, 
@@ -74,7 +77,7 @@ const getComprobantesHandler = async (req, res) => {
         c.conteo
       FROM comprobantes_fb f
       INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
-      WHERE 1=1
+      WHERE c.conteo > 1
     `;
 
     const values = [];
@@ -99,10 +102,6 @@ const getComprobantesHandler = async (req, res) => {
       paramIndex++;
     }
 
-    if (soloDuplicados === 'true') {
-      query += ` AND c.conteo > 1`;
-    }
-
     query += ` ORDER BY c.timestamp DESC;`;
 
     const { rows } = await pool.query(query, values);
@@ -113,12 +112,12 @@ const getComprobantesHandler = async (req, res) => {
   }
 };
 
-// Endpoints asignados (Mantiene compatibilidad con llamadas a /api/cola)
+// Rutas de lectura compatibles para frontend viejo y nuevo
 app.get('/api/comprobantes', getComprobantesHandler);
 app.get('/api/cola', getComprobantesHandler);
 
 // -----------------------------------------------------------------------------
-// 2. EDICIÓN / AUDITORÍA DIRECTA EN TABLA MAESTRA
+// 2. EDICIÓN / AUDITORÍA EN TABLA MAESTRA
 // -----------------------------------------------------------------------------
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
@@ -162,7 +161,7 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// 3. ELIMINACIÓN DE REGISTROS DE LA TABLA MAESTRA
+// 3. ELIMINACIÓN DIRECTA EN TABLA MAESTRA
 // -----------------------------------------------------------------------------
 app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
@@ -171,10 +170,10 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
     const { rows } = await pool.query(`DELETE FROM comprobantes_fb WHERE hash_largo = $1 RETURNING *;`, [hash_largo]);
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Registro no encontrado en comprobantes_fb' });
+      return res.status(404).json({ error: 'Comprobante no encontrado en tabla maestra' });
     }
 
-    // Marca el registro inerte en la cola
+    // Actualiza el estado en la tabla inerte de respaldo
     await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
 
     res.json({ success: true, message: 'Comprobante eliminado de la tabla maestra' });
@@ -208,7 +207,7 @@ app.get('/api/socios', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// 5. REPORTES CONSOLIDADOS (TABLA MAESTRA)
+// 5. REPORTES POR SOCIO (SOLO REGISTROS VÁLIDOS CON MÁS DE 1 COPIA)
 // -----------------------------------------------------------------------------
 app.get('/api/reportes/socios', async (req, res) => {
   try {
@@ -216,9 +215,10 @@ app.get('/api/reportes/socios', async (req, res) => {
       SELECT 
         COALESCE(c.nombre_socio_1, 'Sin Asignar') AS socio,
         COUNT(DISTINCT f.hash_largo) AS total_comprobantes,
-        SUM(f.monto) AS total_monto_acumulado
+        SUM(COALESCE(f.monto, 0)) AS total_monto_acumulado
       FROM comprobantes_fb f
       INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
+      WHERE c.conteo > 1
       GROUP BY COALESCE(c.nombre_socio_1, 'Sin Asignar')
       ORDER BY total_comprobantes DESC;
     `;
@@ -279,11 +279,11 @@ app.post('/api/directorio', async (req, res) => {
   }
 });
 
-// SPA Fallback (raíz)
+// Fallback SPA (Sirve index.html desde la raíz)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor Backend Atenea activo en puerto ${PORT}`);
+  console.log(`Servidor Backend Atenea v2 activo en puerto ${PORT}`);
 });
