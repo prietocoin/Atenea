@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atenea Panel - Gestión de Comprobantes</title>
-  <!-- FAVICON DESDE LA RAÍZ DEL REPOSITORIO -->
   <link rel="icon" type="image/png" href="/logo.png">
   <link rel="shortcut icon" href="/logo.png">
   
@@ -29,7 +28,6 @@
     <!-- BARRA LATERAL NAV -->
     <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
       <div>
-        <!-- LOGO OFICIAL DESDE RAÍZ -->
         <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
           <img src="/logo.png" alt="Atenea Logo" class="w-10 h-10 rounded-xl border border-purple-500/40 object-cover bg-[#16192b]" onerror="this.onerror=null; this.src='./logo.png';">
           <div>
@@ -40,14 +38,22 @@
 
         <nav class="space-y-1">
           <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Auditoría en Vivo</p>
+          
           <button @click="vistaActiva = 'comprobantes'" :class="vistaActiva === 'comprobantes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
             <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Gestión de Comprobantes
+            Comprobantes
           </button>
+
+          <button @click="vistaActiva = 'tasas'" :class="vistaActiva === 'tasas' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Baúl & Cartelera Tasas
+          </button>
+
           <button @click="vistaActiva = 'reportes'" :class="vistaActiva === 'reportes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
-            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012-2h-2a2 2 0 01-2-2z"/></svg>
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
             Reportes por Socio
           </button>
+
           <div class="pt-4">
             <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Base de Datos</p>
             <button @click="vistaActiva = 'directorio'" :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
@@ -61,6 +67,8 @@
 
     <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 p-3 md:p-6 overflow-x-hidden">
+      
+      <!-- VISTA COMPROBANTES (MÓVIL CARDS 30/70 & ESCRITORIO TABLA) -->
       <template x-if="vistaActiva === 'comprobantes'">
         <div class="space-y-4">
           
@@ -92,12 +100,10 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS 30/70 (TITULAR ACORTADO + IGUALDAD SOCIOS 1 Y 2) -->
+          <!-- 📱 VISTA MÓVIL: CARDS 30/70 -->
           <div class="grid grid-cols-1 gap-3 md:hidden">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/90 rounded-2xl p-2.5 shadow-xl relative gap-3">
-                
-                <!-- COLUMNA IZQUIERDA: 30% (Imagen, Hash y Estado) -->
                 <div class="w-[30%] shrink-0 flex flex-col gap-2">
                   <div class="relative aspect-square">
                     <img :src="item.url_imagen" class="w-full h-full object-cover rounded-xl border border-slate-700/60 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
@@ -105,10 +111,8 @@
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </a>
                   </div>
-                  
                   <div class="flex flex-col items-center gap-1">
                     <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 font-mono text-[9px] font-black border border-purple-500/30 truncate w-full text-center" x-text="item.hash_corto"></span>
-                    
                     <div class="flex items-center gap-1">
                       <span class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-bold" x-text="'x' + item.conteo"></span>
                       <template x-if="item.procesado_ia">
@@ -118,27 +122,19 @@
                   </div>
                 </div>
 
-                <!-- COLUMNA DERECHA: 70% (Monto, Operación, Socios en Paridad y Titular Acortado) -->
                 <div class="w-[70%] flex flex-col justify-between">
-                  
-                  <!-- Fila 1: Monto, Moneda y Botón Tipo -->
                   <div class="flex items-start justify-between">
                     <div>
                       <p class="font-black text-emerald-400 text-sm leading-none" x-text="formatMonto(item.monto)"></p>
                       <p class="text-[9px] font-bold text-slate-400 mt-0.5" x-text="item.moneda || '---'"></p>
                     </div>
-                    
                     <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-                      <button @click="abrirModal(item)" 
-                        :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" 
-                        class="px-2 py-0.5 rounded shadow border text-[10px] font-black uppercase active:scale-95 transition-transform" 
-                        title="Auditar Operación">
+                      <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-2 py-0.5 rounded shadow border text-[10px] font-black uppercase active:scale-95 transition-transform">
                         <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
                       </button>
                     </template>
                   </div>
 
-                  <!-- Fila 2: SOCIOS 1 Y 2 EN MISMA JERARQUÍA (Grid de 2 columnas iguales) -->
                   <div class="grid grid-cols-2 gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800 my-1">
                     <div class="truncate">
                       <p class="text-[7px] font-extrabold text-purple-400 uppercase tracking-tighter">Socio 1</p>
@@ -150,28 +146,23 @@
                     </div>
                   </div>
 
-                  <!-- Fila 3: Banco y Titular Acortado (Primera Palabra) -->
                   <div class="flex items-center justify-between text-[10px] bg-[#16182c] px-2 py-1 rounded border border-slate-800/60">
                     <span class="font-bold text-slate-400 uppercase truncate max-w-[45%]" x-text="item.banco || '-'"></span>
-                    <!-- SE APLICA OBTENER PRIMERA PALABRA AL TITULAR EN MÓVIL -->
                     <span class="font-bold text-slate-200 uppercase truncate max-w-[50%]" x-text="obtenerPrimeraPalabra(item.titular)"></span>
                   </div>
 
-                  <!-- Fila 4: Referencia y Botón Editar Lápiz -->
                   <div class="flex items-center justify-between mt-1.5 pt-1 border-t border-slate-800/80">
                     <span class="font-mono text-[9px] text-slate-400 truncate max-w-[110px]">Ref: <span x-text="item.referencia || '-'"></span></span>
-                    
                     <button @click="abrirModal(item)" class="p-1 rounded bg-purple-600/20 text-purple-300 hover:bg-purple-600/40 active:scale-95 transition-all">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </button>
                   </div>
-
                 </div>
               </div>
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO: TABLA COMPACTA -->
+          <!-- 💻 VISTA ESCRITORIO: TABLA -->
           <div class="hidden md:block bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
@@ -224,7 +215,6 @@
 
                       <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
 
-                      <!-- SOCIOS 1 Y 2 VISIBLES CON MISMA JERARQUÍA -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-2">
                           <div class="flex flex-col">
@@ -253,7 +243,59 @@
         </div>
       </template>
 
-      <!-- MODAL COMPACTO DE AUDITORÍA -->
+      <!-- VISTA NUEVA: MÓDULO 2 (BAÚL DE TASAS EN VIVO) -->
+      <template x-if="vistaActiva === 'tasas'">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold text-white tracking-wide">Baúl & Cartelera de Tasas</h2>
+            <button 
+              @click="consultarApiHoo()" 
+              class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 active:scale-95 transition-all flex items-center gap-2 shadow-lg">
+              <span x-show="!cargandoTasas">🔄 Consultar API (Hoo)</span>
+              <span x-show="cargandoTasas">Obteniendo tasas...</span>
+            </button>
+          </div>
+
+          <!-- TARJETA DEL BAÚL EDITABLE -->
+          <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasas Capturadas (Paso previo a Producción)</p>
+              <template x-if="codigoTasaActual">
+                <span class="px-2 py-0.5 bg-emerald-900/40 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/30 rounded" x-text="'Lote: ' + codigoTasaActual"></span>
+              </template>
+            </div>
+
+            <template x-if="Object.keys(tasasBaul).length === 0">
+              <div class="text-center py-8 text-slate-500 text-xs font-medium">
+                Haz clic en <strong class="text-purple-400">"Consultar API (Hoo)"</strong> para cargar en vivo las divisas del mercado.
+              </div>
+            </template>
+
+            <template x-if="Object.keys(tasasBaul).length > 0">
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <template x-for="(valor, moneda) in tasasBaul" :key="moneda">
+                    <div class="bg-[#1a1d33] p-2.5 rounded-xl border border-slate-700/60 flex flex-col justify-between">
+                      <span class="text-[10px] font-extrabold text-purple-400 uppercase" x-text="moneda"></span>
+                      <input type="number" step="any" x-model="tasasBaul[moneda]" class="w-full bg-transparent text-sm text-emerald-400 font-extrabold outline-none border-b border-slate-700/80 focus:border-purple-500 mt-1">
+                    </div>
+                  </template>
+                </div>
+
+                <div class="flex justify-end pt-2 border-t border-slate-800">
+                  <button 
+                    @click="publicarTasaOficial()" 
+                    class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 active:scale-95 transition-all shadow-lg shadow-emerald-900/40">
+                    🚀 Publicar Tasa Oficial a Producción
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- MODAL AUDITORÍA -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -267,15 +309,12 @@
 
           <template x-if="itemEdicion">
             <div class="space-y-3">
-              
-              <!-- MONTO Y MONEDA -->
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Monto</label>
                   <input type="number" step="0.01" x-model="itemEdicion.monto" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 font-bold outline-none focus:border-purple-500">
                 </div>
                 
-                <!-- CUSTOM DROPDOWN MONEDA -->
                 <div x-data="{ openMoneda: false }" class="relative">
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Moneda</label>
                   <button type="button" @click="openMoneda = !openMoneda" @click.away="openMoneda = false" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase flex justify-between items-center outline-none hover:border-purple-500 transition-colors">
@@ -290,7 +329,6 @@
                 </div>
               </div>
 
-              <!-- SOCIOS EN PARIDAD DENTRO DEL MODAL -->
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Socio 1</label>
@@ -302,7 +340,6 @@
                 </div>
               </div>
 
-              <!-- TIPO OPERACIÓN Y BANCO -->
               <div class="grid grid-cols-2 gap-2">
                 <div x-data="{ openTipo: false }" class="relative">
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Tipo Operación</label>
@@ -325,7 +362,6 @@
                 </div>
               </div>
 
-              <!-- TITULAR Y REFERENCIA -->
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Titular</label>
@@ -337,7 +373,6 @@
                 </div>
               </div>
 
-              <!-- BOTONES -->
               <div class="flex items-center justify-between pt-2 border-t border-slate-800">
                 <button @click="eliminarComprobante(itemEdicion.hash_largo)" class="px-3 py-1.5 bg-rose-600/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-bold hover:bg-rose-600/40 active:scale-95 transition-all">Eliminar</button>
                 <div class="flex gap-2">
@@ -365,6 +400,11 @@
         soloDuplicados: true,
         modalAbierto: false,
         itemEdicion: null,
+
+        // MÓDULO TASAS
+        tasasBaul: {},
+        cargandoTasas: false,
+        codigoTasaActual: '',
 
         listaMonedas: [
           'USD', 'EUR', 'USDT', 'PEN', 'COP', 'CLP', 'ARS', 'MXN', 'BRL', 'VES',
@@ -416,6 +456,43 @@
           }
         },
 
+        // CONSULTA DE TASAS DESDE HOO
+        async consultarApiHoo() {
+          this.cargandoTasas = true;
+          try {
+            const res = await fetch('/api/tasas/fetch-hoo');
+            if (res.ok) {
+              const data = await res.json();
+              this.tasasBaul = data.tasas || {};
+            }
+          } catch (err) {
+            console.error("Error consultando tasas:", err);
+          } finally {
+            this.cargandoTasas = false;
+          }
+        },
+
+        async publicarTasaOficial() {
+          if (Object.keys(this.tasasBaul).length === 0) return;
+          try {
+            const res = await fetch('/api/tasas/publicar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id_tasa: this.codigoTasaActual || null,
+                tasas: this.tasasBaul
+              })
+            });
+            if (res.ok) {
+              const data = await res.json();
+              this.codigoTasaActual = data.id_tasa;
+              alert(`¡Tasa ${data.id_tasa} publicada a producción con éxito!`);
+            }
+          } catch (err) {
+            console.error("Error publicando tasa:", err);
+          }
+        },
+
         getCodigoOperativo(nombreSocio, moneda) {
           if (!nombreSocio || !moneda || !this.directorio.length) return null;
           const socioNorm = nombreSocio.trim().toUpperCase();
@@ -437,7 +514,6 @@
           return mapa[codigo] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
         },
 
-        // EXTRACCIÓN GARANTIZADA DE LA PRIMERA PALABRA (MÓVIL Y ESCRITORIO)
         obtenerPrimeraPalabra(texto) {
           if (!texto) return '-';
           const str = String(texto).trim();
