@@ -254,8 +254,8 @@
             <button 
               @click="consultarApiHoo()" 
               class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 active:scale-95 transition-all flex items-center gap-2 shadow-lg">
-              <span x-show="!cargandoTasas">🔄 Consultar API (Hoo)</span>
-              <span x-show="cargandoTasas">Consultando /radar...</span>
+              <span x-show="!cargandoTasas">🔄 Consultar Motor Nativo</span>
+              <span x-show="cargandoTasas">Cargando tasas...</span>
             </button>
           </div>
 
@@ -276,7 +276,7 @@
 
             <template x-if="Object.keys(tasasBaul).length === 0">
               <div class="text-center py-8 text-slate-500 text-xs font-medium">
-                Haz clic en <strong class="text-purple-400">"Consultar API (Hoo)"</strong> para cargar en vivo las divisas del mercado desde /radar.
+                Haz clic en <strong class="text-purple-400">"Consultar Motor Nativo"</strong> para obtener las divisas capturadas localmente.
               </div>
             </template>
 
@@ -468,7 +468,7 @@
 
         async consultarApiHoo() {
           this.cargandoTasas = true;
-          this.mensajeTasas = 'Consultando Hoo (/radar)...';
+          this.mensajeTasas = 'Consultando motor local de tasas...';
           try {
             const res = await fetch('/api/tasas/fetch-hoo');
             const data = await res.json();
@@ -477,11 +477,11 @@
               this.tasasBaul = data.tasas;
               this.mensajeTasas = '';
             } else {
-              this.mensajeTasas = data.msg || data.error || 'No se recibieron tasas del monitor Hoo.';
+              this.mensajeTasas = data.msg || 'No se recibieron tasas del escáner nativo.';
             }
           } catch (err) {
             console.error("Error al consultar tasas:", err);
-            this.mensajeTasas = 'Error de conexión interno con el panel Express.';
+            this.mensajeTasas = 'Error de comunicación con el backend.';
           } finally {
             this.cargandoTasas = false;
           }
