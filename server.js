@@ -43,30 +43,30 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// CACHÉ LOCAL DE TASAS
 let CACHE_TASAS_ATENEA = {
   data: {},
   timestamp: 0,
   estado: 'inicializando'
 };
 
-async function iniciarWorkerRadarNativo() {
+async function actualizarCacheNativa() {
   try {
     const tasas = await ejecutarRadarCompleto();
-    if (Object.keys(tasas).length > 0) {
+    if (tasas && Object.keys(tasas).length > 0) {
       CACHE_TASAS_ATENEA.data = tasas;
       CACHE_TASAS_ATENEA.timestamp = Math.floor(Date.now() / 1000);
       CACHE_TASAS_ATENEA.estado = 'listo';
     }
+    return tasas;
   } catch (err) {
-    console.error("❌ Fallo en Worker Radar Atenea:", err.message);
-  } finally {
-    setTimeout(iniciarWorkerRadarNativo, 5 * 60 * 1000);
+    console.error("❌ Fallo actualizando caché de tasas:", err.message);
+    return {};
   }
 }
 
-// Inicia el worker nativo al arrancar el servidor
-iniciarWorkerRadarNativo();
+// Inicia el barrido en segundo plano cada 5 minutos
+actualizarCacheNativa();
+setInterval(actualizarCacheNativa, 5 * 60 * 1000);
 
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
@@ -256,23 +256,35 @@ app.post('/api/directorio', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 2: ENDPOINT LECTURA ULTRA-RÁPIDA DE TASAS LOCALES
+// MÓDULO 2: ENDPOINT DE CONSULTA DE TASAS CON RESPUESTA INMEDIATA
 // -----------------------------------------------------------------------------
-app.get('/api/tasas/fetch-hoo', (req, res) => {
-  if (Object.keys(CACHE_TASAS_ATENEA.data).length === 0) {
+app.get('/api/tasas/fetch-hoo', async (req, res) => {
+  try {
+    let tasas = CACHE_TASAS_ATENEA.data;
+
+    if (!tasas || Object.keys(tasas).length === 0) {
+      console.log("⚡ Memoria vacía, ejecutando escaneo en vivo con Proxy...");
+      tasas = await actualizarCacheNativa();
+    }
+
+    if (tasas && Object.keys(tasas).length > 0) {
+      return res.json({
+        success: true,
+        count: Object.keys(tasas).length,
+        timestamp: CACHE_TASAS_ATENEA.timestamp,
+        tasas: tasas
+      });
+    }
+
     return res.json({
       success: false,
-      msg: "El escáner nativo de Atenea está ejecutando su primer barrido. Reintenta en 15 segundos.",
+      msg: "No se pudieron capturar las tasas del mercado en este momento.",
       tasas: {}
     });
+  } catch (err) {
+    console.error("❌ Error en fetch-hoo:", err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
-
-  res.json({
-    success: true,
-    count: Object.keys(CACHE_TASAS_ATENEA.data).length,
-    timestamp: CACHE_TASAS_ATENEA.timestamp,
-    tasas: CACHE_TASAS_ATENEA.data
-  });
 });
 
 app.post('/api/tasas/publicar', async (req, res) => {
