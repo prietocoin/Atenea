@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// Escudo anti-colapso global del proceso
+// 🛡️ ESCUDO GLOBAL ANTI-COLAPSO DEL PROCESO
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Excepción no capturada:', err.message, err.stack);
 });
@@ -16,7 +16,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ Promesa rechazada no capturada:', reason);
 });
 
-// Credenciales verificadas de la red interna de Coolify
+// Credenciales de la red interna de Docker / Coolify
 const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
 
 const pool = new Pool({
@@ -35,7 +35,7 @@ pool.connect((err, client, release) => {
   if (err) {
     console.error('❌ Error de conexión con PostgreSQL:', err.message);
   } else {
-    console.log('✅ Backend conectado correctamente a la base de datos "automat"');
+    console.log('✅ Backend conectado correctamente a PostgreSQL ("automat")');
     release();
   }
 });
@@ -45,52 +45,39 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Healthcheck para Coolify
+// Healthcheck
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Diagnóstico de BD
+// Diagnóstico BD
 app.get('/api/test-db', async (req, res) => {
   try {
     const testQuery = await pool.query('SELECT NOW();');
     const countMaster = await pool.query(
       'SELECT COUNT(*) FROM comprobantes_fb f INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo WHERE c.conteo > 1;'
     );
-    const countCola = await pool.query('SELECT COUNT(*) FROM cola_fb;');
     res.json({
       status: 'OK',
-      conexion: 'Exitosa',
       hora_servidor: testQuery.rows[0].now,
-      registros_tabla_maestra_validos: parseInt(countMaster.rows[0].count),
-      total_cola_staging: parseInt(countCola.rows[0].count)
+      registros_tabla_maestra: parseInt(countMaster.rows[0].count)
     });
   } catch (err) {
-    res.status(500).json({ status: 'ERROR', mensaje: err.message, codigo: err.code });
+    res.status(500).json({ status: 'ERROR', mensaje: err.message });
   }
 });
 
-// LECTURA DE COMPROBANTES (TABLA MAESTRA, CONTEO > 1)
+// -----------------------------------------------------------------------------
+// MÓDULO 1: COMPROBANTES (FUNCIONALIDAD PREVIA INTACTA)
+// -----------------------------------------------------------------------------
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
 
     let query = `
       SELECT 
-        f.hash_largo, 
-        f.monto, 
-        f.moneda, 
-        f.banco, 
-        f.referencia, 
-        f.titular, 
-        f.procesado_ia,
-        c.hash_corto, 
-        c.url_imagen, 
-        c.nombre_socio_1, 
-        c.nombre_socio_2, 
-        c.caption, 
-        c.timestamp, 
-        c.conteo
+        f.hash_largo, f.monto, f.moneda, f.banco, f.referencia, f.titular, f.procesado_ia,
+        c.hash_corto, c.url_imagen, c.nombre_socio_1, c.nombre_socio_2, c.caption, c.timestamp, c.conteo
       FROM comprobantes_fb f
       INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
       WHERE c.conteo > 1
@@ -131,7 +118,6 @@ const getComprobantesHandler = async (req, res) => {
 app.get('/api/comprobantes', getComprobantesHandler);
 app.get('/api/cola', getComprobantesHandler);
 
-// EDICIÓN EN TABLA MAESTRA
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
     const { hash_largo } = req.params;
@@ -139,15 +125,8 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
 
     const queryMaster = `
       UPDATE comprobantes_fb
-      SET 
-        monto = $1,
-        moneda = $2,
-        banco = $3,
-        referencia = $4,
-        titular = $5,
-        procesado_ia = TRUE
-      WHERE hash_largo = $6
-      RETURNING *;
+      SET monto = $1, moneda = $2, banco = $3, referencia = $4, titular = $5, procesado_ia = TRUE
+      WHERE hash_largo = $6 RETURNING *;
     `;
 
     const { rows } = await pool.query(queryMaster, [
@@ -173,27 +152,23 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   }
 });
 
-// ELIMINACIÓN EN TABLA MAESTRA
 app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
     const { hash_largo } = req.params;
-
     const { rows } = await pool.query(`DELETE FROM comprobantes_fb WHERE hash_largo = $1 RETURNING *;`, [hash_largo]);
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Comprobante no encontrado en tabla maestra' });
+      return res.status(404).json({ error: 'Comprobante no encontrado' });
     }
 
     await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
-
-    res.json({ success: true, message: 'Comprobante eliminado de la tabla maestra' });
+    res.json({ success: true, message: 'Comprobante eliminado' });
   } catch (err) {
     console.error('Error en DELETE /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// LISTA DE SOCIOS
 app.get('/api/socios', async (req, res) => {
   try {
     const query = `
@@ -203,18 +178,15 @@ app.get('/api/socios', async (req, res) => {
         SELECT nombre_socio_2 AS nombre FROM cola_fb WHERE nombre_socio_2 IS NOT NULL AND nombre_socio_2 != ''
         UNION
         SELECT nombre FROM nombres_fb WHERE roles = 'SOCIO'
-      ) s
-      ORDER BY nombre ASC;
+      ) s ORDER BY nombre ASC;
     `;
     const { rows } = await pool.query(query);
     res.json(rows);
   } catch (err) {
-    console.error('Error en GET /api/socios:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// REPORTES POR SOCIO
 app.get('/api/reportes/socios', async (req, res) => {
   try {
     const query = `
@@ -231,18 +203,15 @@ app.get('/api/reportes/socios', async (req, res) => {
     const { rows } = await pool.query(query);
     res.json(rows);
   } catch (err) {
-    console.error('Error en GET /api/reportes/socios:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// DIRECTORIO (nombres_fb)
 app.get('/api/directorio', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC;');
     res.json(rows);
   } catch (err) {
-    console.error('Error en GET /api/directorio:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -250,40 +219,87 @@ app.get('/api/directorio', async (req, res) => {
 app.post('/api/directorio', async (req, res) => {
   try {
     const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp } = req.body;
-
     const query = `
       INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (id_grupo) DO UPDATE SET
-        nombre = EXCLUDED.nombre,
-        roles = EXCLUDED.roles,
-        moneda_socio = EXCLUDED.moneda_socio,
-        usd = EXCLUDED.usd,
-        pen = EXCLUDED.pen,
-        cop = EXCLUDED.cop,
-        clp = EXCLUDED.clp
+        nombre = EXCLUDED.nombre, roles = EXCLUDED.roles, moneda_socio = EXCLUDED.moneda_socio,
+        usd = EXCLUDED.usd, pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp
       RETURNING *;
     `;
-
-    const { rows } = await pool.query(query, [
-      id_grupo,
-      nombre,
-      roles || 'GRUPO',
-      moneda_socio || null,
-      usd || null,
-      pen || null,
-      cop || null,
-      clp || null
-    ]);
-
+    const { rows } = await pool.query(query, [id_grupo, nombre, roles || 'GRUPO', moneda_socio || null, usd || null, pen || null, cop || null, clp || null]);
     res.json({ success: true, data: rows[0] });
   } catch (err) {
-    console.error('Error en POST /api/directorio:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// SPA Fallback
+// -----------------------------------------------------------------------------
+// MÓDULO 2: BAÚL DE TASAS EN VIVO Y PUBLICACIÓN
+// -----------------------------------------------------------------------------
+
+// Extractor desde la API de Hoo bajo demanda
+app.get('/api/tasas/fetch-hoo', async (req, res) => {
+  try {
+    const response = await fetch('https://hoo.jairokov.com/');
+    const rawText = await response.text();
+
+    const regex = /([A-Z]{3,6}):\s*([0-9]+(?:\.[0-9]+)?)/g;
+    const tasasExtraidas = {};
+    let match;
+
+    while ((match = regex.exec(rawText)) !== null) {
+      const moneda = match[1].toUpperCase();
+      const valor = parseFloat(match[2]);
+      tasasExtraidas[moneda] = valor;
+    }
+
+    res.json({
+      success: true,
+      timestamp: Math.floor(Date.now() / 1000),
+      tasas: tasasExtraidas
+    });
+  } catch (err) {
+    console.error("Error consultando API Hoo:", err.message);
+    res.status(500).json({ error: "No se pudo conectar con la API externa" });
+  }
+});
+
+// Guardar Tasa Oficial de Mercado
+app.post('/api/tasas/publicar', async (req, res) => {
+  try {
+    const { id_tasa, tasas } = req.body; // tasas: { "PEN": 3.37, "COP": 3138, ... }
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    // Auto-generar id_tasa si no viene informado
+    let codigoTasa = id_tasa;
+    if (!codigoTasa) {
+      const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
+      if (lastRes.rows.length > 0) {
+        const num = parseInt(lastRes.rows[0].id_tasa.replace('T', '')) + 1;
+        codigoTasa = `T${String(num).padStart(3, '0')}`;
+      } else {
+        codigoTasa = 'T359';
+      }
+    }
+
+    for (const [moneda, valor] of Object.entries(tasas)) {
+      if (valor && !isNaN(valor)) {
+        await pool.query(
+          `INSERT INTO mercado_tasas (id_tasa, moneda, tasa_base, timestamp) VALUES ($1, $2, $3, $4);`,
+          [codigoTasa, moneda.toUpperCase(), parseFloat(valor), timestamp]
+        );
+      }
+    }
+
+    res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
+  } catch (err) {
+    console.error("Error al publicar tasa:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fallback SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
