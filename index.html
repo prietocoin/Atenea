@@ -26,7 +26,9 @@
     <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
       <div>
         <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
-          <div class="w-10 h-10 rounded-xl bg-purple-900/50 border border-purple-500/40 flex items-center justify-center text-purple-300 font-bold text-lg shadow-lg">🦉</div>
+          <div class="w-10 h-10 rounded-xl bg-purple-900/50 border border-purple-500/40 flex items-center justify-center text-purple-300 font-bold text-lg shadow-lg">
+            🦉
+          </div>
           <div>
             <h1 class="font-extrabold text-white text-base tracking-wide">FUNDABLOCK</h1>
             <p class="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Atenea Panel v2.0</p>
@@ -59,9 +61,12 @@
 
     <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 p-3 md:p-6 overflow-x-hidden">
+      
+      <!-- VISTA COMPROBANTES -->
       <template x-if="vistaActiva === 'comprobantes'">
         <div class="space-y-4">
           
+          <!-- ENCABEZADO -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 class="text-lg font-bold text-white tracking-wide">Gestión De Comprobantes & IA</h2>
             <div class="flex items-center gap-2">
@@ -93,7 +98,7 @@
             </label>
           </div>
 
-          <!-- METRICAS -->
+          <!-- METRICAS COMPACTAS -->
           <div class="grid grid-cols-4 gap-2">
             <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
               <p class="text-[9px] font-bold text-slate-400 uppercase">RECIBIDOS</p>
@@ -113,8 +118,92 @@
             </div>
           </div>
 
-          <!-- TABLA -->
-          <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
+          <!-- 📱 VISTA DE TARJETAS TÁCTILES (MÓVIL: md:hidden) -->
+          <div class="grid grid-cols-1 gap-3 md:hidden">
+            <template x-for="item in comprobantes" :key="item.hash_largo">
+              <div class="bg-[#131525] border border-slate-800/90 rounded-2xl p-3.5 space-y-2.5 shadow-xl relative overflow-hidden active:border-purple-500/50 transition-all">
+                
+                <!-- Header de Tarjeta: Foto + Hash + Lápiz + Conteo/IA -->
+                <div class="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                  <div class="flex items-center gap-2.5">
+                    <img :src="item.url_imagen" class="w-11 h-11 object-cover rounded-xl border border-slate-700/60 bg-slate-900 shadow-md" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded bg-purple-900/50 text-purple-300 font-mono text-xs border border-purple-500/40 font-black shadow-inner" x-text="item.hash_corto"></span>
+                        
+                        <!-- BOTÓN LÁPIZ AUDITAR -->
+                        <button 
+                          @click="abrirModal(item)" 
+                          class="p-1.5 rounded-lg text-purple-300 bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/40 active:scale-95 transition-all shadow-md"
+                          title="Auditar Comprobante">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div class="flex items-center gap-1.5 mt-1">
+                        <span class="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold" x-text="'x' + item.conteo"></span>
+                        <template x-if="item.procesado_ia">
+                          <span class="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">✓ IA OK</span>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+
+                  <a :href="item.url_imagen" target="_blank" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </a>
+                </div>
+
+                <!-- Monto Extraído & Insignia D / P / A / C -->
+                <div class="flex items-center justify-between bg-[#181b30] p-2.5 rounded-xl border border-slate-800/60">
+                  <div>
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Monto & Moneda</p>
+                    <p class="font-black text-emerald-400 text-base" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></p>
+                  </div>
+
+                  <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                    <div class="flex flex-col items-end">
+                      <span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Operación</span>
+                      <span 
+                        :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))"
+                        class="px-2.5 py-1 rounded-lg text-xs font-black border uppercase tracking-wider shadow-md"
+                        x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                      </span>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Detalle de Socios & Banco -->
+                <div class="grid grid-cols-2 gap-2 text-xs pt-0.5">
+                  <div class="bg-[#181b30]/50 p-2 rounded-lg border border-slate-800/40">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase">Socio 1</p>
+                    <p class="font-extrabold text-purple-300 truncate" x-text="item.nombre_socio_1 || '-'"></p>
+                    <template x-if="item.nombre_socio_2">
+                      <p class="text-[9px] text-pink-400/90 font-semibold truncate mt-0.5" x-text="'+ ' + item.nombre_socio_2"></p>
+                    </template>
+                  </div>
+
+                  <div class="bg-[#181b30]/50 p-2 rounded-lg border border-slate-800/40">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase">Banco / Titular</p>
+                    <p class="font-bold text-slate-200 uppercase truncate" x-text="item.banco || '-'"></p>
+                    <p class="text-[9px] text-slate-400 uppercase truncate" x-text="item.titular || '-'"></p>
+                  </div>
+                </div>
+
+                <!-- Referencia & Fecha -->
+                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60 font-medium">
+                  <span>Ref: <strong class="font-mono text-slate-200" x-text="item.referencia || '-'"></strong></span>
+                  <span class="text-slate-500" x-text="formatFecha(item.timestamp)"></span>
+                </div>
+
+              </div>
+            </template>
+          </div>
+
+          <!-- 💻 VISTA DE TABLA COMPACTA (ESCRITORIO: hidden md:block) -->
+          <div class="hidden md:block bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
                 <thead>
@@ -189,7 +278,7 @@
         </div>
       </template>
 
-      <!-- MODAL AUDITORÍA -->
+      <!-- MODAL COMPACTO DE AUDITORÍA -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl">
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -276,6 +365,7 @@
         modalAbierto: false,
         itemEdicion: null,
 
+        // MONEDAS AMÉRICA + EURO + USDT
         listaMonedas: [
           'USD', 'EUR', 'USDT', 'PEN', 'COP', 'CLP', 'ARS', 'MXN', 'BRL', 'VES',
           'PYG', 'DOP', 'CRC', 'CAD', 'ECU', 'PAN', 'BOB', 'UYU', 'GTQ', 'HNL',
