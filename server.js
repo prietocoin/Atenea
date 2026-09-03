@@ -1,289 +1,454 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { Pool } = require('pg');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Credenciales de la red interna de Coolify
-const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || DEFAULT_DB_URL,
-  ssl: false
-});
-
-// Verificación inicial de conexión
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ Error conectando a PostgreSQL:', err.message);
-  } else {
-    console.log('✅ Backend conectado a la BD "automat" - Módulo Tabla Maestra');
-    release();
-  }
-});
-
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.static(__dirname));
-
-// -----------------------------------------------------------------------------
-// DIAGNÓSTICO DE BASE DE DATOS
-// -----------------------------------------------------------------------------
-app.get('/api/test-db', async (req, res) => {
-  try {
-    const testQuery = await pool.query('SELECT NOW();');
-    const countMaster = await pool.query(
-      'SELECT COUNT(*) FROM comprobantes_fb f INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo WHERE c.conteo > 1;'
-    );
-    const countCola = await pool.query('SELECT COUNT(*) FROM cola_fb;');
-    res.json({
-      status: 'OK',
-      conexion: 'Exitosa',
-      hora_servidor: testQuery.rows[0].now,
-      registros_tabla_maestra_validos: parseInt(countMaster.rows[0].count),
-      total_cola_staging: parseInt(countCola.rows[0].count)
-    });
-  } catch (err) {
-    res.status(500).json({ status: 'ERROR', mensaje: err.message, codigo: err.code });
-  }
-});
-
-// -----------------------------------------------------------------------------
-// 1. LECTURA PRINCIPAL: TABLA MAESTRA (Filtro estricto: conteo > 1)
-// -----------------------------------------------------------------------------
-const getComprobantesHandler = async (req, res) => {
-  try {
-    const { socio, fechaInicio, hash } = req.query;
-
-    // Regla Maestra: Solo mostrar registros con más de 1 copia (gemelos, trillizos, etc.)
-    let query = `
-      SELECT 
-        f.hash_largo, 
-        f.monto, 
-        f.moneda, 
-        f.banco, 
-        f.referencia, 
-        f.titular, 
-        f.procesado_ia,
-        c.hash_corto, 
-        c.url_imagen, 
-        c.nombre_socio_1, 
-        c.nombre_socio_2, 
-        c.caption, 
-        c.timestamp, 
-        c.conteo
-      FROM comprobantes_fb f
-      INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
-      WHERE c.conteo > 1
-    `;
-
-    const values = [];
-    let paramIndex = 1;
-
-    if (socio) {
-      query += ` AND (c.nombre_socio_1 = $${paramIndex} OR c.nombre_socio_2 = $${paramIndex})`;
-      values.push(socio);
-      paramIndex++;
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atenea Panel - Gestión de Comprobantes</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#0d0f1d',
+              card: '#16192b',
+              border: '#262a42',
+              accent: '#8b5cf6'
+            }
+          }
+        }
+      }
     }
+  </script>
+</head>
+<body class="bg-[#0b0d19] text-slate-200 font-sans antialiased min-h-screen" x-data="app()" x-init="init()">
 
-    if (fechaInicio) {
-      const startTimestamp = Math.floor(new Date(fechaInicio).getTime() / 1000);
-      query += ` AND c.timestamp >= $${paramIndex}`;
-      values.push(startTimestamp);
-      paramIndex++;
+  <div class="flex flex-col md:flex-row min-h-screen">
+    
+    <!-- BARRA LATERAL NAV -->
+    <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
+      <div>
+        <!-- LOGO & TITULO -->
+        <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
+          <div class="w-10 h-10 rounded-xl bg-purple-900/50 border border-purple-500/40 flex items-center justify-center text-purple-300 font-bold text-lg shadow-lg">
+            🦉
+          </div>
+          <div>
+            <h1 class="font-extrabold text-white text-base tracking-wide">FUNDABLOCK</h1>
+            <p class="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Atenea Panel v2.0</p>
+          </div>
+        </div>
+
+        <!-- MENU -->
+        <nav class="space-y-1">
+          <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Auditoría en Vivo</p>
+          
+          <button 
+            @click="vistaActiva = 'comprobantes'" 
+            :class="vistaActiva === 'comprobantes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" 
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Gestión de Comprobantes
+          </button>
+
+          <button 
+            @click="vistaActiva = 'reportes'" 
+            :class="vistaActiva === 'reportes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" 
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Reportes por Socio
+          </button>
+
+          <div class="pt-4">
+            <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Base de Datos</p>
+            <button 
+              @click="vistaActiva = 'directorio'" 
+              :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" 
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
+              <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              Directorio (nombres_fb)
+            </button>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 p-3 md:p-6 overflow-x-hidden">
+      
+      <!-- SECCION: COMPROBANTES -->
+      <template x-if="vistaActiva === 'comprobantes'">
+        <div class="space-y-4">
+          
+          <!-- ENCABEZADO -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 class="text-lg font-bold text-white tracking-wide">Gestión De Comprobantes & IA</h2>
+            <div class="flex items-center gap-2">
+              <button @click="cargarComprobantes()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/60 active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              </button>
+              <span class="px-2.5 py-1 rounded-xl bg-purple-900/40 text-purple-300 text-xs font-semibold border border-purple-500/30">
+                <span x-text="comprobantes.length"></span> ítems
+              </span>
+            </div>
+          </div>
+
+          <!-- FILTROS COMPACTOS -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800">
+            <select x-model="filtroSocio" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 outline-none">
+              <option value="">Todos los Socios</option>
+              <template x-for="s in socios" :key="s">
+                <option :value="s" x-text="s"></option>
+              </template>
+            </select>
+
+            <input type="date" x-model="filtroFecha" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 outline-none" />
+
+            <input type="text" x-model="filtroHash" @input.debounce.300ms="cargarComprobantes()" placeholder="Buscar Hash..." class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 outline-none" />
+
+            <label class="flex items-center gap-2 px-2.5 py-1.5 bg-[#1a1d33] border border-slate-700/80 rounded-lg cursor-pointer text-xs text-slate-300">
+              <input type="checkbox" x-model="soloDuplicados" @change="cargarComprobantes()" class="rounded bg-slate-800 border-slate-600 text-purple-600 focus:ring-purple-500">
+              <span>Duplicados (>1)</span>
+            </label>
+          </div>
+
+          <!-- METRICAS COMPACTAS -->
+          <div class="grid grid-cols-4 gap-2">
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-slate-400 uppercase">RECIBIDOS</p>
+              <p class="text-lg font-extrabold text-white mt-0.5" x-text="metricas.recibidos"></p>
+            </div>
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-emerald-400 uppercase">IA OK</p>
+              <p class="text-lg font-extrabold text-emerald-400 mt-0.5" x-text="metricas.iaOk"></p>
+            </div>
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-rose-400 uppercase">DESCARTADOS</p>
+              <p class="text-lg font-extrabold text-rose-400 mt-0.5" x-text="metricas.descartados"></p>
+            </div>
+            <div class="bg-[#131525] p-2.5 rounded-xl border border-slate-800 text-center">
+              <p class="text-[9px] font-bold text-amber-400 uppercase">DUPLICADOS</p>
+              <p class="text-lg font-extrabold text-amber-400 mt-0.5" x-text="metricas.duplicados"></p>
+            </div>
+          </div>
+
+          <!-- TABLA COMPACTA MÓVIL (SIN COLUMNA ACCIÓN EXTRA) -->
+          <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px] tracking-wider">
+                    <th class="px-3 py-2.5">IMAGEN & R2</th>
+                    <th class="px-3 py-2.5">HASH / ESTADO</th>
+                    <th class="px-3 py-2.5">MONTO & MONEDA</th>
+                    <th class="px-3 py-2.5">BANCO / TITULAR</th>
+                    <th class="px-3 py-2.5">REFERENCIA</th>
+                    <th class="px-3 py-2.5">SOCIO & TIPO</th>
+                    <th class="px-3 py-2.5">FECHA / HORA</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
+                  <template x-for="item in comprobantes" :key="item.hash_largo">
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                      
+                      <!-- IMAGEN -->
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <div class="flex items-center gap-1.5">
+                          <img :src="item.url_imagen" class="w-8 h-8 object-cover rounded-lg border border-slate-700/60 bg-slate-900" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
+                          <a :href="item.url_imagen" target="_blank" class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                          </a>
+                        </div>
+                      </td>
+
+                      <!-- HASH & EDICIÓN (LÁPIZ JUNTO AL HASH) -->
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <div class="flex items-center gap-1">
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 font-mono text-[10px] border border-purple-500/30 font-bold" x-text="item.hash_corto"></span>
+                          
+                          <!-- LÁPIZ TÁCTIL PARA EDICIÓN MÓVIL -->
+                          <button 
+                            @click="abrirModal(item)" 
+                            class="p-1 rounded text-slate-400 hover:text-purple-300 hover:bg-purple-900/40 active:scale-95 transition-all"
+                            title="Auditar Comprobante">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <!-- INDICADORES REPETICIÓN & IA -->
+                        <div class="flex items-center gap-1 mt-0.5">
+                          <span class="px-1 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-bold" x-text="'x' + item.conteo"></span>
+                          <template x-if="item.procesado_ia">
+                            <span class="px-1 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">✓ IA OK</span>
+                          </template>
+                        </div>
+                      </td>
+
+                      <!-- MONTO & MONEDA -->
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <span class="font-bold text-emerald-400 text-xs" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></span>
+                      </td>
+
+                      <!-- BANCO / TITULAR -->
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <p class="font-bold text-slate-200 uppercase text-[11px]" x-text="item.banco || '-'"></p>
+                        <p class="text-[9px] text-slate-400 uppercase" x-text="item.titular || '-'"></p>
+                      </td>
+
+                      <!-- REFERENCIA -->
+                      <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
+
+                      <!-- SOCIO 1 & CRUCE CÓDIGO D/P/A/C -->
+                      <td class="px-3 py-2 align-middle whitespace-nowrap">
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-bold text-purple-300" x-text="item.nombre_socio_1 || '-'"></span>
+                          
+                          <!-- Insignia D / P / A / C basada en Socio 1 + Moneda -->
+                          <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                            <span 
+                              :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))"
+                              class="px-1.5 py-0.2 rounded text-[9px] font-black border uppercase tracking-wider"
+                              x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                            </span>
+                          </template>
+                        </div>
+                        <template x-if="item.nombre_socio_2">
+                          <p class="text-[9px] text-pink-400/80 font-semibold" x-text="'+ ' + item.nombre_socio_2"></p>
+                        </template>
+                      </td>
+
+                      <!-- FECHA / HORA -->
+                      <td class="px-3 py-2 align-middle text-slate-400 text-[10px] whitespace-nowrap" x-text="formatFecha(item.timestamp)"></td>
+
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </template>
+
+      <!-- MODAL COMPACTO DE AUDITORÍA -->
+      <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl">
+          
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+              <span>Auditar Comprobante</span>
+              <span class="text-xs text-purple-400 font-mono" x-text="itemEdicion ? itemEdicion.hash_corto : ''"></span>
+            </h3>
+            <button @click="modalAbierto = false" class="text-slate-400 hover:text-white text-sm">✕</button>
+          </div>
+
+          <template x-if="itemEdicion">
+            <div class="space-y-2.5">
+              
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Monto</label>
+                  <input type="number" step="0.01" x-model="itemEdicion.monto" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Moneda</label>
+                  <input type="text" x-model="itemEdicion.moneda" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Banco</label>
+                <input type="text" x-model="itemEdicion.banco" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase">
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Referencia</label>
+                  <input type="text" x-model="itemEdicion.referencia" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Titular</label>
+                  <input type="text" x-model="itemEdicion.titular" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase">
+                </div>
+              </div>
+
+              <!-- EDICIÓN DE SOCIOS -->
+              <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+                <div>
+                  <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Socio 1</label>
+                  <input type="text" x-model="itemEdicion.nombre_socio_1" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-purple-200 uppercase">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Socio 2</label>
+                  <input type="text" x-model="itemEdicion.nombre_socio_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-200 uppercase">
+                </div>
+              </div>
+
+              <!-- BOTONES DE ACCIÓN -->
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                <button @click="eliminarComprobante(itemEdicion.hash_largo)" class="px-3 py-1.5 bg-rose-600/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-bold hover:bg-rose-600/40 active:scale-95 transition-all">
+                  Eliminar
+                </button>
+                <div class="flex gap-2">
+                  <button @click="modalAbierto = false" class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">Cancelar</button>
+                  <button @click="guardarCambios()" class="px-3.5 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-500 active:scale-95 transition-all">Guardar</button>
+                </div>
+              </div>
+
+            </div>
+          </template>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- SCRIPT LÓGICA ALPINE.JS -->
+  <script>
+    function app() {
+      return {
+        vistaActiva: 'comprobantes',
+        comprobantes: [],
+        socios: [],
+        directorio: [],
+        filtroSocio: '',
+        filtroFecha: '',
+        filtroHash: '',
+        soloDuplicados: true,
+        modalAbierto: false,
+        itemEdicion: null,
+
+        metricas: {
+          recibidos: 0,
+          iaOk: 0,
+          descartados: 0,
+          duplicados: 0
+        },
+
+        async init() {
+          await this.cargarSocios();
+          await this.cargarDirectorio();
+          await this.cargarComprobantes();
+        },
+
+        async cargarComprobantes() {
+          const params = new URLSearchParams();
+          if (this.filtroSocio) params.append('socio', this.filtroSocio);
+          if (this.filtroFecha) params.append('fechaInicio', this.filtroFecha);
+          if (this.filtroHash) params.append('hash', this.filtroHash);
+          if (this.soloDuplicados) params.append('soloDuplicados', 'true');
+
+          try {
+            const res = await fetch(`/api/comprobantes?${params.toString()}`);
+            if (res.ok) {
+              this.comprobantes = await res.json();
+              this.calcularMetricas();
+            }
+          } catch (err) {
+            console.error("Error al cargar comprobantes:", err);
+          }
+        },
+
+        async cargarSocios() {
+          try {
+            const res = await fetch('/api/socios');
+            if (res.ok) this.socios = (await res.json()).map(s => s.nombre);
+          } catch (err) {
+            console.error("Error al cargar socios:", err);
+          }
+        },
+
+        async cargarDirectorio() {
+          try {
+            const res = await fetch('/api/directorio');
+            if (res.ok) this.directorio = await res.json();
+          } catch (err) {
+            console.error("Error al cargar directorio:", err);
+          }
+        },
+
+        // CRUCE SOCIO 1 VS MONEDA COMPROBANTE
+        getCodigoOperativo(nombreSocio, moneda) {
+          if (!nombreSocio || !moneda || !this.directorio.length) return null;
+          
+          const socioNorm = nombreSocio.trim().toUpperCase();
+          const monedaNorm = moneda.trim().toUpperCase();
+
+          const registroSocio = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          if (!registroSocio) return null;
+
+          const codigo = registroSocio[monedaNorm] || registroSocio[monedaNorm.toLowerCase()];
+          return codigo ? codigo.toUpperCase() : null;
+        },
+
+        claseInsignia(codigo) {
+          const mapa = {
+            'D': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+            'P': 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+            'A': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+            'C': 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+          };
+          return mapa[codigo] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
+        },
+
+        calcularMetricas() {
+          this.metricas.recibidos = this.comprobantes.length;
+          this.metricas.iaOk = this.comprobantes.filter(c => c.procesado_ia).length;
+          this.metricas.descartados = 0;
+          this.metricas.duplicados = this.comprobantes.filter(c => c.conteo > 1).length;
+        },
+
+        abrirModal(item) {
+          this.itemEdicion = { ...item };
+          this.modalAbierto = true;
+        },
+
+        async guardarCambios() {
+          try {
+            const res = await fetch(`/api/comprobantes/${this.itemEdicion.hash_largo}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.itemEdicion)
+            });
+            if (res.ok) {
+              this.modalAbierto = false;
+              await this.cargarComprobantes();
+            }
+          } catch (err) {
+            console.error("Error al guardar cambios:", err);
+          }
+        },
+
+        async eliminarComprobante(hash_largo) {
+          if (!confirm('¿Deseas eliminar este comprobante de la tabla maestra?')) return;
+          try {
+            const res = await fetch(`/api/comprobantes/${hash_largo}`, { method: 'DELETE' });
+            if (res.ok) {
+              this.modalAbierto = false;
+              await this.cargarComprobantes();
+            }
+          } catch (err) {
+            console.error("Error al eliminar comprobante:", err);
+          }
+        },
+
+        formatMonto(val) {
+          if (!val) return '0.00';
+          return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        formatFecha(ts) {
+          if (!ts) return '-';
+          const date = new Date(ts * 1000);
+          return `${date.getDate()}/${date.getMonth()+1}, ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+        }
+      }
     }
-
-    if (hash) {
-      query += ` AND c.hash_corto = $${paramIndex}`;
-      values.push(hash);
-      paramIndex++;
-    }
-
-    query += ` ORDER BY c.timestamp DESC;`;
-
-    const { rows } = await pool.query(query, values);
-    res.json(rows);
-  } catch (err) {
-    console.error('Error en GET /api/comprobantes:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Rutas de lectura compatibles para frontend viejo y nuevo
-app.get('/api/comprobantes', getComprobantesHandler);
-app.get('/api/cola', getComprobantesHandler);
-
-// -----------------------------------------------------------------------------
-// 2. EDICIÓN / AUDITORÍA EN TABLA MAESTRA
-// -----------------------------------------------------------------------------
-app.put('/api/comprobantes/:hash_largo', async (req, res) => {
-  try {
-    const { hash_largo } = req.params;
-    const { monto, moneda, banco, referencia, titular, nombre_socio_1, nombre_socio_2 } = req.body;
-
-    const queryMaster = `
-      UPDATE comprobantes_fb
-      SET 
-        monto = $1,
-        moneda = $2,
-        banco = $3,
-        referencia = $4,
-        titular = $5,
-        procesado_ia = TRUE
-      WHERE hash_largo = $6
-      RETURNING *;
-    `;
-
-    const { rows } = await pool.query(queryMaster, [
-      monto !== undefined && monto !== '' ? parseFloat(monto) : null,
-      moneda || null,
-      banco ? banco.toUpperCase() : null,
-      referencia || null,
-      titular ? titular.toUpperCase() : null,
-      hash_largo
-    ]);
-
-    if (nombre_socio_1 !== undefined || nombre_socio_2 !== undefined) {
-      await pool.query(
-        `UPDATE cola_fb SET nombre_socio_1 = $1, nombre_socio_2 = $2 WHERE hash_largo = $3;`,
-        [nombre_socio_1 || null, nombre_socio_2 || null, hash_largo]
-      );
-    }
-
-    res.json({ success: true, data: rows[0] });
-  } catch (err) {
-    console.error('Error en PUT /api/comprobantes:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -----------------------------------------------------------------------------
-// 3. ELIMINACIÓN DIRECTA EN TABLA MAESTRA
-// -----------------------------------------------------------------------------
-app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
-  try {
-    const { hash_largo } = req.params;
-
-    const { rows } = await pool.query(`DELETE FROM comprobantes_fb WHERE hash_largo = $1 RETURNING *;`, [hash_largo]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Comprobante no encontrado en tabla maestra' });
-    }
-
-    // Actualiza el estado en la tabla inerte de respaldo
-    await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
-
-    res.json({ success: true, message: 'Comprobante eliminado de la tabla maestra' });
-  } catch (err) {
-    console.error('Error en DELETE /api/comprobantes:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -----------------------------------------------------------------------------
-// 4. LISTA DE SOCIOS PARA FILTROS
-// -----------------------------------------------------------------------------
-app.get('/api/socios', async (req, res) => {
-  try {
-    const query = `
-      SELECT DISTINCT nombre FROM (
-        SELECT nombre_socio_1 AS nombre FROM cola_fb WHERE nombre_socio_1 IS NOT NULL AND nombre_socio_1 != ''
-        UNION
-        SELECT nombre_socio_2 AS nombre FROM cola_fb WHERE nombre_socio_2 IS NOT NULL AND nombre_socio_2 != ''
-        UNION
-        SELECT nombre FROM nombres_fb WHERE roles = 'SOCIO'
-      ) s
-      ORDER BY nombre ASC;
-    `;
-    const { rows } = await pool.query(query);
-    res.json(rows);
-  } catch (err) {
-    console.error('Error en GET /api/socios:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -----------------------------------------------------------------------------
-// 5. REPORTES POR SOCIO (SOLO REGISTROS VÁLIDOS CON MÁS DE 1 COPIA)
-// -----------------------------------------------------------------------------
-app.get('/api/reportes/socios', async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        COALESCE(c.nombre_socio_1, 'Sin Asignar') AS socio,
-        COUNT(DISTINCT f.hash_largo) AS total_comprobantes,
-        SUM(COALESCE(f.monto, 0)) AS total_monto_acumulado
-      FROM comprobantes_fb f
-      INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
-      WHERE c.conteo > 1
-      GROUP BY COALESCE(c.nombre_socio_1, 'Sin Asignar')
-      ORDER BY total_comprobantes DESC;
-    `;
-    const { rows } = await pool.query(query);
-    res.json(rows);
-  } catch (err) {
-    console.error('Error en GET /api/reportes/socios:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -----------------------------------------------------------------------------
-// 6. DIRECTORIO (nombres_fb)
-// -----------------------------------------------------------------------------
-app.get('/api/directorio', async (req, res) => {
-  try {
-    const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC;');
-    res.json(rows);
-  } catch (err) {
-    console.error('Error en GET /api/directorio:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/directorio', async (req, res) => {
-  try {
-    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp } = req.body;
-
-    const query = `
-      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (id_grupo) DO UPDATE SET
-        nombre = EXCLUDED.nombre,
-        roles = EXCLUDED.roles,
-        moneda_socio = EXCLUDED.moneda_socio,
-        usd = EXCLUDED.usd,
-        pen = EXCLUDED.pen,
-        cop = EXCLUDED.cop,
-        clp = EXCLUDED.clp
-      RETURNING *;
-    `;
-
-    const { rows } = await pool.query(query, [
-      id_grupo,
-      nombre,
-      roles || 'GRUPO',
-      moneda_socio || null,
-      usd || null,
-      pen || null,
-      cop || null,
-      clp || null
-    ]);
-
-    res.json({ success: true, data: rows[0] });
-  } catch (err) {
-    console.error('Error en POST /api/directorio:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Fallback SPA (Sirve index.html desde la raíz)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor Backend Atenea v2 activo en puerto ${PORT}`);
-});
+  </script>
+</body>
+</html>
