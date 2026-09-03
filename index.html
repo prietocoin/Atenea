@@ -468,7 +468,7 @@
 
         async consultarApiHoo() {
           this.cargandoTasas = true;
-          this.mensajeTasas = 'Consultando motor local de tasas...';
+          this.mensajeTasas = 'Consultando motor nativo vía Proxy...';
           try {
             const res = await fetch('/api/tasas/fetch-hoo');
             const data = await res.json();
