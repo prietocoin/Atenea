@@ -116,7 +116,7 @@ async function initDB() {
     }
     console.log('✅ Matriz completa de 38 socios sembrada en nombres_fb.');
 
-    // 3. Recreación limpia de Vista v_comprobantes_auditados
+    // 3. Recreación limpia de Vista v_comprobantes_auditados con fallback a 1.0 para USD/USDT
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -382,7 +382,21 @@ const getComprobantesHandler = async (req, res) => {
     query += ` ORDER BY v.timestamp_comprobante DESC;`;
 
     const { rows } = await pool.query(query, values);
-    res.json(rows);
+
+    // Cálculo final de M1 y M2 (Monto dividido por Tasa del Socio)
+    const rowsProcesadas = rows.map(row => {
+      const monto = parseFloat(row.monto) || 0;
+      const t1 = parseFloat(row.tasa_1) || parseFloat(row.tasa_base) || 1.0;
+      const t2 = parseFloat(row.tasa_2) || parseFloat(row.tasa_base) || 1.0;
+
+      return {
+        ...row,
+        m1: t1 > 0 ? parseFloat((monto / t1).toFixed(2)) : 0,
+        m2: t2 > 0 ? parseFloat((monto / t2).toFixed(2)) : 0
+      };
+    });
+
+    res.json(rowsProcesadas);
   } catch (err) {
     console.error('Error en GET /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
@@ -471,22 +485,18 @@ app.get('/api/directorio', async (req, res) => {
   }
 });
 
-// Endpoint dedicado para actualizar los factores de ajuste de un socio
 app.post('/api/socios/ajustes', async (req, res) => {
   try {
     const { nombre, ajustes } = req.body;
     if (!nombre || !ajustes) {
-      return res.status(400).json({ error: 'Nombre de socio y objeto de ajustes son requeridos.' });
+      return res.status(400).json({ error: 'Nombre de socio y objeto de ajustes requeridos.' });
     }
     const { rows } = await pool.query(
-      `UPDATE nombres_fb 
-       SET ajustes = $1 
-       WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2)) 
-       RETURNING *;`,
+      `UPDATE nombres_fb SET ajustes = $1 WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2)) RETURNING *;`,
       [JSON.stringify(ajustes), nombre]
     );
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Socio no encontrado en nombres_fb.' });
+      return res.status(404).json({ error: 'Socio no encontrado.' });
     }
     res.json({ success: true, data: rows[0] });
   } catch (err) {
