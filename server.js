@@ -8,12 +8,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
+// Escudo absoluto contra colapsos
 process.on('uncaughtException', (err) => {
-  console.error('⚠️ Excepción no capturada:', err.message, err.stack);
+  console.error('⚠️ Excepción no capturada aislada:', err.message);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Promesa rechazada no capturada:', reason);
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Promesa rechazada aislada:', reason);
 });
 
 const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
@@ -27,16 +28,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('⚠️ Error inesperado en pool de PostgreSQL:', err.message);
-});
-
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ Error de conexión con PostgreSQL:', err.message);
-  } else {
-    console.log('✅ Backend conectado correctamente a PostgreSQL ("automat")');
-    release();
-  }
+  console.error('⚠️ Error en pool PostgreSQL:', err.message);
 });
 
 app.use(cors());
@@ -49,7 +41,6 @@ let CACHE_TASAS_ATENEA = {
   estado: 'inicializando'
 };
 
-// Escaneo continuo cada 5 minutos en background
 async function actualizarCacheNativa() {
   try {
     const tasas = await ejecutarRadarCompleto();
@@ -65,9 +56,7 @@ async function actualizarCacheNativa() {
   }
 }
 
-actualizarCacheNativa();
-setInterval(actualizarCacheNativa, 5 * 60 * 1000);
-
+// Healthcheck de Easypanel
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
@@ -88,9 +77,7 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// MÓDULO 1: COMPROBANTES
-// -----------------------------------------------------------------------------
+// MÓDULO COMPROBANTES
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -255,35 +242,22 @@ app.post('/api/directorio', async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// MÓDULO 2: TASAS (RESPUESTA INMEDIATA DESDE CACHÉ LOCAL)
-// -----------------------------------------------------------------------------
+// MÓDULO TASAS
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
     let tasas = CACHE_TASAS_ATENEA.data;
 
-    // Si la memoria está vacía, obliga el scraping instantáneo
     if (!tasas || Object.keys(tasas).length === 0) {
-      console.log("⚡ Memoria local vacía, ejecutando scraping visual on-demand...");
       tasas = await actualizarCacheNativa();
     }
 
-    if (tasas && Object.keys(tasas).length > 0) {
-      return res.json({
-        success: true,
-        count: Object.keys(tasas).length,
-        timestamp: CACHE_TASAS_ATENEA.timestamp,
-        tasas: tasas
-      });
-    }
-
-    return res.json({
-      success: false,
-      msg: "Imposible conectar con Hoo para extraer las tasas.",
-      tasas: {}
+    res.json({
+      success: Object.keys(tasas).length > 0,
+      count: Object.keys(tasas).length,
+      timestamp: CACHE_TASAS_ATENEA.timestamp,
+      tasas: tasas
     });
   } catch (err) {
-    console.error("❌ Error en fetch-hoo:", err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -324,6 +298,11 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// ARRANCAR EXPRESS PRIMERO Y LUEGO PROGRAMAR TRABAJOS EN SEGUNDO PLANO
 app.listen(PORT, HOST, () => {
-  console.log(`Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
+  console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
+  
+  // Escaneo retrasado para dar tiempo al inicio limpio del contenedor
+  setTimeout(actualizarCacheNativa, 2000);
+  setInterval(actualizarCacheNativa, 5 * 60 * 1000);
 });
