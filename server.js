@@ -1,3 +1,14 @@
+// Parche anti-colapso para Node 18
+if (typeof global.File === 'undefined') {
+  global.File = class File extends Blob {
+    constructor(parts, filename, options = {}) {
+      super(parts, options);
+      this.name = filename;
+      this.lastModified = options?.lastModified || Date.now();
+    }
+  };
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -75,7 +86,6 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// COMPROBANTES
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -240,7 +250,6 @@ app.post('/api/directorio', async (req, res) => {
   }
 });
 
-// TASAS
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
     let tasas = CACHE_TASAS_ATENEA.data;
@@ -296,7 +305,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// INICIAR EXPRESS Y LUEGO SINCRONIZAR
 app.listen(PORT, HOST, () => {
   console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
   setTimeout(actualizarCacheNativa, 1000);
