@@ -148,21 +148,31 @@
                     </div>
                   </div>
 
-                  <!-- MÓVIL: SOCIO 1 Y SOCIO 2 CON TASA 1 Y TASA 2 -->
+                  <!-- MÓVIL: SOCIO 1 Y SOCIO 2 CON M1 Y M2 -->
                   <div class="grid grid-cols-2 gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800 my-1">
                     <div class="truncate">
                       <p class="text-[7px] font-extrabold text-purple-400 uppercase tracking-tighter">Socio 1</p>
                       <p class="text-[10px] font-bold text-purple-200 truncate" x-text="item.nombre_socio_1 || '-'"></p>
-                      <template x-if="item.tasa_1">
-                        <p class="text-[8px] font-mono text-purple-300/80" x-text="'T1: ' + item.tasa_1"></p>
-                      </template>
+                      <div class="flex items-center gap-1 mt-0.5">
+                        <template x-if="item.tasa_1">
+                          <p class="text-[8px] font-mono text-purple-300/80" x-text="'T1:' + item.tasa_1"></p>
+                        </template>
+                        <template x-if="item.m1 !== undefined">
+                          <p class="text-[8px] font-black text-emerald-300 bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'$' + formatMonto(item.m1)"></p>
+                        </template>
+                      </div>
                     </div>
                     <div class="truncate border-l border-slate-800 pl-1">
                       <p class="text-[7px] font-extrabold text-pink-400 uppercase tracking-tighter">Socio 2</p>
                       <p class="text-[10px] font-bold text-pink-200 truncate" x-text="item.nombre_socio_2 || '-'"></p>
-                      <template x-if="item.tasa_2">
-                        <p class="text-[8px] font-mono text-pink-300/80" x-text="'T2: ' + item.tasa_2"></p>
-                      </template>
+                      <div class="flex items-center gap-1 mt-0.5">
+                        <template x-if="item.tasa_2">
+                          <p class="text-[8px] font-mono text-pink-300/80" x-text="'T2:' + item.tasa_2"></p>
+                        </template>
+                        <template x-if="item.m2 !== undefined">
+                          <p class="text-[8px] font-black text-emerald-300 bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'$' + formatMonto(item.m2)"></p>
+                        </template>
+                      </div>
                     </div>
                   </div>
 
@@ -182,7 +192,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO: TABLA CON MUESTRA DE TASAS AJUSTADAS -->
+          <!-- 💻 VISTA ESCRITORIO: TABLA CON M1 Y M2 -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -225,6 +235,7 @@
                         </div>
                       </td>
 
+                      <!-- MONTO, VOLUMEN USD E HISTORIAL TASA BASE DE CARTELERA -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col">
                           <span class="font-bold text-emerald-400 text-xs" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></span>
@@ -237,6 +248,7 @@
                         </div>
                       </td>
 
+                      <!-- LOTE Y TIPO DE OPERACIÓN -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-1.5">
                           <template x-if="item.lote_tasa_asignado">
@@ -257,22 +269,34 @@
 
                       <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
 
-                      <!-- SOCIOS Y TASAS CALCULADAS -->
+                      <!-- SOCIOS, TASAS Y MONTOS M1/M2 -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-                        <div class="flex flex-col gap-1">
+                        <div class="flex flex-col gap-1.5">
+                          <!-- SOCIO 1 -->
                           <div class="flex flex-col">
                             <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
-                            <template x-if="item.tasa_1">
-                              <span class="text-[9px] font-mono font-bold text-purple-400/90" x-text="'T1: ' + item.tasa_1"></span>
-                            </template>
+                            <div class="flex items-center gap-1 text-[9px] font-mono mt-0.5">
+                              <template x-if="item.tasa_1">
+                                <span class="text-purple-400 font-bold" x-text="'T1: ' + item.tasa_1"></span>
+                              </template>
+                              <template x-if="item.m1 !== undefined">
+                                <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: $' + formatMonto(item.m1) + ' USDT'"></span>
+                              </template>
+                            </div>
                           </div>
 
+                          <!-- SOCIO 2 -->
                           <template x-if="item.nombre_socio_2">
-                            <div class="flex flex-col border-t border-slate-800/60 pt-0.5">
+                            <div class="flex flex-col border-t border-slate-800/60 pt-1">
                               <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
-                              <template x-if="item.tasa_2">
-                                <span class="text-[9px] font-mono font-bold text-pink-400/90" x-text="'T2: ' + item.tasa_2"></span>
-                              </template>
+                              <div class="flex items-center gap-1 text-[9px] font-mono mt-0.5">
+                                <template x-if="item.tasa_2">
+                                  <span class="text-pink-400 font-bold" x-text="'T2: ' + item.tasa_2"></span>
+                                </template>
+                                <template x-if="item.m2 !== undefined">
+                                  <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: $' + formatMonto(item.m2) + ' USDT'"></span>
+                                </template>
+                              </div>
                             </div>
                           </template>
                         </div>
@@ -785,7 +809,6 @@
             ex = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : reg.ajustes;
           }
 
-          // Preparar grilla con valores existentes o 1.0 por defecto
           const temp = {};
           this.listaMonedas.forEach(m => {
             temp['P-' + m] = ex['P-' + m] !== undefined ? ex['P-' + m] : (ex[m] || 1.0);
@@ -972,7 +995,7 @@
         },
 
         formatMonto(val) {
-          if (!val) return '0.00';
+          if (val === null || val === undefined || isNaN(val)) return '0.00';
           return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
