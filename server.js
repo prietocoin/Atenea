@@ -7,8 +7,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-process.on('uncaughtException', (err) => console.error('⚠️ Excepción aislada:', err.message));
-process.on('unhandledRejection', (reason) => console.error('⚠️ Promesa rechazada aislada:', reason));
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Excepción aislada:', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Promesa rechazada aislada:', reason);
+});
 
 const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
 
@@ -20,25 +25,53 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
+pool.on('error', (err) => {
+  console.error('⚠️ Error en PostgreSQL:', err.message);
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
-// ENDPOINT PROXY LIVIANO: Descarga el HTML de Hoo sin parsearlo en Node.js
-app.get('/api/tasas/hoo-html', async (req, res) => {
+app.get('/api/test-db', async (req, res) => {
   try {
-    const response = await fetch('https://hoo.jairokov.com/', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-      signal: AbortSignal.timeout(7000)
+    const testQuery = await pool.query('SELECT NOW();');
+    const countMaster = await pool.query(
+      'SELECT COUNT(*) FROM comprobantes_fb f INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo WHERE c.conteo > 1;'
+    );
+    res.json({
+      status: 'OK',
+      hora_servidor: testQuery.rows[0].now,
+      registros_tabla_maestra: parseInt(countMaster.rows[0].count)
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'ERROR', mensaje: err.message });
+  }
+});
+
+// PROXY DIRECTO AL ENDPOINT DE FASTAPI (/radar) EN RENDER
+app.get('/api/tasas/fetch-hoo', async (req, res) => {
+  try {
+    const response = await fetch('https://hoo.jairokov.com/radar', {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(8000)
     });
 
-    if (response.ok) {
-      const html = await response.text();
-      return res.json({ success: true, html });
+    if (!response.ok) {
+      return res.status(500).json({ success: false, msg: `HTTP Error ${response.status}` });
     }
-    return res.status(500).json({ success: false, msg: 'Hoo no respondió OK' });
+
+    const data = await response.json();
+    
+    // Devolvemos el diccionario 'rates' generado por tu FastAPI
+    return res.json({
+      success: data.success || true,
+      rates: data.rates || {}
+    });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
@@ -85,6 +118,7 @@ const getComprobantesHandler = async (req, res) => {
     const { rows } = await pool.query(query, values);
     res.json(rows);
   } catch (err) {
+    console.error('Error en GET /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
@@ -121,6 +155,7 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
+    console.error('Error en PUT /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -130,11 +165,14 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
     const { hash_largo } = req.params;
     const { rows } = await pool.query(`DELETE FROM comprobantes_fb WHERE hash_largo = $1 RETURNING *;`, [hash_largo]);
 
-    if (rows.length === 0) return res.status(404).json({ error: 'Comprobante no encontrado' });
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Comprobante no encontrado' });
+    }
 
     await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
     res.json({ success: true, message: 'Comprobante eliminado' });
   } catch (err) {
+    console.error('Error en DELETE /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -157,10 +195,48 @@ app.get('/api/socios', async (req, res) => {
   }
 });
 
+app.get('/api/reportes/socios', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        COALESCE(c.nombre_socio_1, 'Sin Asignar') AS socio,
+        COUNT(DISTINCT f.hash_largo) AS total_comprobantes,
+        SUM(COALESCE(f.monto, 0)) AS total_monto_acumulado
+      FROM comprobantes_fb f
+      INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
+      WHERE c.conteo > 1
+      GROUP BY COALESCE(c.nombre_socio_1, 'Sin Asignar')
+      ORDER BY total_comprobantes DESC;
+    `;
+    const { rows } = await pool.query(query);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/directorio', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC;');
     res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/directorio', async (req, res) => {
+  try {
+    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp } = req.body;
+    const query = `
+      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ON CONFLICT (id_grupo) DO UPDATE SET
+        nombre = EXCLUDED.nombre, roles = EXCLUDED.roles, moneda_socio = EXCLUDED.moneda_socio,
+        usd = EXCLUDED.usd, pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp
+      RETURNING *;
+    `;
+    const { rows } = await pool.query(query, [id_grupo, nombre, roles || 'GRUPO', moneda_socio || null, usd || null, pen || null, cop || null, clp || null]);
+    res.json({ success: true, data: rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -193,10 +269,15 @@ app.post('/api/tasas/publicar', async (req, res) => {
 
     res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
   } catch (err) {
+    console.error("Error al publicar tasa:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-app.listen(PORT, HOST, () => console.log(`✅ Atenea activo en http://${HOST}:${PORT}`));
+app.listen(PORT, HOST, () => {
+  console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
+});
