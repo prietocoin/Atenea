@@ -466,33 +466,69 @@
           }
         },
 
-        async consultarApiHoo() {
+       async consultarApiHoo() {
   this.cargandoTasas = true;
-  this.mensajeTasas = 'Extrayendo tasas en el navegador...';
+  this.mensajeTasas = 'Escaneando tasas...';
 
   try {
     const res = await fetch('/api/tasas/hoo-html');
     const data = await res.json();
 
     if (data.success && data.html) {
-      // Usamos el parser DOM nativo de Chrome directamente en el cliente
+      const tasasExtraidas = {};
+      const fiats = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB", "BRL", "BCV"];
+
+      // 1. Extraer del script de datos interno de Next.js (__NEXT_DATA__)
       const parser = new DOMParser();
       const doc = parser.parseFromString(data.html, 'text/html');
-      const tasasExtraidas = {};
+      const nextScript = doc.getElementById('__NEXT_DATA__');
 
-      // Réplica exacta del código probado en la consola
-      doc.querySelectorAll('.grid.grid-cols-2 > div').forEach(tarjeta => {
-        const spans = tarjeta.querySelectorAll('span');
-        if (spans.length >= 2) {
-          const moneda = (spans[0].textContent || '').trim().toUpperCase();
-          const valorTexto = (spans[1].textContent || '').trim().replace(/,/g, '');
-          const valor = parseFloat(valorTexto);
+      if (nextScript && nextScript.textContent) {
+        fiats.forEach(fiat => {
+          const reg = new RegExp(`"${fiat}"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)`, 'i');
+          const match = nextScript.textContent.match(reg);
+          if (match && match[1]) tasasExtraidas[fiat] = parseFloat(match[1]);
+        });
+      }
 
-          if (moneda.length === 3 && !isNaN(valor) && valor > 0) {
-            tasasExtraidas[moneda] = valor;
+      // 2. Respaldo por búsqueda directa de variables en todo el HTML
+      if (Object.keys(tasasExtraidas).length === 0) {
+        fiats.forEach(fiat => {
+          const reg = new RegExp(`"${fiat}"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)`, 'i');
+          const match = data.html.match(reg);
+          if (match && match[1]) tasasExtraidas[fiat] = parseFloat(match[1]);
+        });
+      }
+
+      // 3. Respaldo DOM visual por si el servidor entregó HTML pre-renderizado
+      if (Object.keys(tasasExtraidas).length === 0) {
+        doc.querySelectorAll('.grid.grid-cols-2 > div').forEach(tarjeta => {
+          const spans = tarjeta.querySelectorAll('span');
+          if (spans.length >= 2) {
+            const moneda = (spans[0].textContent || '').trim().toUpperCase();
+            const valor = parseFloat((spans[1].textContent || '').trim().replace(/,/g, ''));
+
+            if (moneda.length === 3 && !isNaN(valor) && valor > 0) {
+              tasasExtraidas[moneda] = valor;
+            }
           }
-        }
-      });
+        });
+      }
+
+      if (Object.keys(tasasExtraidas).length > 0) {
+        this.tasasBaul = tasasExtraidas;
+        this.mensajeTasas = '';
+        return;
+      }
+    }
+
+    this.mensajeTasas = 'No se pudieron extraer las tasas del contenido.';
+  } catch (err) {
+    this.mensajeTasas = 'Error de comunicación con el servidor.';
+  } finally {
+    this.cargandoTasas = false;
+  }
+};
 
       if (Object.keys(tasasExtraidas).length > 0) {
         this.tasasBaul = tasasExtraidas;
