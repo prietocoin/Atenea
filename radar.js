@@ -1,84 +1,74 @@
-const { ProxyAgent } = require('undici');
+const cheerio = require('cheerio');
 
-const MONEDAS = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB", "BRL", "BCV"];
-
-const PROXY_IP = process.env.PROXY_IP || '46.203.210.178';
-const PROXY_PORT = process.env.PROXY_PORT || '5625';
-const PROXY_USER = process.env.PROXY_USER || 'ttsctjnu';
-const PROXY_PASS = process.env.PROXY_PASS || 'ul2gxifzz0pk';
-
-let proxyAgent = null;
-try {
-  const proxyUrl = `http://${PROXY_USER}:${PROXY_PASS}@${PROXY_IP}:${PROXY_PORT}`;
-  proxyAgent = new ProxyAgent(proxyUrl);
-} catch (e) {
-  console.error("⚠️ Error inicializando ProxyAgent:", e.message);
-}
-
-async function consultarHoo(endpoint) {
-  const url = `https://hoo.jairokov.com${endpoint}`;
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/html, */*'
-  };
-
-  // 1. Intento Directo
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(url, { headers, signal: controller.signal });
-    clearTimeout(timeout);
-    if (res.ok) return await res.text();
-  } catch (e) {}
-
-  // 2. Intento vía Proxy
-  if (proxyAgent) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(url, { headers, dispatcher: proxyAgent, signal: controller.signal });
-      clearTimeout(timeout);
-      if (res.ok) return await res.text();
-    } catch (e) {}
-  }
-
-  return null;
-}
+const HOO_URL = 'https://hoo.jairokov.com';
 
 async function ejecutarRadarCompleto() {
-  const resultados = {};
+  const tasas = {};
+
   try {
-    console.log("🚀 [Atenea Radar] Consultando tasas desde hoo.jairokov.com...");
-    const raw = await consultarHoo('/radar');
-    if (raw) {
+    console.log("📡 Conectando a https://hoo.jairokov.com...");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    // 1. Intentar primero el endpoint JSON /radar
+    const resRadar = await fetch(`${HOO_URL}/radar`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if (resRadar.ok) {
+      const textRaw = await resRadar.text();
       try {
-        const data = JSON.parse(raw);
-        if (data && data.rates) {
-          MONEDAS.forEach(m => {
-            if (data.rates[m] !== undefined) {
-              resultados[m] = parseFloat(data.rates[m]);
-            }
-          });
-          if (Object.keys(resultados).length > 0) {
-            console.log("✅ [Atenea Radar] Tasas obtenidas correctamente:", resultados);
-            return resultados;
-          }
+        const json = JSON.parse(textRaw);
+        if (json && json.rates && Object.keys(json.rates).length > 0) {
+          console.log("✅ Tasas leídas vía JSON API:", json.rates);
+          return json.rates;
         }
       } catch (e) {
-        // En caso de respuesta HTML/Texto
-        MONEDAS.forEach(m => {
-          const reg = new RegExp(`"${m}"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)`, 'i');
-          const match = raw.match(reg);
-          if (match && match[1]) {
-            resultados[m] = parseFloat(match[1]);
-          }
-        });
+        // Si /radar devuelve HTML, el flujo continúa al scraper del DOM
       }
     }
+
+    // 2. Extractor exacto del DOM visual basado en tu inspección de pantalla
+    const controllerHome = new AbortController();
+    const timeoutHome = setTimeout(() => controllerHome.abort(), 8000);
+
+    const resHome = await fetch(HOO_URL, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      signal: controllerHome.signal
+    });
+    clearTimeout(timeoutHome);
+
+    if (!resHome.ok) {
+      throw new Error(`Estado HTTP ${resHome.status} al acceder a Hoo`);
+    }
+
+    const html = await resHome.text();
+    const $ = cheerio.load(html);
+
+    // Selector dirigido a los contenedores `.grid.grid-cols-2 > div` de la captura
+    $('.grid.grid-cols-2 > div').each((_, el) => {
+      const spans = $(el).find('span');
+      if (spans.length >= 2) {
+        const moneda = $(spans[0]).text().trim().toUpperCase();
+        const valorRaw = $(spans[1]).text().trim().replace(/,/g, '');
+        const valor = parseFloat(valorRaw);
+
+        if (moneda && !isNaN(valor) && valor > 0) {
+          tasas[moneda] = valor;
+        }
+      }
+    });
+
+    console.log("✅ Tasas extraídas exactamente desde el DOM de Hoo:", tasas);
+    return tasas;
+
   } catch (err) {
-    console.error("❌ Error protegido en radar.js:", err.message);
+    console.error("❌ Error en el lector de Hoo:", err.message);
+    return tasas;
   }
-  return resultados;
 }
 
 module.exports = { ejecutarRadarCompleto };
