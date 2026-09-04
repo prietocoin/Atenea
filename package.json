@@ -1,7 +1,7 @@
 {
   "name": "atenea-panel",
   "version": "2.0.0",
-  "description": "Panel Atenea v2 con extracción nativa en navegador",
+  "description": "Panel de gestión Atenea v2",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
