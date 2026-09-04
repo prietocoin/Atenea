@@ -49,6 +49,7 @@ let CACHE_TASAS_ATENEA = {
   estado: 'inicializando'
 };
 
+// Escaneo continuo cada 5 minutos en background
 async function actualizarCacheNativa() {
   try {
     const tasas = await ejecutarRadarCompleto();
@@ -255,14 +256,15 @@ app.post('/api/directorio', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 2: ENDPOINT DE TASAS CON LECTURA Y ESCANEO AUTOMÁTICO
+// MÓDULO 2: TASAS (RESPUESTA INMEDIATA DESDE CACHÉ LOCAL)
 // -----------------------------------------------------------------------------
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
     let tasas = CACHE_TASAS_ATENEA.data;
 
+    // Si la memoria está vacía, obliga el scraping instantáneo
     if (!tasas || Object.keys(tasas).length === 0) {
-      console.log("⚡ Memoria vacía, ejecutando escaneo en vivo...");
+      console.log("⚡ Memoria local vacía, ejecutando scraping visual on-demand...");
       tasas = await actualizarCacheNativa();
     }
 
@@ -277,7 +279,7 @@ app.get('/api/tasas/fetch-hoo', async (req, res) => {
 
     return res.json({
       success: false,
-      msg: "No se pudieron capturar las tasas del mercado en este momento.",
+      msg: "Imposible conectar con Hoo para extraer las tasas.",
       tasas: {}
     });
   } catch (err) {
