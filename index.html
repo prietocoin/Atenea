@@ -254,8 +254,8 @@
             <button 
               @click="consultarApiHoo()" 
               class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 active:scale-95 transition-all flex items-center gap-2 shadow-lg">
-              <span x-show="!cargandoTasas">🔄 Consultar Motor Nativo</span>
-              <span x-show="cargandoTasas">Cargando tasas...</span>
+              <span x-show="!cargandoTasas">🔄 Scraping Hoo Visual</span>
+              <span x-show="cargandoTasas">Escaneando...</span>
             </button>
           </div>
 
@@ -276,7 +276,7 @@
 
             <template x-if="Object.keys(tasasBaul).length === 0">
               <div class="text-center py-8 text-slate-500 text-xs font-medium">
-                Haz clic en <strong class="text-purple-400">"Consultar Motor Nativo"</strong> para obtener las divisas capturadas localmente.
+                Haz clic en <strong class="text-purple-400">"Scraping Hoo Visual"</strong> para leer directamente el monitor.
               </div>
             </template>
 
@@ -468,7 +468,7 @@
 
         async consultarApiHoo() {
           this.cargandoTasas = true;
-          this.mensajeTasas = 'Consultando motor nativo vía Proxy...';
+          this.mensajeTasas = 'Descargando interfaz visual de Hoo...';
           try {
             const res = await fetch('/api/tasas/fetch-hoo');
             const data = await res.json();
@@ -477,7 +477,7 @@
               this.tasasBaul = data.tasas;
               this.mensajeTasas = '';
             } else {
-              this.mensajeTasas = data.msg || 'No se recibieron tasas del escáner nativo.';
+              this.mensajeTasas = data.msg || 'No se recibieron tasas del escáner visual.';
             }
           } catch (err) {
             console.error("Error al consultar tasas:", err);
