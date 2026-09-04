@@ -61,8 +61,14 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
     `);
 
-    // 1. Agregar columna 'ajustes' JSONB a nombres_fb si no existe
+    // 1. Garantizar columnas de monedas y 'ajustes' JSONB en nombres_fb
     await pool.query(`
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cop VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS clp VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ves VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ars VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
 
@@ -415,19 +421,21 @@ app.get('/api/directorio', async (req, res) => {
 
 app.post('/api/directorio', async (req, res) => {
   try {
-    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ajustes } = req.body;
+    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ves, ars, ajustes } = req.body;
     const query = `
-      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ajustes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ves, ars, ajustes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       ON CONFLICT (id_grupo) DO UPDATE SET
         nombre = EXCLUDED.nombre, roles = EXCLUDED.roles, moneda_socio = EXCLUDED.moneda_socio,
         usd = EXCLUDED.usd, pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp,
+        ves = EXCLUDED.ves, ars = EXCLUDED.ars,
         ajustes = COALESCE(EXCLUDED.ajustes, nombres_fb.ajustes)
       RETURNING *;
     `;
     const { rows } = await pool.query(query, [
       id_grupo, nombre, roles || 'GRUPO', moneda_socio || null, 
-      usd || null, pen || null, cop || null, clp || null, 
+      usd || null, pen || null, cop || null, clp || null,
+      ves || null, ars || null,
       ajustes ? JSON.stringify(ajustes) : null
     ]);
     res.json({ success: true, data: rows[0] });
