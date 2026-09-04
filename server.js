@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
 process.on('uncaughtException', (err) => {
-  console.error('⚠️ Excepción aislada:', err.message);
+  console.error('⚠️ Excepción no capturada aislada:', err.message);
 });
 
 process.on('unhandledRejection', (reason) => {
