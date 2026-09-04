@@ -505,6 +505,12 @@
 
           try {
             const res = await fetch('/api/tasas/fetch-hoo');
+            
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+              throw new Error(`Servidor devolvió HTML (${res.status}). Revisa la ruta '/api/tasas/fetch-hoo'.`);
+            }
+
             const data = await res.json();
 
             if (data && data.success && data.rates && Object.keys(data.rates).length > 0) {
@@ -515,7 +521,7 @@
             }
           } catch (err) {
             console.error('Error al consultar la API:', err);
-            this.mensajeTasas = 'Error de conexión con el backend de Atenea.';
+            this.mensajeTasas = `Error: ${err.message}`;
           } finally {
             this.cargandoTasas = false;
           }
@@ -536,6 +542,11 @@
                 tasas: this.tasasBaul
               })
             });
+
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+              throw new Error(`El servidor respondió con HTML (${res.status}). Revisa '/api/tasas/publicar' en server.js.`);
+            }
 
             const data = await res.json();
 
@@ -558,7 +569,7 @@
             this.notificacionTasas = {
               mostrar: true,
               tipo: 'error',
-              mensaje: `Error de conexión: ${err.message}`
+              mensaje: `${err.message}`
             };
           } finally {
             this.publicandoTasas = false;
