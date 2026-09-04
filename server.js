@@ -53,7 +53,13 @@ async function initDB() {
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
-      WITH lotes_rangos AS (
+      WITH primer_lote AS (
+        SELECT id_tasa, timestamp
+        FROM mercado_tasas
+        ORDER BY timestamp ASC
+        LIMIT 1
+      ),
+      lotes_rangos AS (
         SELECT 
           id_tasa,
           timestamp AS t_inicio,
@@ -78,11 +84,11 @@ async function initDB() {
         c.nombre_socio_2,
         c.url_imagen,
         c.conteo,
-        lr.id_tasa AS lote_tasa_asignado,
-        mt.tasa_base AS tasa_mercado_aplicada,
+        COALESCE(lr.id_tasa, (SELECT id_tasa FROM primer_lote)) AS lote_tasa_asignado,
+        COALESCE(mt.tasa_base, mt_primer.tasa_base) AS tasa_mercado_aplicada,
         CASE 
-          WHEN mt.tasa_base IS NOT NULL AND mt.tasa_base > 0 
-          THEN ROUND((f.monto / mt.tasa_base)::numeric, 2)
+          WHEN COALESCE(mt.tasa_base, mt_primer.tasa_base) IS NOT NULL AND COALESCE(mt.tasa_base, mt_primer.tasa_base) > 0 
+          THEN ROUND((f.monto / COALESCE(mt.tasa_base, mt_primer.tasa_base))::numeric, 2)
           ELSE NULL
         END AS monto_usd_equivalente
       FROM comprobantes_fb f
@@ -92,9 +98,12 @@ async function initDB() {
        AND (lr.t_fin IS NULL OR c.timestamp < lr.t_fin)
       LEFT JOIN mercado_tasas mt 
         ON mt.id_tasa = lr.id_tasa 
-       AND mt.moneda = UPPER(f.moneda);
+       AND mt.moneda = UPPER(f.moneda)
+      LEFT JOIN mercado_tasas mt_primer
+        ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
+       AND mt_primer.moneda = UPPER(f.moneda);
     `);
-    console.log('✅ Vista v_comprobantes_auditados verificada/actualizada.');
+    console.log('✅ Vista v_comprobantes_auditados verificada y reestructurada.');
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -138,11 +147,9 @@ app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
     let payload = req.body;
     
-    // Extraer si viene envuelto como arreglo [{...}]
     if (Array.isArray(payload)) {
       payload = payload[0] || {};
     }
-    // Extraer si viene en objeto .json
     if (payload.json) {
       payload = payload.json;
     }
