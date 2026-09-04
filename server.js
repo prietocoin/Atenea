@@ -90,35 +90,25 @@ app.get('/api/tasas/fetch-hoo', (req, res) => {
 });
 
 // 3. Endpoint de guardado a producción en PostgreSQL
-app.post('/api/tasas/publicar', async (req, res) => {
+app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
-    const { id_tasa, tasas } = req.body;
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    let codigoTasa = id_tasa;
-    if (!codigoTasa) {
-      const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
-      if (lastRes.rows.length > 0) {
-        const num = parseInt(lastRes.rows[0].id_tasa.replace('T', '')) + 1;
-        codigoTasa = `T${String(num).padStart(3, '0')}`;
-      } else {
-        codigoTasa = 'T359';
-      }
+    let payload = req.body;
+    
+    // Extraer del arreglo de n8n si llega como [{...}]
+    if (Array.isArray(payload)) {
+      payload = payload[0] || {};
+    }
+    // Extraer de la propiedad .json si n8n lo envía empaquetado
+    if (payload.json) {
+      payload = payload.json;
     }
 
-    for (const [moneda, valor] of Object.entries(tasas)) {
-      if (valor && !isNaN(valor)) {
-        await pool.query(
-          `INSERT INTO mercado_tasas (id_tasa, moneda, tasa_base, timestamp) VALUES ($1, $2, $3, $4);`,
-          [codigoTasa, moneda.toUpperCase(), parseFloat(valor), timestamp]
-        );
-      }
-    }
-
-    res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
+    borradorTasas = payload;
+    console.log('✅ Borrador recibido en Express:', borradorTasas);
+    return res.json({ success: true, rates: borradorTasas });
   } catch (err) {
-    console.error("Error al publicar tasa:", err.message);
-    res.status(500).json({ error: err.message });
+    console.error('❌ Error al recibir borrador:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
