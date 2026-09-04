@@ -64,7 +64,6 @@ async function actualizarCacheNativa() {
   }
 }
 
-// Inicia el barrido en segundo plano cada 5 minutos
 actualizarCacheNativa();
 setInterval(actualizarCacheNativa, 5 * 60 * 1000);
 
@@ -256,14 +255,14 @@ app.post('/api/directorio', async (req, res) => {
 });
 
 // -----------------------------------------------------------------------------
-// MÓDULO 2: ENDPOINT DE CONSULTA DE TASAS CON RESPUESTA INMEDIATA
+// MÓDULO 2: ENDPOINT DE TASAS CON LECTURA Y ESCANEO AUTOMÁTICO
 // -----------------------------------------------------------------------------
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
     let tasas = CACHE_TASAS_ATENEA.data;
 
     if (!tasas || Object.keys(tasas).length === 0) {
-      console.log("⚡ Memoria vacía, ejecutando escaneo en vivo con Proxy...");
+      console.log("⚡ Memoria vacía, ejecutando escaneo en vivo...");
       tasas = await actualizarCacheNativa();
     }
 
