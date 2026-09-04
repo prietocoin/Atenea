@@ -8,9 +8,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// Escudo absoluto contra colapsos
 process.on('uncaughtException', (err) => {
-  console.error('⚠️ Excepción no capturada aislada:', err.message);
+  console.error('⚠️ Excepción aislada:', err.message);
 });
 
 process.on('unhandledRejection', (reason) => {
@@ -28,7 +27,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('⚠️ Error en pool PostgreSQL:', err.message);
+  console.error('⚠️ Error en PostgreSQL:', err.message);
 });
 
 app.use(cors());
@@ -56,7 +55,6 @@ async function actualizarCacheNativa() {
   }
 }
 
-// Healthcheck de Easypanel
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
@@ -77,7 +75,7 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// MÓDULO COMPROBANTES
+// COMPROBANTES
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -242,7 +240,7 @@ app.post('/api/directorio', async (req, res) => {
   }
 });
 
-// MÓDULO TASAS
+// TASAS
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
     let tasas = CACHE_TASAS_ATENEA.data;
@@ -298,11 +296,9 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// ARRANCAR EXPRESS PRIMERO Y LUEGO PROGRAMAR TRABAJOS EN SEGUNDO PLANO
+// LEVANTAR SERVIDOR Y PROGRAMAR TAREAS
 app.listen(PORT, HOST, () => {
   console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
-  
-  // Escaneo retrasado para dar tiempo al inicio limpio del contenedor
-  setTimeout(actualizarCacheNativa, 2000);
-  setInterval(actualizarCacheNativa, 5 * 60 * 1000);
+  setTimeout(actualizarCacheNativa, 1000);
+  setInterval(actualizarCacheNativa, 2 * 60 * 1000);
 });
