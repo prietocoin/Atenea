@@ -134,9 +134,6 @@
                         <template x-if="item.monto_usd_equivalente">
                           <span class="text-[9px] font-bold text-emerald-300" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
                         </template>
-                        <template x-if="item.tasa_mercado_aplicada">
-                          <span class="text-[8px] font-mono text-purple-300/80" x-text="'Tasa: ' + item.tasa_mercado_aplicada"></span>
-                        </template>
                       </div>
                     </div>
                     <div class="flex items-center gap-1">
@@ -178,7 +175,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO: TABLA CON SCROLL COMPLETO -->
+          <!-- 💻 VISTA ESCRITORIO: TABLA SIMPLIFICADA Y ORDENADA -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -221,7 +218,7 @@
                         </div>
                       </td>
 
-                      <!-- MONTO, CONVERSIÓN Y VALOR DE LA TASA JUNTOS -->
+                      <!-- MONTO, VOLUMEN USD E HISTORIAL TASA BASE -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col">
                           <span class="font-bold text-emerald-400 text-xs" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></span>
@@ -234,7 +231,7 @@
                         </div>
                       </td>
 
-                      <!-- LOTE Y TIPO DE OPERACIÓN JUNTOS -->
+                      <!-- LOTE Y TIPO DE OPERACIÓN (SINGULARES Y JUNTOS) -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-1.5">
                           <template x-if="item.lote_tasa_asignado">
@@ -255,7 +252,7 @@
 
                       <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
 
-                      <!-- SOCIOS LIMPIOS -->
+                      <!-- SOCIOS -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col">
                           <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
