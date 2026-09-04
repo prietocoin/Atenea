@@ -31,20 +31,76 @@ pool.on('error', (err) => {
   console.error('⚠️ Error en PostgreSQL:', err.message);
 });
 
-// Inicialización de tablas requeridas en PostgreSQL
-pool.query(`
-  CREATE TABLE IF NOT EXISTS mercado_tasas (
-    id SERIAL PRIMARY KEY,
-    id_tasa VARCHAR(20) NOT NULL,
-    moneda VARCHAR(10) NOT NULL,
-    tasa_base NUMERIC(18, 6) NOT NULL,
-    timestamp BIGINT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE INDEX IF NOT EXISTS idx_mercado_tasas_id_tasa ON mercado_tasas(id_tasa);
-  CREATE INDEX IF NOT EXISTS idx_mercado_tasas_moneda_ts ON mercado_tasas(moneda, timestamp DESC);
-`).then(() => console.log('✅ Tabla mercado_tasas verificada/creada correctamente.'))
-  .catch(err => console.error('⚠️ Error al verificar tabla mercado_tasas:', err.message));
+// Inicialización automática de Tablas, Índices y Vistas requeridas
+async function initDB() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mercado_tasas (
+        id SERIAL PRIMARY KEY,
+        id_tasa VARCHAR(20) NOT NULL,
+        moneda VARCHAR(10) NOT NULL,
+        tasa_base NUMERIC(18, 6) NOT NULL,
+        timestamp BIGINT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_id_tasa ON mercado_tasas(id_tasa);
+      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_moneda_ts ON mercado_tasas(moneda, timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_ts ON mercado_tasas (timestamp ASC);
+      CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
+    `);
+    console.log('✅ Tabla e índices de mercado_tasas verificados.');
+
+    await pool.query(`
+      DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
+      CREATE VIEW v_comprobantes_auditados AS
+      WITH lotes_rangos AS (
+        SELECT 
+          id_tasa,
+          timestamp AS t_inicio,
+          LEAD(timestamp) OVER (ORDER BY timestamp ASC) AS t_fin
+        FROM (
+          SELECT DISTINCT id_tasa, timestamp 
+          FROM mercado_tasas
+        ) lotes
+      )
+      SELECT 
+        f.hash_largo,
+        c.hash_corto,
+        c.timestamp AS timestamp_comprobante,
+        to_timestamp(c.timestamp) AS fecha_hora_comprobante,
+        f.monto,
+        UPPER(f.moneda) AS moneda,
+        f.banco,
+        f.titular,
+        f.referencia,
+        f.procesado_ia,
+        c.nombre_socio_1,
+        c.nombre_socio_2,
+        c.url_imagen,
+        c.conteo,
+        lr.id_tasa AS lote_tasa_asignado,
+        mt.tasa_base AS tasa_mercado_aplicada,
+        CASE 
+          WHEN mt.tasa_base IS NOT NULL AND mt.tasa_base > 0 
+          THEN ROUND((f.monto / mt.tasa_base)::numeric, 2)
+          ELSE NULL
+        END AS monto_usd_equivalente
+      FROM comprobantes_fb f
+      INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
+      LEFT JOIN lotes_rangos lr 
+        ON c.timestamp >= lr.t_inicio 
+       AND (lr.t_fin IS NULL OR c.timestamp < lr.t_fin)
+      LEFT JOIN mercado_tasas mt 
+        ON mt.id_tasa = lr.id_tasa 
+       AND mt.moneda = UPPER(f.moneda);
+    `);
+    console.log('✅ Vista v_comprobantes_auditados verificada/actualizada.');
+  } catch (err) {
+    console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
+  }
+}
+
+initDB();
 
 // Middlewares
 app.use(cors());
@@ -160,36 +216,36 @@ const getComprobantesHandler = async (req, res) => {
 
     let query = `
       SELECT 
-        f.hash_largo, f.monto, f.moneda, f.banco, f.referencia, f.titular, f.procesado_ia,
-        c.hash_corto, c.url_imagen, c.nombre_socio_1, c.nombre_socio_2, c.caption, c.timestamp, c.conteo
-      FROM comprobantes_fb f
-      INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
-      WHERE c.conteo > 1
+        v.hash_largo, v.monto, v.moneda, v.banco, v.referencia, v.titular, v.procesado_ia,
+        v.hash_corto, v.url_imagen, v.nombre_socio_1, v.nombre_socio_2, v.timestamp_comprobante AS timestamp, 
+        v.conteo, v.lote_tasa_asignado, v.tasa_mercado_aplicada, v.monto_usd_equivalente
+      FROM v_comprobantes_auditados v
+      WHERE v.conteo > 1
     `;
 
     const values = [];
     let paramIndex = 1;
 
     if (socio) {
-      query += ` AND (c.nombre_socio_1 = $${paramIndex} OR c.nombre_socio_2 = $${paramIndex})`;
+      query += ` AND (v.nombre_socio_1 = $${paramIndex} OR v.nombre_socio_2 = $${paramIndex})`;
       values.push(socio);
       paramIndex++;
     }
 
     if (fechaInicio) {
       const startTimestamp = Math.floor(new Date(fechaInicio).getTime() / 1000);
-      query += ` AND c.timestamp >= $${paramIndex}`;
+      query += ` AND v.timestamp_comprobante >= $${paramIndex}`;
       values.push(startTimestamp);
       paramIndex++;
     }
 
     if (hash) {
-      query += ` AND c.hash_corto = $${paramIndex}`;
+      query += ` AND v.hash_corto = $${paramIndex}`;
       values.push(hash);
       paramIndex++;
     }
 
-    query += ` ORDER BY c.timestamp DESC;`;
+    query += ` ORDER BY v.timestamp_comprobante DESC;`;
 
     const { rows } = await pool.query(query, values);
     res.json(rows);
