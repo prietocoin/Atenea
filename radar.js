@@ -1,10 +1,6 @@
 const { ProxyAgent } = require('undici');
 
-// Lista de divisas Binance P2P
-const BINANCE_FIATS = [
-  "PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB"
-];
-
+// Configuración de Proxy
 const PROXY_IP = process.env.PROXY_IP || '46.203.210.178';
 const PROXY_PORT = process.env.PROXY_PORT || '5625';
 const PROXY_USER = process.env.PROXY_USER || 'ttsctjnu';
@@ -14,194 +10,113 @@ const PROXY_URL = `http://${PROXY_USER}:${PROXY_PASS}@${PROXY_IP}:${PROXY_PORT}`
 const proxyAgent = new ProxyAgent(PROXY_URL);
 
 /**
- * Algoritmo de Purificación:
- * 1. Toma los primeros 7 valores capturados.
- * 2. Los ordena de menor a mayor.
- * 3. Selecciona la ventana de 5 valores continuos con la menor diferencia (max - min).
- * 4. Calcula el promedio exacto de esos 5 precios.
+ * Petición HTTP con soporte de Proxy y Fallback directo
  */
-function calcularPromedioPurificado(prices) {
-  if (!prices || prices.length === 0) return 0.0;
-  
-  let top7 = prices.slice(0, 7).map(Number).filter(n => !isNaN(n) && n > 0);
-  if (top7.length === 0) return 0.0;
-  if (top7.length < 5) {
-    return top7.reduce((a, b) => a + b, 0) / top7.length;
-  }
+async function consultarHoo(endpoint) {
+  const url = `https://hoo.jairokov.com${endpoint}`;
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/html, */*'
+  };
 
-  top7.sort((a, b) => a - b);
-
-  let menorRango = Infinity;
-  let mejorGrupo = top7.slice(0, 5);
-
-  for (let i = 0; i <= top7.length - 5; i++) {
-    let grupo = top7.slice(i, i + 5);
-    let rango = grupo[4] - grupo[0];
-    if (rango < menorRango) {
-      menorRango = rango;
-      mejorGrupo = grupo;
-    }
-  }
-
-  return mejorGrupo.reduce((a, b) => a + b, 0) / 5;
-}
-
-async function fetchConFallback(url, options = {}) {
+  // Intento 1: A través de Proxy
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(url, {
-      ...options,
+      headers,
       dispatcher: proxyAgent,
       signal: controller.signal
     });
     clearTimeout(timeout);
-    if (res.ok) return res;
+    if (res.ok) return await res.text();
   } catch (e) {
-    // Intentar reintento directo si la proxy falla o da timeout
+    console.warn(`⚠️ Intento vía Proxy a ${url} falló: ${e.message}. Probando conexión directa...`);
   }
 
+  // Intento 2: Conexión directa
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(url, { headers, signal: controller.signal });
     clearTimeout(timeout);
-    if (res.ok) return res;
+    if (res.ok) return await res.text();
   } catch (e) {
+    console.error(`❌ Error en conexión directa a ${url}: ${e.message}`);
     return null;
   }
+
   return null;
 }
 
-async function obtenerPreciosBinanceApi(fiat) {
-  const payload = JSON.stringify({
-    asset: 'USDT',
-    fiat: fiat,
-    merchantCheck: false,
-    page: 1,
-    payTypes: [],
-    publisherType: null,
-    rows: 15,
-    tradeType: 'BUY'
-  });
+/**
+ * Extractor secundario por Expresión Regular sobre HTML/Texto plano 
+ * de las tarjetas de Hoo Monitor (PEN, COP, CLP, ARS, MXN, VES, PYG, DOP, CRC, EUR, CAD, BOB, BRL, BCV)
+ */
+function extraerTasasDesdeTextoHTML(textoRaw) {
+  const tasas = {};
+  const listaMonedas = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB", "BRL", "BCV"];
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-  };
+  listaMonedas.forEach(moneda => {
+    // Busca patrones tipo "COP": 3130 o COP ... 3130 en el HTML
+    const regex = new RegExp(`"${moneda}"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)`, 'i');
+    const match = textoRaw.match(regex);
 
-  const res = await fetchConFallback('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', {
-    method: 'POST',
-    headers,
-    body: payload
-  });
-
-  if (!res) return [];
-
-  try {
-    const data = await res.json();
-    if (data && data.data && Array.isArray(data.data)) {
-      return data.data
-        .map(item => parseFloat(item?.adv?.price))
-        .filter(price => !isNaN(price) && price > 0.1);
+    if (match && match[1]) {
+      tasas[moneda] = parseFloat(match[1]);
+    } else {
+      // Búsqueda flexible por estructura de tarjeta HTML/DOM
+      const regexDOM = new RegExp(`${moneda}[\\s\\S]*?([0-9]+(?:\\.[0-9]+)?)`, 'i');
+      const matchDOM = textoRaw.match(regexDOM);
+      if (matchDOM && matchDOM[1]) {
+        const val = parseFloat(matchDOM[1]);
+        if (!isNaN(val) && val > 0) tasas[moneda] = val;
+      }
     }
-  } catch (err) {
-    console.error(`⚠️ Error parseando Binance P2P (${fiat}):`, err.message);
-  }
-  return [];
+  });
+
+  return tasas;
 }
 
-// API Pública Dedicada BRL
-async function obtenerPrecioBRL() {
-  const res1 = await fetchConFallback("https://economia.awesomeapi.com.br/json/last/USDT-BRL");
-  if (res1) {
-    try {
-      const data = await res1.json();
-      if (data && data.USDTBRL && data.USDTBRL.bid) {
-        return parseFloat(data.USDTBRL.bid);
-      }
-    } catch {}
-  }
-
-  const res2 = await fetchConFallback("https://api.binance.com/api/3/ticker/price?symbol=USDTBRL");
-  if (res2) {
-    try {
-      const data = await res2.json();
-      if (data && data.price) {
-        return parseFloat(data.price);
-      }
-    } catch {}
-  }
-
-  const preciosP2P = await obtenerPreciosBinanceApi("BRL");
-  return calcularPromedioPurificado(preciosP2P);
-}
-
-// API Pública Dedicada BCV
-async function obtenerPrecioBCV() {
-  const res1 = await fetchConFallback("https://ve.dolarapi.com/v1/dolares/oficial");
-  if (res1) {
-    try {
-      const data = await res1.json();
-      const val = parseFloat(data.promedio || data.precio);
-      if (!isNaN(val) && val > 0) return val;
-    } catch {}
-  }
-
-  const res2 = await fetchConFallback("https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=bcv");
-  if (res2) {
-    try {
-      const data = await res2.json();
-      const val = parseFloat(data?.monitors?.bcv?.price || data?.promedio);
-      if (!isNaN(val) && val > 0) return val;
-    } catch {}
-  }
-
-  const res3 = await fetchConFallback("https://www.tcambio.app/");
-  if (res3) {
-    try {
-      const text = await res3.text();
-      const match = text.match(/(?:BCV|Central|Dólar).*?([\d,.]+)/i);
-      if (match) {
-        let val = match[1].replace(',', '.');
-        if ((val.match(/\./g) || []).length > 1) {
-          const parts = val.split('.');
-          val = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
-        }
-        return parseFloat(val);
-      }
-    } catch {}
-  }
-
-  return 0.0;
-}
-
+/**
+ * Función principal del ejecutor Radar
+ */
 async function ejecutarRadarCompleto() {
-  console.log(`🚀 [Atenea Radar] Escaneando 14 divisas (Algoritmo 5 de 7)...`);
-  const resultados = {};
+  console.log(`🚀 [Atenea Radar] Capturando grilla oficial desde https://hoo.jairokov.com...`);
 
-  for (const fiat of BINANCE_FIATS) {
-    const precios = await obtenerPreciosBinanceApi(fiat);
-    const rawAvg = calcularPromedioPurificado(precios);
-    
-    if (rawAvg > 0) {
-      const adj = (fiat === "COP" || fiat === "VES") ? 0.99 : 1.0;
-      const valAdj = rawAvg * adj;
-      resultados[fiat] = valAdj >= 100 ? Math.round(valAdj) : parseFloat(valAdj.toFixed(2));
+  // 1. Intento de consumo de API JSON /radar
+  const respuestaRadar = await consultarHoo('/radar');
+
+  if (respuestaRadar) {
+    try {
+      const json = JSON.parse(respuestaRadar);
+      if (json && json.rates && Object.keys(json.rates).length > 0) {
+        console.log("✅ [Atenea Radar] Tasas capturadas exitosamente vía JSON API:", json.rates);
+        return json.rates;
+      }
+    } catch (e) {
+      console.warn("⚠️ La respuesta de /radar fue HTML. Ejecutando extractor DOM sobre la captura...");
+      const tasasExtraidas = extraerTasasDesdeTextoHTML(respuestaRadar);
+      if (Object.keys(tasasExtraidas).length > 0) {
+        console.log("✅ [Atenea Radar] Tasas extraídas desde el HTML de /radar:", tasasExtraidas);
+        return tasasExtraidas;
+      }
     }
   }
 
-  const brl = await obtenerPrecioBRL();
-  if (brl > 0) resultados["BRL"] = parseFloat(brl.toFixed(2));
+  // 2. Fallback: Captura visual del frontend https://hoo.jairokov.com/
+  console.log("📡 Intentando captura alternativa desde la raíz de Hoo Monitor...");
+  const respuestaHome = await consultarHoo('/');
+  if (respuestaHome) {
+    const tasasHome = extraerTasasDesdeTextoHTML(respuestaHome);
+    if (Object.keys(tasasHome).length > 0) {
+      console.log("✅ [Atenea Radar] Tasas extraídas desde el frontend principal:", tasasHome);
+      return tasasHome;
+    }
+  }
 
-  const bcv = await obtenerPrecioBCV();
-  if (bcv > 0) resultados["BCV"] = parseFloat(bcv.toFixed(2));
-
-  console.log("✅ [Atenea Radar] Escaneo completado. 14 divisas cargadas:", resultados);
-  return resultados;
+  console.error("❌ No se pudieron capturar las tasas desde hoo.jairokov.com");
+  return {};
 }
 
 module.exports = { ejecutarRadarCompleto };
