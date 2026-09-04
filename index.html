@@ -129,18 +129,26 @@
                   <div class="flex items-start justify-between">
                     <div>
                       <p class="font-black text-emerald-400 text-sm leading-none" x-text="formatMonto(item.monto)"></p>
-                      <div class="flex items-center gap-1 mt-0.5">
+                      <div class="flex flex-col gap-0.5 mt-1">
                         <span class="text-[9px] font-bold text-slate-400" x-text="item.moneda || '---'"></span>
                         <template x-if="item.monto_usd_equivalente">
-                          <span class="text-[9px] font-bold text-emerald-300 bg-emerald-950/60 px-1 rounded border border-emerald-500/30" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
+                          <span class="text-[9px] font-bold text-emerald-300" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
+                        </template>
+                        <template x-if="item.tasa_mercado_aplicada">
+                          <span class="text-[8px] font-mono text-purple-300/80" x-text="'Tasa: ' + item.tasa_mercado_aplicada"></span>
                         </template>
                       </div>
                     </div>
-                    <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-                      <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-2 py-0.5 rounded shadow border text-[10px] font-black uppercase active:scale-95 transition-transform">
-                        <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
-                      </button>
-                    </template>
+                    <div class="flex items-center gap-1">
+                      <template x-if="item.lote_tasa_asignado">
+                        <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
+                      </template>
+                      <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                        <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded shadow border text-[9px] font-black uppercase active:scale-95 transition-transform">
+                          <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
+                        </button>
+                      </template>
+                    </div>
                   </div>
 
                   <div class="grid grid-cols-2 gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800 my-1">
@@ -160,19 +168,17 @@
                   </div>
 
                   <div class="flex items-center justify-between mt-1.5 pt-1 border-t border-slate-800/80">
-                    <div class="flex items-center gap-1 truncate max-w-[120px]">
-                      <span class="font-mono text-[9px] text-slate-400">Ref: <span x-text="item.referencia || '-'"></span></span>
-                    </div>
-                    <template x-if="item.lote_tasa_asignado">
-                      <span class="text-[8px] font-mono font-extrabold text-purple-300 bg-purple-950/80 px-1 rounded border border-purple-500/40" x-text="item.lote_tasa_asignado"></span>
-                    </template>
+                    <span class="font-mono text-[9px] text-slate-400">Ref: <span x-text="item.referencia || '-'"></span></span>
+                    <button @click="abrirModal(item)" class="p-1 rounded bg-purple-600/20 text-purple-300 hover:bg-purple-600/40 active:scale-95 transition-all">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
                   </div>
                 </div>
               </div>
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO: TABLA CON SCROLL COMPLETO Y HEADER FIJO -->
+          <!-- 💻 VISTA ESCRITORIO: TABLA CON SCROLL COMPLETO -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -181,7 +187,7 @@
                     <th class="px-3 py-2.5">IMAGEN & R2</th>
                     <th class="px-3 py-2.5">HASH / ESTADO</th>
                     <th class="px-3 py-2.5">MONTO & MONEDA</th>
-                    <th class="px-3 py-2.5">TASA / LOTE</th>
+                    <th class="px-3 py-2.5">LOTE & TIPO</th>
                     <th class="px-3 py-2.5">BANCO / TITULAR</th>
                     <th class="px-3 py-2.5">REFERENCIA</th>
                     <th class="px-3 py-2.5">SOCIOS (1 & 2)</th>
@@ -215,22 +221,29 @@
                         </div>
                       </td>
 
+                      <!-- MONTO, CONVERSIÓN Y VALOR DE LA TASA JUNTOS -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col">
                           <span class="font-bold text-emerald-400 text-xs" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></span>
                           <template x-if="item.monto_usd_equivalente">
                             <span class="text-[9px] font-bold text-slate-400" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
                           </template>
+                          <template x-if="item.tasa_mercado_aplicada">
+                            <span class="text-[8px] font-mono text-purple-300/80 mt-0.5" x-text="'Tasa: ' + item.tasa_mercado_aplicada"></span>
+                          </template>
                         </div>
                       </td>
 
+                      <!-- LOTE Y TIPO DE OPERACIÓN JUNTOS -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-                        <div class="flex flex-col">
+                        <div class="flex items-center gap-1.5">
                           <template x-if="item.lote_tasa_asignado">
-                            <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30 w-max" x-text="item.lote_tasa_asignado"></span>
+                            <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
                           </template>
-                          <template x-if="item.tasa_mercado_aplicada">
-                            <span class="text-[9px] text-slate-400 font-mono mt-0.5" x-text="'Tasa: ' + item.tasa_mercado_aplicada"></span>
+                          <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                            <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded text-[10px] font-black border uppercase hover:opacity-80">
+                              <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
+                            </button>
                           </template>
                         </div>
                       </td>
@@ -242,19 +255,12 @@
 
                       <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
 
+                      <!-- SOCIOS LIMPIOS -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-                        <div class="flex items-center gap-2">
-                          <div class="flex flex-col">
-                            <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
-                            <template x-if="item.nombre_socio_2">
-                              <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
-                            </template>
-                          </div>
-
-                          <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-                            <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.2 rounded text-[9px] font-black border uppercase hover:opacity-80">
-                              <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
-                            </button>
+                        <div class="flex flex-col">
+                          <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
+                          <template x-if="item.nombre_socio_2">
+                            <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
                           </template>
                         </div>
                       </td>
