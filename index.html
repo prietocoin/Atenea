@@ -466,7 +466,7 @@
           }
         },
 
-       async consultarApiHoo() {
+      async consultarApiHoo() {
   this.cargandoTasas = true;
   this.mensajeTasas = 'Escaneando tasas...';
 
@@ -474,22 +474,38 @@
     const res = await fetch('/api/tasas/hoo-html');
     const data = await res.json();
 
-    if (data.success && data.html) {
+    if (data && data.success && data.html) {
       const tasasExtraidas = {};
       const fiats = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB", "BRL", "BCV"];
 
-      // 1. Extraer del script de datos interno de Next.js (__NEXT_DATA__)
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(data.html, 'text/html');
-      const nextScript = doc.getElementById('__NEXT_DATA__');
+      // Extracción limpia por posición de texto (sin escapes complejos de caracteres)
+      fiats.forEach(fiat => {
+        const clave = '"' + fiat + '"';
+        const pos = data.html.indexOf(clave);
+        if (pos !== -1) {
+          const fragmento = data.html.substring(pos, pos + 40);
+          const match = fragmento.match(/:\s*([0-9]+(?:\.[0-9]+)?)/);
+          if (match && match[1]) {
+            tasasExtraidas[fiat] = parseFloat(match[1]);
+          }
+        }
+      });
 
-      if (nextScript && nextScript.textContent) {
-        fiats.forEach(fiat => {
-          const reg = new RegExp(`"${fiat}"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)`, 'i');
-          const match = nextScript.textContent.match(reg);
-          if (match && match[1]) tasasExtraidas[fiat] = parseFloat(match[1]);
-        });
+      if (Object.keys(tasasExtraidas).length > 0) {
+        this.tasasBaul = tasasExtraidas;
+        this.mensajeTasas = '';
+        return;
       }
+    }
+
+    this.mensajeTasas = 'No se encontraron tasas disponibles.';
+  } catch (err) {
+    console.error('Error al leer tasas:', err);
+    this.mensajeTasas = 'Error de conexión.';
+  } finally {
+    this.cargandoTasas = false;
+  }
+}
 
       // 2. Respaldo por búsqueda directa de variables en todo el HTML
       if (Object.keys(tasasExtraidas).length === 0) {
