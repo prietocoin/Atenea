@@ -53,10 +53,10 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// PROXY DIRECTO AL ENDPOINT DE FASTAPI (/radar) EN RENDER
+// PROXY DIRECTO AL ENDPOINT RADAR DE RENDER
 app.get('/api/tasas/fetch-hoo', async (req, res) => {
   try {
-    const response = await fetch('https://hoo.jairokov.com/radar', {
+    const response = await fetch('https://motor-de-hoole.onrender.com/radar', {
       headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(8000)
     });
@@ -67,7 +67,6 @@ app.get('/api/tasas/fetch-hoo', async (req, res) => {
 
     const data = await response.json();
     
-    // Devolvemos el diccionario 'rates' generado por tu FastAPI
     return res.json({
       success: data.success || true,
       rates: data.rates || {}
