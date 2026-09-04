@@ -7,6 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
+// Manejo global de excepciones
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Excepción aislada:', err.message);
 });
@@ -15,6 +16,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Promesa rechazada aislada:', reason);
 });
 
+// Configuración de PostgreSQL
 const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgres-db:5432/automat';
 
 const pool = new Pool({
@@ -29,10 +31,15 @@ pool.on('error', (err) => {
   console.error('⚠️ Error en PostgreSQL:', err.message);
 });
 
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// Almacenamiento temporal en memoria para auditoría en el Baúl
+let borradorTasas = {};
+
+// --- DIAGNÓSTICO ---
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
@@ -53,30 +60,69 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// PROXY DIRECTO AL ENDPOINT RADAR DE RENDER
-app.get('/api/tasas/fetch-hoo', async (req, res) => {
+// --- MÓDULO DE TASAS ---
+
+// 1. Webhook receptor desde n8n
+app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
-    const response = await fetch('https://motor-de-hoole.onrender.com/radar', {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(8000)
-    });
-
-    if (!response.ok) {
-      return res.status(500).json({ success: false, msg: `HTTP Error ${response.status}` });
-    }
-
-    const data = await response.json();
-    
-    return res.json({
-      success: data.success || true,
-      rates: data.rates || {}
-    });
+    borradorTasas = req.body;
+    console.log('✅ Borrador de tasas actualizado desde n8n:', borradorTasas);
+    return res.json({ success: true, message: 'Borrador cargado en memoria' });
   } catch (err) {
+    console.error('Error al recibir borrador:', err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// COMPROBANTES Y TABLA MAESTRA
+// 2. Endpoint consultado por Atenea Panel ("Conectar Hoo API")
+app.get('/api/tasas/fetch-hoo', (req, res) => {
+  if (!borradorTasas || Object.keys(borradorTasas).length === 0) {
+    return res.status(404).json({
+      success: false,
+      msg: 'El motor de n8n aún no ha enviado un borrador reciente.'
+    });
+  }
+
+  return res.json({
+    success: true,
+    rates: borradorTasas
+  });
+});
+
+// 3. Endpoint de guardado a producción en PostgreSQL
+app.post('/api/tasas/publicar', async (req, res) => {
+  try {
+    const { id_tasa, tasas } = req.body;
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    let codigoTasa = id_tasa;
+    if (!codigoTasa) {
+      const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
+      if (lastRes.rows.length > 0) {
+        const num = parseInt(lastRes.rows[0].id_tasa.replace('T', '')) + 1;
+        codigoTasa = `T${String(num).padStart(3, '0')}`;
+      } else {
+        codigoTasa = 'T359';
+      }
+    }
+
+    for (const [moneda, valor] of Object.entries(tasas)) {
+      if (valor && !isNaN(valor)) {
+        await pool.query(
+          `INSERT INTO mercado_tasas (id_tasa, moneda, tasa_base, timestamp) VALUES ($1, $2, $3, $4);`,
+          [codigoTasa, moneda.toUpperCase(), parseFloat(valor), timestamp]
+        );
+      }
+    }
+
+    res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
+  } catch (err) {
+    console.error("Error al publicar tasa:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- COMPROBANTES Y TABLA MAESTRA ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -176,6 +222,7 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   }
 });
 
+// --- SOCIOS Y DIRECTORIO ---
 app.get('/api/socios', async (req, res) => {
   try {
     const query = `
@@ -241,38 +288,7 @@ app.post('/api/directorio', async (req, res) => {
   }
 });
 
-app.post('/api/tasas/publicar', async (req, res) => {
-  try {
-    const { id_tasa, tasas } = req.body;
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    let codigoTasa = id_tasa;
-    if (!codigoTasa) {
-      const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
-      if (lastRes.rows.length > 0) {
-        const num = parseInt(lastRes.rows[0].id_tasa.replace('T', '')) + 1;
-        codigoTasa = `T${String(num).padStart(3, '0')}`;
-      } else {
-        codigoTasa = 'T359';
-      }
-    }
-
-    for (const [moneda, valor] of Object.entries(tasas)) {
-      if (valor && !isNaN(valor)) {
-        await pool.query(
-          `INSERT INTO mercado_tasas (id_tasa, moneda, tasa_base, timestamp) VALUES ($1, $2, $3, $4);`,
-          [codigoTasa, moneda.toUpperCase(), parseFloat(valor), timestamp]
-        );
-      }
-    }
-
-    res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
-  } catch (err) {
-    console.error("Error al publicar tasa:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
+// --- FRONTEND SPA ---
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
