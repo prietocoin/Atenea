@@ -466,101 +466,63 @@
           }
         },
 
-      async consultarApiHoo() {
-  this.cargandoTasas = true;
-  this.mensajeTasas = 'Escaneando tasas...';
+        async consultarApiHoo() {
+          this.cargandoTasas = true;
+          this.mensajeTasas = 'Escaneando tasas...';
 
-  try {
-    const res = await fetch('/api/tasas/hoo-html');
-    const data = await res.json();
+          try {
+            const res = await fetch('/api/tasas/hoo-html');
+            const data = await res.json();
 
-    if (data && data.success && data.html) {
-      const tasasExtraidas = {};
-      const fiats = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB", "BRL", "BCV"];
+            if (data && data.success && data.html) {
+              const tasasExtraidas = {};
+              const fiats = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB", "BRL", "BCV"];
 
-      // Extracción limpia por posición de texto (sin escapes complejos de caracteres)
-      fiats.forEach(fiat => {
-        const clave = '"' + fiat + '"';
-        const pos = data.html.indexOf(clave);
-        if (pos !== -1) {
-          const fragmento = data.html.substring(pos, pos + 40);
-          const match = fragmento.match(/:\s*([0-9]+(?:\.[0-9]+)?)/);
-          if (match && match[1]) {
-            tasasExtraidas[fiat] = parseFloat(match[1]);
-          }
-        }
-      });
+              // Estrategia 1: Búsqueda exacta en texto JSON del paquete HTML
+              fiats.forEach(fiat => {
+                const clave = '"' + fiat + '"';
+                const pos = data.html.indexOf(clave);
+                if (pos !== -1) {
+                  const fragmento = data.html.substring(pos, pos + 40);
+                  const match = fragmento.match(/:\s*([0-9]+(?:\.[0-9]+)?)/);
+                  if (match && match[1]) {
+                    tasasExtraidas[fiat] = parseFloat(match[1]);
+                  }
+                }
+              });
 
-      if (Object.keys(tasasExtraidas).length > 0) {
-        this.tasasBaul = tasasExtraidas;
-        this.mensajeTasas = '';
-        return;
-      }
-    }
+              // Estrategia 2: Respaldo DOMParser
+              if (Object.keys(tasasExtraidas).length === 0) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.html, 'text/html');
+                doc.querySelectorAll('.grid.grid-cols-2 > div').forEach(tarjeta => {
+                  const spans = tarjeta.querySelectorAll('span');
+                  if (spans.length >= 2) {
+                    const moneda = (spans[0].textContent || '').trim().toUpperCase();
+                    const valor = parseFloat((spans[1].textContent || '').trim().replace(/,/g, ''));
+                    if (moneda.length === 3 && !isNaN(valor) && valor > 0) {
+                      tasasExtraidas[moneda] = valor;
+                    }
+                  }
+                });
+              }
 
-    this.mensajeTasas = 'No se encontraron tasas disponibles.';
-  } catch (err) {
-    console.error('Error al leer tasas:', err);
-    this.mensajeTasas = 'Error de conexión.';
-  } finally {
-    this.cargandoTasas = false;
-  }
-}
-
-      // 2. Respaldo por búsqueda directa de variables en todo el HTML
-      if (Object.keys(tasasExtraidas).length === 0) {
-        fiats.forEach(fiat => {
-          const reg = new RegExp(`"${fiat}"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)`, 'i');
-          const match = data.html.match(reg);
-          if (match && match[1]) tasasExtraidas[fiat] = parseFloat(match[1]);
-        });
-      }
-
-      // 3. Respaldo DOM visual por si el servidor entregó HTML pre-renderizado
-      if (Object.keys(tasasExtraidas).length === 0) {
-        doc.querySelectorAll('.grid.grid-cols-2 > div').forEach(tarjeta => {
-          const spans = tarjeta.querySelectorAll('span');
-          if (spans.length >= 2) {
-            const moneda = (spans[0].textContent || '').trim().toUpperCase();
-            const valor = parseFloat((spans[1].textContent || '').trim().replace(/,/g, ''));
-
-            if (moneda.length === 3 && !isNaN(valor) && valor > 0) {
-              tasasExtraidas[moneda] = valor;
+              if (Object.keys(tasasExtraidas).length > 0) {
+                this.tasasBaul = tasasExtraidas;
+                this.mensajeTasas = '';
+                return;
+              }
             }
+
+            this.mensajeTasas = 'No se encontraron tasas disponibles.';
+          } catch (err) {
+            console.error('Error al leer tasas:', err);
+            this.mensajeTasas = 'Error de conexión.';
+          } finally {
+            this.cargandoTasas = false;
           }
-        });
-      }
+        },
 
-      if (Object.keys(tasasExtraidas).length > 0) {
-        this.tasasBaul = tasasExtraidas;
-        this.mensajeTasas = '';
-        return;
-      }
-    }
-
-    this.mensajeTasas = 'No se pudieron extraer las tasas del contenido.';
-  } catch (err) {
-    this.mensajeTasas = 'Error de comunicación con el servidor.';
-  } finally {
-    this.cargandoTasas = false;
-  }
-};
-
-      if (Object.keys(tasasExtraidas).length > 0) {
-        this.tasasBaul = tasasExtraidas;
-        this.mensajeTasas = '';
-        return;
-      }
-    }
-
-    this.mensajeTasas = 'No se pudieron extraer los datos del DOM.';
-  } catch (err) {
-    console.error(err);
-    this.mensajeTasas = 'Error de conexión con el servidor.';
-  } finally {
-    this.cargandoTasas = false;
-  }
-},
         async publicarTasaOficial() {
           if (Object.keys(this.tasasBaul).length === 0) return;
           try {
