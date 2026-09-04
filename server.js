@@ -31,6 +31,21 @@ pool.on('error', (err) => {
   console.error('⚠️ Error en PostgreSQL:', err.message);
 });
 
+// Inicialización de tablas requeridas en PostgreSQL
+pool.query(`
+  CREATE TABLE IF NOT EXISTS mercado_tasas (
+    id SERIAL PRIMARY KEY,
+    id_tasa VARCHAR(20) NOT NULL,
+    moneda VARCHAR(10) NOT NULL,
+    tasa_base NUMERIC(18, 6) NOT NULL,
+    timestamp BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_mercado_tasas_id_tasa ON mercado_tasas(id_tasa);
+  CREATE INDEX IF NOT EXISTS idx_mercado_tasas_moneda_ts ON mercado_tasas(moneda, timestamp DESC);
+`).then(() => console.log('✅ Tabla mercado_tasas verificada/creada correctamente.'))
+  .catch(err => console.error('⚠️ Error al verificar tabla mercado_tasas:', err.message));
+
 // Middlewares
 app.use(cors());
 app.use(express.json());
@@ -62,14 +77,25 @@ app.get('/api/test-db', async (req, res) => {
 
 // --- MÓDULO DE TASAS ---
 
-// 1. Webhook receptor desde n8n
+// 1. Webhook receptor unificado desde n8n
 app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
-    borradorTasas = req.body;
+    let payload = req.body;
+    
+    // Extraer si viene envuelto como arreglo [{...}]
+    if (Array.isArray(payload)) {
+      payload = payload[0] || {};
+    }
+    // Extraer si viene en objeto .json
+    if (payload.json) {
+      payload = payload.json;
+    }
+
+    borradorTasas = payload;
     console.log('✅ Borrador de tasas actualizado desde n8n:', borradorTasas);
-    return res.json({ success: true, message: 'Borrador cargado en memoria' });
+    return res.json({ success: true, message: 'Borrador cargado en memoria', rates: borradorTasas });
   } catch (err) {
-    console.error('Error al recibir borrador:', err.message);
+    console.error('❌ Error al recibir borrador:', err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -89,26 +115,41 @@ app.get('/api/tasas/fetch-hoo', (req, res) => {
   });
 });
 
-// 3. Endpoint de guardado a producción en PostgreSQL
-app.post('/api/tasas/n8n-webhook', (req, res) => {
+// 3. Endpoint de guardado definitivo en PostgreSQL
+app.post('/api/tasas/publicar', async (req, res) => {
   try {
-    let payload = req.body;
-    
-    // Extraer del arreglo de n8n si llega como [{...}]
-    if (Array.isArray(payload)) {
-      payload = payload[0] || {};
-    }
-    // Extraer de la propiedad .json si n8n lo envía empaquetado
-    if (payload.json) {
-      payload = payload.json;
+    const { id_tasa, tasas } = req.body;
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    if (!tasas || Object.keys(tasas).length === 0) {
+      return res.status(400).json({ success: false, message: 'No se enviaron tasas para publicar.' });
     }
 
-    borradorTasas = payload;
-    console.log('✅ Borrador recibido en Express:', borradorTasas);
-    return res.json({ success: true, rates: borradorTasas });
+    let codigoTasa = id_tasa;
+    if (!codigoTasa) {
+      const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
+      if (lastRes.rows.length > 0) {
+        const num = parseInt(lastRes.rows[0].id_tasa.replace('T', '')) + 1;
+        codigoTasa = `T${String(num).padStart(3, '0')}`;
+      } else {
+        codigoTasa = 'T359';
+      }
+    }
+
+    for (const [moneda, valor] of Object.entries(tasas)) {
+      if (valor && !isNaN(valor)) {
+        await pool.query(
+          `INSERT INTO mercado_tasas (id_tasa, moneda, tasa_base, timestamp) VALUES ($1, $2, $3, $4);`,
+          [codigoTasa, moneda.toUpperCase(), parseFloat(valor), timestamp]
+        );
+      }
+    }
+
+    console.log(`✅ Lote ${codigoTasa} guardado exitosamente en PostgreSQL.`);
+    res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
   } catch (err) {
-    console.error('❌ Error al recibir borrador:', err.message);
-    return res.status(500).json({ success: false, error: err.message });
+    console.error("❌ Error al publicar tasa:", err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
