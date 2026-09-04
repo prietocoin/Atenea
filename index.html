@@ -254,8 +254,8 @@
             <button 
               @click="consultarApiHoo()" 
               class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 active:scale-95 transition-all flex items-center gap-2 shadow-lg">
-              <span x-show="!cargandoTasas">🔄 Scraping Hoo Visual</span>
-              <span x-show="cargandoTasas">Escaneando...</span>
+              <span x-show="!cargandoTasas">🔄 Conectar Hoo API</span>
+              <span x-show="cargandoTasas">Consultando API...</span>
             </button>
           </div>
 
@@ -276,7 +276,7 @@
 
             <template x-if="Object.keys(tasasBaul).length === 0">
               <div class="text-center py-8 text-slate-500 text-xs font-medium">
-                Haz clic en <strong class="text-purple-400">"Scraping Hoo Visual"</strong> para leer directamente el monitor.
+                Haz clic en <strong class="text-purple-400">"Conectar Hoo API"</strong> para recibir las tasas del motor v4.
               </div>
             </template>
 
@@ -468,56 +468,21 @@
 
         async consultarApiHoo() {
           this.cargandoTasas = true;
-          this.mensajeTasas = 'Escaneando tasas...';
+          this.mensajeTasas = 'Conectando con la API oficial de Hoo...';
 
           try {
-            const res = await fetch('/api/tasas/hoo-html');
+            const res = await fetch('/api/tasas/fetch-hoo');
             const data = await res.json();
 
-            if (data && data.success && data.html) {
-              const tasasExtraidas = {};
-              const fiats = ["PEN", "COP", "CLP", "ARS", "MXN", "VES", "PYG", "DOP", "CRC", "EUR", "CAD", "BOB", "BRL", "BCV"];
-
-              // Estrategia 1: Búsqueda exacta en texto JSON del paquete HTML
-              fiats.forEach(fiat => {
-                const clave = '"' + fiat + '"';
-                const pos = data.html.indexOf(clave);
-                if (pos !== -1) {
-                  const fragmento = data.html.substring(pos, pos + 40);
-                  const match = fragmento.match(/:\s*([0-9]+(?:\.[0-9]+)?)/);
-                  if (match && match[1]) {
-                    tasasExtraidas[fiat] = parseFloat(match[1]);
-                  }
-                }
-              });
-
-              // Estrategia 2: Respaldo DOMParser
-              if (Object.keys(tasasExtraidas).length === 0) {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(data.html, 'text/html');
-                doc.querySelectorAll('.grid.grid-cols-2 > div').forEach(tarjeta => {
-                  const spans = tarjeta.querySelectorAll('span');
-                  if (spans.length >= 2) {
-                    const moneda = (spans[0].textContent || '').trim().toUpperCase();
-                    const valor = parseFloat((spans[1].textContent || '').trim().replace(/,/g, ''));
-                    if (moneda.length === 3 && !isNaN(valor) && valor > 0) {
-                      tasasExtraidas[moneda] = valor;
-                    }
-                  }
-                });
-              }
-
-              if (Object.keys(tasasExtraidas).length > 0) {
-                this.tasasBaul = tasasExtraidas;
-                this.mensajeTasas = '';
-                return;
-              }
+            if (data && data.success && data.rates && Object.keys(data.rates).length > 0) {
+              this.tasasBaul = data.rates;
+              this.mensajeTasas = '';
+            } else {
+              this.mensajeTasas = 'El motor v4 de Hoo aún está inicializando sus datos.';
             }
-
-            this.mensajeTasas = 'No se encontraron tasas disponibles.';
           } catch (err) {
-            console.error('Error al leer tasas:', err);
-            this.mensajeTasas = 'Error de conexión.';
+            console.error('Error al consultar la API:', err);
+            this.mensajeTasas = 'Error de conexión con el backend de Atenea.';
           } finally {
             this.cargandoTasas = false;
           }
