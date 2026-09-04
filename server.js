@@ -31,7 +31,19 @@ pool.on('error', (err) => {
   console.error('⚠️ Error en PostgreSQL:', err.message);
 });
 
-// Inicialización automática de Tablas, Índices y Vistas requeridas
+// Matriz de factores de ajuste por socio (extraída de Hoole - T_Ajustes.csv)
+const MATRIZ_AJUSTES_SOCIOS = {
+  "OMAR": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "D-ECU": 1.064, "P-BRL": 0.971, "D-BRL": -1.031, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": 0.962, "D-EUR": -1.042, "P-BOB": -0.926, "D-BOB": 1.087 },
+  "CHASAN": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.96, "D-ECU": 1.042, "P-MXN": 0.97, "D-MXN": -1.03, "P-BRL": -0.952, "D-BRL": 1.053, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 },
+  "JOSEM": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 },
+  "NELSY": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": 0.98, "D-ARS": -1.02, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": 0.99, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 },
+  "YARELIS": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-ECU": 0.98, "D-ECU": 1.02, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 },
+  "ELIS": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 },
+  "IRIS": { "P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": 0.98, "D-COP": -1.02, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087 },
+  "MERLI": { "P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087 }
+};
+
+// Inicialización automática de esquema
 async function initDB() {
   try {
     await pool.query(`
@@ -48,8 +60,22 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_mercado_tasas_ts ON mercado_tasas (timestamp ASC);
       CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
     `);
-    console.log('✅ Tabla e índices de mercado_tasas verificados.');
 
+    // 1. Agregar columna 'ajustes' JSONB a nombres_fb si no existe
+    await pool.query(`
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
+    `);
+
+    // 2. Sembrar/Actualizar matriz de ajustes en nombres_fb
+    for (const [socio, ajustesObj] of Object.entries(MATRIZ_AJUSTES_SOCIOS)) {
+      await pool.query(
+        `UPDATE nombres_fb SET ajustes = $1 WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2));`,
+        [JSON.stringify(ajustesObj), socio]
+      );
+    }
+    console.log('✅ Matriz de ajustes sembrada e integrada en la tabla nombres_fb.');
+
+    // 3. Recreación limpia de la Vista v_comprobantes_auditados
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -103,7 +129,7 @@ async function initDB() {
         ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
        AND mt_primer.moneda = UPPER(f.moneda);
     `);
-    console.log('✅ Vista v_comprobantes_auditados verificada y reestructurada.');
+    console.log('✅ Vista v_comprobantes_auditados actualizada.');
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -116,13 +142,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Almacenamiento temporal en memoria para auditoría en el Baúl
 let borradorTasas = {};
 
 // --- DIAGNÓSTICO ---
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
+app.get('/health', (req, res) => res.status(200).send('OK'));
 
 app.get('/api/test-db', async (req, res) => {
   try {
@@ -141,18 +164,11 @@ app.get('/api/test-db', async (req, res) => {
 });
 
 // --- MÓDULO DE TASAS ---
-
-// 1. Webhook receptor unificado desde n8n
 app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
     let payload = req.body;
-    
-    if (Array.isArray(payload)) {
-      payload = payload[0] || {};
-    }
-    if (payload.json) {
-      payload = payload.json;
-    }
+    if (Array.isArray(payload)) payload = payload[0] || {};
+    if (payload.json) payload = payload.json;
 
     borradorTasas = payload;
     console.log('✅ Borrador de tasas actualizado desde n8n:', borradorTasas);
@@ -163,22 +179,13 @@ app.post('/api/tasas/n8n-webhook', (req, res) => {
   }
 });
 
-// 2. Endpoint consultado por Atenea Panel ("Conectar Hoo API")
 app.get('/api/tasas/fetch-hoo', (req, res) => {
   if (!borradorTasas || Object.keys(borradorTasas).length === 0) {
-    return res.status(404).json({
-      success: false,
-      msg: 'El motor de n8n aún no ha enviado un borrador reciente.'
-    });
+    return res.status(404).json({ success: false, msg: 'El motor de n8n aún no ha enviado un borrador reciente.' });
   }
-
-  return res.json({
-    success: true,
-    rates: borradorTasas
-  });
+  return res.json({ success: true, rates: borradorTasas });
 });
 
-// 3. Endpoint de guardado definitivo en PostgreSQL
 app.post('/api/tasas/publicar', async (req, res) => {
   try {
     const { id_tasa, tasas } = req.body;
@@ -216,17 +223,79 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// --- COMPROBANTES Y TABLA MAESTRA ---
+// --- COMPROBANTES Y CÁLCULO DE TASA 1 Y TASA 2 ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
 
     let query = `
       SELECT 
-        v.hash_largo, v.monto, v.moneda, v.banco, v.referencia, v.titular, v.procesado_ia,
-        v.hash_corto, v.url_imagen, v.nombre_socio_1, v.nombre_socio_2, v.timestamp_comprobante AS timestamp, 
-        v.conteo, v.lote_tasa_asignado, v.tasa_mercado_aplicada, v.monto_usd_equivalente
+        v.hash_largo, 
+        v.monto, 
+        v.moneda, 
+        v.banco, 
+        v.referencia, 
+        v.titular, 
+        v.procesado_ia,
+        v.hash_corto, 
+        v.url_imagen, 
+        v.nombre_socio_1, 
+        v.nombre_socio_2, 
+        v.timestamp_comprobante AS timestamp, 
+        v.conteo, 
+        v.lote_tasa_asignado, 
+        v.tasa_mercado_aplicada AS tasa_base,
+        v.monto_usd_equivalente,
+
+        -- Tasa ajustada para Socio 1 según la columna 'ajustes' de nombres_fb
+        COALESCE(
+          ROUND((v.tasa_mercado_aplicada * ABS(
+            COALESCE(
+              (n1.ajustes->>(
+                COALESCE(
+                  CASE v.moneda
+                    WHEN 'PEN' THEN n1.pen
+                    WHEN 'COP' THEN n1.cop
+                    WHEN 'CLP' THEN n1.clp
+                    WHEN 'VES' THEN n1.ves
+                    WHEN 'ARS' THEN n1.ars
+                    WHEN 'USD' THEN n1.usd
+                    ELSE 'D'
+                  END, 'D'
+                ) || '-' || v.moneda
+              ))::numeric,
+              1
+            )
+          ))::numeric, 6),
+          v.tasa_mercado_aplicada
+        ) AS tasa_1,
+
+        -- Tasa ajustada para Socio 2 según la columna 'ajustes' de nombres_fb
+        COALESCE(
+          ROUND((v.tasa_mercado_aplicada * ABS(
+            COALESCE(
+              (n2.ajustes->>(
+                COALESCE(
+                  CASE v.moneda
+                    WHEN 'PEN' THEN n2.pen
+                    WHEN 'COP' THEN n2.cop
+                    WHEN 'CLP' THEN n2.clp
+                    WHEN 'VES' THEN n2.ves
+                    WHEN 'ARS' THEN n2.ars
+                    WHEN 'USD' THEN n2.usd
+                    ELSE 'D'
+                  END, 'D'
+                ) || '-' || v.moneda
+              ))::numeric,
+              1
+            )
+          ))::numeric, 6),
+          v.tasa_mercado_aplicada
+        ) AS tasa_2
+
       FROM v_comprobantes_auditados v
+      LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
+      LEFT JOIN nombres_fb n2 ON UPPER(TRIM(n2.nombre)) = UPPER(TRIM(v.nombre_socio_2))
       WHERE v.conteo > 1
     `;
 
@@ -335,26 +404,6 @@ app.get('/api/socios', async (req, res) => {
   }
 });
 
-app.get('/api/reportes/socios', async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        COALESCE(c.nombre_socio_1, 'Sin Asignar') AS socio,
-        COUNT(DISTINCT f.hash_largo) AS total_comprobantes,
-        SUM(COALESCE(f.monto, 0)) AS total_monto_acumulado
-      FROM comprobantes_fb f
-      INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
-      WHERE c.conteo > 1
-      GROUP BY COALESCE(c.nombre_socio_1, 'Sin Asignar')
-      ORDER BY total_comprobantes DESC;
-    `;
-    const { rows } = await pool.query(query);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 app.get('/api/directorio', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC;');
@@ -366,23 +415,28 @@ app.get('/api/directorio', async (req, res) => {
 
 app.post('/api/directorio', async (req, res) => {
   try {
-    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp } = req.body;
+    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ajustes } = req.body;
     const query = `
-      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ajustes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (id_grupo) DO UPDATE SET
         nombre = EXCLUDED.nombre, roles = EXCLUDED.roles, moneda_socio = EXCLUDED.moneda_socio,
-        usd = EXCLUDED.usd, pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp
+        usd = EXCLUDED.usd, pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp,
+        ajustes = COALESCE(EXCLUDED.ajustes, nombres_fb.ajustes)
       RETURNING *;
     `;
-    const { rows } = await pool.query(query, [id_grupo, nombre, roles || 'GRUPO', moneda_socio || null, usd || null, pen || null, cop || null, clp || null]);
+    const { rows } = await pool.query(query, [
+      id_grupo, nombre, roles || 'GRUPO', moneda_socio || null, 
+      usd || null, pen || null, cop || null, clp || null, 
+      ajustes ? JSON.stringify(ajustes) : null
+    ]);
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- FRONTEND SPA ---
+// SPA Fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
