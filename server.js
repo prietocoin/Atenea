@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
 process.on('uncaughtException', (err) => {
-  console.error('⚠️ Excepción no capturada aislada:', err.message);
+  console.error('⚠️ Excepción aislada:', err.message);
 });
 
 process.on('unhandledRejection', (reason) => {
@@ -296,7 +296,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// LEVANTAR SERVIDOR Y PROGRAMAR TAREAS
+// INICIAR EXPRESS Y LUEGO SINCRONIZAR
 app.listen(PORT, HOST, () => {
   console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
   setTimeout(actualizarCacheNativa, 1000);
