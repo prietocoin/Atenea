@@ -251,6 +251,7 @@ async function initDB() {
     }
     console.log('✅ Base de datos sembrada.');
 
+    // RECREACIÓN DE LA VISTA CON LEFT JOIN PARA QUE NUNCA QUEDE EN BLANCO
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -271,37 +272,37 @@ async function initDB() {
         ) lotes
       )
       SELECT 
-        f.hash_largo,
+        c.hash_largo,
         c.hash_corto,
         c.timestamp AS timestamp_comprobante,
         to_timestamp(c.timestamp) AS fecha_hora_comprobante,
-        f.monto,
-        UPPER(f.moneda) AS moneda,
+        COALESCE(f.monto, 0) AS monto,
+        COALESCE(UPPER(f.moneda), 'USDT') AS moneda,
         f.banco,
         f.titular,
         f.referencia,
-        f.procesado_ia,
+        COALESCE(f.procesado_ia, FALSE) AS procesado_ia,
         c.nombre_socio_1,
         c.nombre_socio_2,
         c.url_imagen,
-        c.conteo,
+        COALESCE(c.conteo, 1) AS conteo,
         COALESCE(lr.id_tasa, (SELECT id_tasa FROM primer_lote), 'T360') AS lote_tasa_asignado,
         
         COALESCE(
           mt.tasa_base, 
           mt_primer.tasa_base,
-          CASE WHEN UPPER(f.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
+          CASE WHEN UPPER(COALESCE(f.moneda, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
         ) AS tasa_mercado_aplicada,
         
         CASE 
-          WHEN UPPER(f.moneda) IN ('USD', 'USDT', 'PYUSD') THEN ROUND(f.monto::numeric, 2)
+          WHEN UPPER(COALESCE(f.moneda, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN ROUND(COALESCE(f.monto, 0)::numeric, 2)
           WHEN COALESCE(mt.tasa_base, mt_primer.tasa_base) > 0 
-            THEN ROUND((f.monto / COALESCE(mt.tasa_base, mt_primer.tasa_base))::numeric, 2)
+            THEN ROUND((COALESCE(f.monto, 0) / COALESCE(mt.tasa_base, mt_primer.tasa_base))::numeric, 2)
           ELSE NULL
         END AS monto_usd_equivalente
 
-      FROM comprobantes_fb f
-      INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo
+      FROM cola_fb c
+      LEFT JOIN comprobantes_fb f ON TRIM(LOWER(c.hash_largo)) = TRIM(LOWER(f.hash_largo))
       LEFT JOIN lotes_rangos lr 
         ON c.timestamp >= lr.t_inicio 
        AND (lr.t_fin IS NULL OR c.timestamp < lr.t_fin)
@@ -312,7 +313,7 @@ async function initDB() {
         ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
        AND mt_primer.moneda = UPPER(f.moneda);
     `);
-    console.log('✅ Vista v_comprobantes_auditados sincronizada.');
+    console.log('✅ Vista v_comprobantes_auditados sincronizada con LEFT JOIN.');
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -344,7 +345,6 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// ENDPOINT PARA OBTENER ÚLTIMAS TASAS PUBLICADAS DEL MERCADO
 app.get('/api/tasas/ultimas', async (req, res) => {
   try {
     const lastLotRes = await pool.query(`
@@ -372,7 +372,6 @@ app.get('/api/tasas/ultimas', async (req, res) => {
   }
 });
 
-// --- TASAS ---
 app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
     let payload = req.body;
@@ -380,10 +379,8 @@ app.post('/api/tasas/n8n-webhook', (req, res) => {
     if (payload.json) payload = payload.json;
 
     borradorTasas = payload;
-    console.log('✅ Borrador de tasas actualizado desde n8n:', borradorTasas);
     return res.json({ success: true, message: 'Borrador cargado en memoria', rates: borradorTasas });
   } catch (err) {
-    console.error('❌ Error al recibir borrador:', err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
@@ -424,15 +421,13 @@ app.post('/api/tasas/publicar', async (req, res) => {
       }
     }
 
-    console.log(`✅ Lote ${codigoTasa} guardado exitosamente en PostgreSQL.`);
     res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
   } catch (err) {
-    console.error("❌ Error al publicar tasa:", err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// --- COMPROBANTES Y CÁLCULO UNIFICADO ---
+// --- GET COMPROBANTES CON BÚSQUEDA INSENSIBLE A MAYÚSCULAS ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash, soloDuplicados } = req.query;
@@ -456,7 +451,7 @@ const getComprobantesHandler = async (req, res) => {
         
         COALESCE(
           v.tasa_mercado_aplicada,
-          CASE WHEN UPPER(f.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
+          CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
         ) AS tasa_base,
         
         v.monto_usd_equivalente,
@@ -628,7 +623,6 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
-    console.error('Error en PUT /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -645,7 +639,6 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
     await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
     res.json({ success: true, message: 'Comprobante eliminado' });
   } catch (err) {
-    console.error('Error en DELETE /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -678,32 +671,23 @@ app.get('/api/directorio', async (req, res) => {
   }
 });
 
-// ELIMINACIÓN DE PERFIL/SOCIO DEL DIRECTORIO
 app.delete('/api/directorio/:nombre', async (req, res) => {
   try {
     const { nombre } = req.params;
-    if (!nombre) {
-      return res.status(400).json({ error: 'Nombre de socio requerido.' });
-    }
+    if (!nombre) return res.status(400).json({ error: 'Nombre de socio requerido.' });
 
     const { rows } = await pool.query(
       `DELETE FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1)) RETURNING *;`,
       [nombre]
     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Socio no encontrado.' });
-    }
-
-    console.log(`🗑️ Socio ${nombre} eliminado del directorio nombres_fb.`);
+    if (rows.length === 0) return res.status(404).json({ error: 'Socio no encontrado.' });
     res.json({ success: true, message: `Socio ${nombre} eliminado correctamente.` });
   } catch (err) {
-    console.error('Error al borrar socio:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ENDPOINT UNIFICADO CON TALLA AUTOMÁTICA
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
@@ -757,7 +741,6 @@ app.post('/api/socios/config', async (req, res) => {
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
-    console.error('Error al guardar configuracion de socio:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
