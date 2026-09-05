@@ -103,126 +103,128 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS 30% / 70% (70% CENTRO DATOS + 30% DERECHA MÉTRICAS/BOTONES) -->
-          <div class="grid grid-cols-1 gap-3 md:hidden overflow-y-auto flex-1 pb-4">
+          <!-- 📱 VISTA MÓVIL: CARDS MINIMALISTAS (30% IMAGEN | CENTRO DATOS | 15% DERECHA) -->
+          <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
-              <div class="flex flex-row bg-[#131525] border border-slate-800/90 rounded-2xl p-2.5 shadow-xl relative gap-2">
+              <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2 shadow-md relative gap-2.5">
                 
-                <!-- 1. IZQUIERDA (30% DEL CARD): IMAGEN -->
+                <!-- 1. IZQUIERDA (30%): IMAGEN -->
                 <div class="w-[30%] shrink-0 flex flex-col justify-start">
                   <div class="relative aspect-square w-full">
-                    <img :src="item.url_imagen" class="w-full h-full object-cover rounded-xl border border-slate-700/60 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
-                    <a :href="item.url_imagen" target="_blank" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-xl text-white backdrop-blur-sm">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    <img :src="item.url_imagen" class="w-full h-full object-cover rounded-lg border border-slate-700/50 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
+                    <a :href="item.url_imagen" target="_blank" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-lg text-white backdrop-blur-sm">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </a>
                   </div>
                 </div>
 
-                <!-- CONTENEDOR DERECHO DE DATOS (70% DEL CARD) -->
-                <div class="w-[70%] flex flex-row gap-2 min-w-0">
+                <!-- CONTENEDOR DERECHO: DIV CENTRAL + DIV DERECHO (15%) -->
+                <div class="w-[70%] flex flex-row gap-2 min-w-0 justify-between">
                   
-                  <!-- 2. DIV CENTRAL (70% DEL SECTOR DERECHO) -->
-                  <div class="w-[68%] flex flex-col justify-between min-w-0 pr-1 border-r border-slate-800/60">
+                  <!-- 2. DIV CENTRAL (DATOS Y SOCIOS) -->
+                  <div class="flex-1 flex flex-col justify-between min-w-0 space-y-1">
                     
-                    <!-- L1: HASH, CONTEO, IA -->
-                    <div class="flex items-center gap-1 flex-wrap">
-                      <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 font-mono text-[9px] font-black border border-purple-500/30 truncate" x-text="item.hash_corto"></span>
-                      <span class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-bold" x-text="'x' + item.conteo"></span>
-                      <template x-if="item.procesado_ia">
-                        <span class="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-bold">✓ IA</span>
-                      </template>
+                    <!-- L1: HASH / IA (IZQ) + LOTE Y TIPO OPERACIÓN (ARRIBA DERECHA DEL DIV CENTRAL) -->
+                    <div class="flex items-center justify-between gap-1">
+                      <div class="flex items-center gap-1 truncate">
+                        <span class="px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 font-mono text-[9px] font-bold border border-purple-500/20 truncate" x-text="item.hash_corto"></span>
+                        <span class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-bold" x-text="'x' + item.conteo"></span>
+                        <template x-if="item.procesado_ia">
+                          <span class="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-bold">✓ IA</span>
+                        </template>
+                      </div>
+
+                      <!-- LOTE Y BADGE TIPO EN EL DIV CENTRAL -->
+                      <div class="flex items-center gap-1 shrink-0">
+                        <template x-if="item.lote_tasa_asignado">
+                          <span class="px-1 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
+                        </template>
+                        <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                          <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1 py-0.5 rounded text-[8px] font-black uppercase">
+                            <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
+                          </button>
+                        </template>
+                      </div>
                     </div>
 
                     <!-- L2: MONTO Y MONEDA NOTABLES -->
-                    <div class="my-0.5 flex items-baseline gap-1 truncate">
-                      <span class="font-black text-emerald-400 text-sm leading-none" x-text="formatMonto(item.monto)"></span>
-                      <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
+                    <div class="flex items-baseline gap-1 truncate my-0.5">
+                      <span class="font-black text-emerald-400 text-sm leading-tight" x-text="formatMonto(item.monto)"></span>
+                      <span class="text-[9px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
                     </div>
 
-                    <!-- L3 & L4: SOCIO 1 Y SOCIO 2 CON TASA Y MONTO NATIVO SOCIO -->
-                    <div class="flex flex-col gap-1 bg-[#1a1d33] p-1 rounded border border-slate-800/80 my-0.5 text-[9px]">
+                    <!-- L3 & L4: SOCIO 1 Y SOCIO 2 CON SU TASA Y SU MONTO NATIVO -->
+                    <div class="space-y-0.5 text-[9px] py-0.5">
                       <!-- SOCIO 1 -->
-                      <div class="flex items-center justify-between gap-1 truncate">
+                      <div class="flex items-center justify-between gap-1">
                         <span class="font-bold text-purple-300 truncate" x-text="item.nombre_socio_1 || '-'"></span>
-                        <div class="flex items-center gap-1 shrink-0 font-mono">
-                          <span class="text-slate-400 text-[8px]" x-text="'T1:' + (item.tasa_1 || '-')"></span>
-                          <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
+                        <div class="flex items-center gap-1 font-mono text-[8px] shrink-0">
+                          <template x-if="item.tasa_1">
+                            <span class="text-slate-400" x-text="'T1:' + item.tasa_1"></span>
+                          </template>
+                          <template x-if="item.m1_socio !== undefined">
+                            <span class="text-emerald-300 font-bold" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
+                          </template>
+                          <template x-if="item.m1_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_1)">
+                            <span class="text-slate-500 font-medium" x-text="'(≈$' + formatMonto(item.m1_usdt) + ')'"></span>
+                          </template>
                         </div>
                       </div>
 
                       <!-- SOCIO 2 -->
                       <template x-if="item.nombre_socio_2">
-                        <div class="flex items-center justify-between gap-1 border-t border-slate-800/60 pt-0.5 truncate">
+                        <div class="flex items-center justify-between gap-1 border-t border-slate-800/40 pt-0.5">
                           <span class="font-bold text-pink-300 truncate" x-text="item.nombre_socio_2"></span>
-                          <div class="flex items-center gap-1 shrink-0 font-mono">
-                            <span class="text-slate-400 text-[8px]" x-text="'T2:' + (item.tasa_2 || '-')"></span>
-                            <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
+                          <div class="flex items-center gap-1 font-mono text-[8px] shrink-0">
+                            <template x-if="item.tasa_2">
+                              <span class="text-slate-400" x-text="'T2:' + item.tasa_2"></span>
+                            </template>
+                            <template x-if="item.m2_socio !== undefined">
+                              <span class="text-emerald-300 font-bold" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
+                            </template>
+                            <template x-if="item.m2_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_2)">
+                              <span class="text-slate-500 font-medium" x-text="'(≈$' + formatMonto(item.m2_usdt) + ')'"></span>
+                            </template>
                           </div>
                         </div>
                       </template>
                     </div>
 
-                    <!-- L5: TITULAR, BANCO, REFERENCIA -->
-                    <div class="flex flex-col text-[8px] text-slate-400 truncate leading-tight">
-                      <span class="font-bold text-slate-200 uppercase truncate" x-text="obtenerPrimeraPalabra(item.titular)"></span>
-                      <span class="truncate" x-text="(item.banco || '-') + ' • Ref: ' + (item.referencia || '-')"></span>
+                    <!-- L5: TITULAR Y BANCO -->
+                    <div class="text-[8px] text-slate-400 truncate leading-tight pt-0.5">
+                      <span class="font-bold text-slate-200 uppercase" x-text="obtenerPrimeraPalabra(item.titular)"></span>
+                      <span class="text-slate-500" x-text="' • ' + (item.banco || '-')"></span>
                     </div>
 
                   </div>
 
-                  <!-- 3. DIV DERECHO (30% DEL SECTOR DERECHO) -->
-                  <div class="w-[32%] flex flex-col justify-between items-end shrink-0 pl-0.5 text-[9px] font-mono">
+                  <!-- 3. DIV DERECHA (15%): ACCIONES (ARRIBA), EQUIVALENTE USD ADMIN (CENTRO), REFERENCIA (ABAJO) -->
+                  <div class="w-[15%] shrink-0 flex flex-col justify-between items-end pl-1 border-l border-slate-800/30 text-[8px] font-mono">
                     
-                    <!-- LOTE Y BADGE TIPO DE OPERACIÓN -->
+                    <!-- ARRIBA A LA DERECHA: BOTONES BASURA Y LÁPIZ -->
                     <div class="flex items-center gap-1">
-                      <template x-if="item.lote_tasa_asignado">
-                        <span class="px-1 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
-                      </template>
-                      <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-                        <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1 py-0.5 rounded shadow border text-[8px] font-black uppercase">
-                          <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
-                        </button>
-                      </template>
+                      <button @click="eliminarComprobante(item.hash_largo)" title="Eliminar" class="text-rose-400 hover:text-rose-300 p-0.5 active:scale-90 transition-transform">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                      </button>
+                      <button @click="abrirModal(item)" title="Editar" class="text-purple-400 hover:text-purple-300 p-0.5 active:scale-90 transition-transform">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
                     </div>
 
-                    <!-- MONTO BASE EQUIVALENTE ADMIN -->
-                    <div class="flex flex-col items-end my-0.5">
+                    <!-- CENTRO: EQUIVALENTE ADMIN EN DÓLARES (MINIMALISTA) -->
+                    <div class="flex flex-col items-end my-1">
                       <template x-if="item.monto_usd_equivalente">
-                        <span class="text-[8px] font-bold text-emerald-400 flex items-center gap-0.5 bg-slate-900/80 px-1 rounded border border-slate-700/60">
+                        <span class="text-[8px] font-bold text-emerald-400 flex items-center gap-0.5" title="Equivalente Admin Dólares">
                           <span>🪙</span>
                           <span x-text="formatMonto(item.monto_usd_equivalente)"></span>
                         </span>
                       </template>
                     </div>
 
-                    <!-- ME1 (Socio 1 Admin USDT) -->
-                    <div class="flex flex-col items-end">
-                      <span class="text-[6.5px] font-bold text-purple-400 uppercase tracking-tighter">ME1</span>
-                      <span class="text-[8px] font-bold text-emerald-300 flex items-center gap-0.5">
-                        <span>🪙</span>
-                        <span x-text="formatMonto(item.m1_usdt)"></span>
-                      </span>
-                    </div>
-
-                    <!-- ME2 (Socio 2 Admin USDT) -->
-                    <template x-if="item.nombre_socio_2">
-                      <div class="flex flex-col items-end">
-                        <span class="text-[6.5px] font-bold text-pink-400 uppercase tracking-tighter">ME2</span>
-                        <span class="text-[8px] font-bold text-emerald-300 flex items-center gap-0.5">
-                          <span>🪙</span>
-                          <span x-text="formatMonto(item.m2_usdt)"></span>
-                        </span>
-                      </div>
-                    </template>
-
-                    <!-- BOTONES DE ACCIÓN: ELIMINAR (CON CONFIRMACIÓN) Y EDITAR -->
-                    <div class="flex items-center gap-1 mt-1 pt-1 border-t border-slate-800/80 w-full justify-end">
-                      <button @click="eliminarComprobante(item.hash_largo)" title="Eliminar" class="p-1 rounded bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 active:scale-95 transition-all">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                      </button>
-                      <button @click="abrirModal(item)" title="Editar" class="p-1 rounded bg-purple-600/20 text-purple-300 hover:bg-purple-600/40 active:scale-95 transition-all">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </button>
+                    <!-- ABAJO A LA DERECHA: REFERENCIA -->
+                    <div class="flex flex-col items-end truncate w-full">
+                      <span class="text-[7px] text-slate-500 font-bold uppercase">Ref</span>
+                      <span class="text-[8px] text-slate-400 truncate w-full text-right" x-text="item.referencia || '-'"></span>
                     </div>
 
                   </div>
