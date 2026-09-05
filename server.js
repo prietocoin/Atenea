@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// Función de Truncado según Regla de Precisión (Mismísima lógica n8n)
+// Función de Truncado según Regla de Precisión
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -289,7 +289,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// --- COMPROBANTES Y CÁLCULO UNIFICADO OPCIÓN A (CROSS-RATE DIRECTO + MONEDA SOCIO + ADMIN USDT) ---
+// --- COMPROBANTES Y CÁLCULO UNIFICADO OPCIÓN A CON NORMALIZACIÓN USD -> USDT ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -322,19 +322,27 @@ const getComprobantesHandler = async (req, res) => {
         -- Tipo de transacción único (definido por Socio 1 x Moneda)
         t.tipo_op,
 
-        -- Moneda Nativa y Tasa Base del Socio 1
-        COALESCE(UPPER(TRIM(n1.moneda_socio)), 'USD') AS moneda_socio_1,
+        -- Moneda Nativa y Tasa Base del Socio 1 (Normalizado USD -> USDT)
+        CASE 
+          WHEN UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
+          ELSE UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT')))
+        END AS moneda_socio_1,
+        
         COALESCE(
           mt_s1.tasa_base,
-          CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USD')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
+          CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_1,
         COALESCE((n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_1,
 
-        -- Moneda Nativa y Tasa Base del Socio 2
-        COALESCE(UPPER(TRIM(n2.moneda_socio)), 'USD') AS moneda_socio_2,
+        -- Moneda Nativa y Tasa Base del Socio 2 (Normalizado USD -> USDT)
+        CASE 
+          WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
+          ELSE UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT')))
+        END AS moneda_socio_2,
+
         COALESCE(
           mt_s2.tasa_base,
-          CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USD')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
+          CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_2,
         COALESCE((n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_2
 
@@ -344,11 +352,11 @@ const getComprobantesHandler = async (req, res) => {
 
       LEFT JOIN mercado_tasas mt_s1
         ON mt_s1.id_tasa = v.lote_tasa_asignado
-       AND mt_s1.moneda = UPPER(COALESCE(n1.moneda_socio, 'USD'))
+       AND mt_s1.moneda = CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n1.moneda_socio, 'USDT')) END
 
       LEFT JOIN mercado_tasas mt_s2
         ON mt_s2.id_tasa = v.lote_tasa_asignado
-       AND mt_s2.moneda = UPPER(COALESCE(n2.moneda_socio, 'USD'))
+       AND mt_s2.moneda = CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n2.moneda_socio, 'USDT')) END
 
       LEFT JOIN LATERAL (
         SELECT COALESCE(
@@ -394,13 +402,14 @@ const getComprobantesHandler = async (req, res) => {
 
     const { rows } = await pool.query(query, values);
 
-    // Cálculo dinámico de Tasa Cross, M1/M2 en moneda socio y M1/M2 en USDT Admin + TRUNCADO DE PRECISIÓN
+    // Cálculo dinámico de Tasa Cross con TRUNCADO DE PRECISIÓN
     const rowsProcesadas = rows.map(row => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
 
       // --- SOCIO 1 ---
-      const monedaSocio1 = (row.moneda_socio_1 || 'USD').toUpperCase();
+      let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
+      if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
       const factor1 = Math.abs(parseFloat(row.factor_1) || 1.0);
 
@@ -412,7 +421,8 @@ const getComprobantesHandler = async (req, res) => {
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
 
       // --- SOCIO 2 ---
-      const monedaSocio2 = (row.moneda_socio_2 || 'USD').toUpperCase();
+      let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
+      if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
       const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
       const factor2 = Math.abs(parseFloat(row.factor_2) || 1.0);
 
