@@ -41,7 +41,7 @@ function aplicarReglaPrecision(val) {
   }
 }
 
-// Matriz y Configuración Completa de los 38 Socios (Hoole.xlsx)
+// Matriz y Configuración Semilla de los 38 Socios
 const SEED_SOCIOS_CONFIG = {
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
@@ -49,14 +49,13 @@ const SEED_SOCIOS_CONFIG = {
     "roles": "SOCIO",
     "moneda_socio": "USDT",
     "talla": "M",
+    "whatsapp": "120363323877732465@g.us",
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "P", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 1 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 3 },
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 4 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 4 }
     ],
     "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "D-ECU": 1.064, "P-BRL": 0.9709, "D-BRL": -1.0309, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": 0.962, "D-EUR": -1.042, "P-BOB": -0.9259, "D-BOB": 1.087 }
   },
@@ -66,38 +65,15 @@ const SEED_SOCIOS_CONFIG = {
     "roles": "SOCIO",
     "moneda_socio": "USDT",
     "talla": "M",
+    "whatsapp": "120363339357414946@g.us",
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 },
-      { "pais": "Mexico", "moneda": "MXN", "activo": true, "orden": 7 },
-      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 8 }
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
     ],
     "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.96, "D-ECU": 1.042, "P-MXN": 0.97, "D-MXN": -1.03, "P-BRL": -0.952, "D-BRL": 1.053, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
-  },
-  "JOSEM": {
-    "id_grupo": "120363345944393252@g.us",
-    "nombre": "JoseM",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "M",
-    "pen": "D", "cop": "D", "clp": "P", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 },
-      { "pais": "Mexico", "moneda": "MXN", "activo": true, "orden": 7 },
-      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 8 },
-      { "pais": "Ecuador", "moneda": "ECU", "activo": true, "orden": 9 }
-    ],
-    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
   },
   "NELSY": {
     "id_grupo": "GRP_NELSY",
@@ -105,36 +81,15 @@ const SEED_SOCIOS_CONFIG = {
     "roles": "SOCIO",
     "moneda_socio": "USDT",
     "talla": "M",
+    "whatsapp": "",
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 },
-      { "pais": "Mexico", "moneda": "MXN", "activo": true, "orden": 7 },
-      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 8 },
-      { "pais": "Ecuador", "moneda": "ECU", "activo": true, "orden": 9 }
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
     ],
     "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": 0.98, "D-ARS": -1.02, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": 0.99, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
-  },
-  "SOLANO": {
-    "id_grupo": "GRP_SOLANO",
-    "nombre": "Solano",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "M",
-    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Ecuador", "moneda": "ECU", "activo": true, "orden": 5 },
-      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 6 }
-    ],
-    "ajustes": { "P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087 }
   }
 };
 
@@ -155,7 +110,7 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
     `);
 
-    // 1. Garantizar columnas completas Opción 1 en nombres_fb
+    // 1. Garantizar esquema completo en nombres_fb
     await pool.query(`
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10);
@@ -179,7 +134,7 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
 
-    // 2. Sembrar/Actualizar configuración de Opción 1
+    // 2. Sembrar/Actualizar configuración de socios
     for (const [socioKey, config] of Object.entries(SEED_SOCIOS_CONFIG)) {
       const check = await pool.query(
         `SELECT id_grupo FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`,
@@ -195,23 +150,24 @@ async function initDB() {
             roles = COALESCE($1, roles),
             moneda_socio = COALESCE($2, moneda_socio),
             talla = COALESCE($3, talla),
-            pen = COALESCE($4, pen),
-            cop = COALESCE($5, cop),
-            clp = COALESCE($6, clp),
-            ars = COALESCE($7, ars),
-            ves = COALESCE($8, ves),
-            brl = COALESCE($9, brl),
-            mxn = COALESCE($10, mxn),
-            pyg = COALESCE($11, pyg),
-            usd = COALESCE($12, usd),
-            ecu = COALESCE($13, ecu),
-            eur = COALESCE($14, eur),
-            usdt = COALESCE($15, usdt),
-            cartelera_paises = CASE WHEN cartelera_paises = '[]'::jsonb OR cartelera_paises IS NULL THEN $16::jsonb ELSE cartelera_paises END,
-            ajustes = CASE WHEN ajustes = '{}'::jsonb OR ajustes IS NULL THEN $17::jsonb ELSE ajustes END
-           WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($18));`,
+            whatsapp = COALESCE($4, whatsapp),
+            pen = COALESCE($5, pen),
+            cop = COALESCE($6, cop),
+            clp = COALESCE($7, clp),
+            ars = COALESCE($8, ars),
+            ves = COALESCE($9, ves),
+            brl = COALESCE($10, brl),
+            mxn = COALESCE($11, mxn),
+            pyg = COALESCE($12, pyg),
+            usd = COALESCE($13, usd),
+            ecu = COALESCE($14, ecu),
+            eur = COALESCE($15, eur),
+            usdt = COALESCE($16, usdt),
+            cartelera_paises = CASE WHEN cartelera_paises = '[]'::jsonb OR cartelera_paises IS NULL THEN $17::jsonb ELSE cartelera_paises END,
+            ajustes = CASE WHEN ajustes = '{}'::jsonb OR ajustes IS NULL THEN $18::jsonb ELSE ajustes END
+           WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($19));`,
           [
-            config.roles, config.moneda_socio, config.talla,
+            config.roles, config.moneda_socio, config.talla, config.whatsapp,
             config.pen, config.cop, config.clp, config.ars, config.ves,
             config.brl, config.mxn, config.pyg, config.usd, config.ecu,
             config.eur, config.usdt,
@@ -221,13 +177,13 @@ async function initDB() {
       } else {
         await pool.query(
           `INSERT INTO nombres_fb (
-            id_grupo, nombre, roles, moneda_socio, talla, 
+            id_grupo, nombre, roles, moneda_socio, talla, whatsapp,
             pen, cop, clp, ars, ves, brl, mxn, pyg, usd, ecu, eur, usdt,
             cartelera_paises, ajustes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19::jsonb)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19::jsonb, $20::jsonb)
           ON CONFLICT DO NOTHING;`,
           [
-            config.id_grupo, config.nombre, config.roles, config.moneda_socio, config.talla,
+            config.id_grupo, config.nombre, config.roles, config.moneda_socio, config.talla, config.whatsapp,
             config.pen, config.cop, config.clp, config.ars, config.ves,
             config.brl, config.mxn, config.pyg, config.usd, config.ecu, config.eur, config.usdt,
             jsonCartelera, jsonAjustes
@@ -235,7 +191,7 @@ async function initDB() {
         );
       }
     }
-    console.log('✅ Base de datos sembrada con Opción 1 (Directorio Unificado nombres_fb).');
+    console.log('✅ Base de datos sembrada con Opción 1 (nombres_fb).');
 
     // 3. Recreación limpia de Vista v_comprobantes_auditados
     await pool.query(`
@@ -331,7 +287,7 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// --- MÓDULO DE TASAS & WEBHOOKS ---
+// --- TASAS ---
 app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
     let payload = req.body;
@@ -391,7 +347,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// --- COMPROBANTES Y CÁLCULO UNIFICADO CROSS-RATE OPCIÓN A ---
+// --- COMPROBANTES Y CÁLCULO UNIFICADO ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -413,7 +369,7 @@ const getComprobantesHandler = async (req, res) => {
         v.conteo, 
         v.lote_tasa_asignado, 
         
-        -- Tasa Base Oficial Moneda Origen vs USD
+        -- Tasa Base Oficial
         COALESCE(
           v.tasa_mercado_aplicada,
           CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
@@ -610,7 +566,7 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   }
 });
 
-// --- SOCIOS Y DIRECTORIO OPCIÓN 1 ---
+// --- SOCIOS Y DIRECTORIO ---
 app.get('/api/socios', async (req, res) => {
   try {
     const query = `
@@ -638,7 +594,32 @@ app.get('/api/directorio', async (req, res) => {
   }
 });
 
-// ENDPOINT UNIFICADO OPCIÓN 1 PARA GUARDAR CONFIGURACIÓN COMPLETA DEL SOCIO
+// ELIMINACIÓN DE PERFIL/SOCIO DEL DIRECTORIO
+app.delete('/api/directorio/:nombre', async (req, res) => {
+  try {
+    const { nombre } = req.params;
+    if (!nombre) {
+      return res.status(400).json({ error: 'Nombre de socio requerido.' });
+    }
+
+    const { rows } = await pool.query(
+      `DELETE FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1)) RETURNING *;`,
+      [nombre]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Socio no encontrado.' });
+    }
+
+    console.log(`🗑️ Socio ${nombre} eliminado del directorio nombres_fb.`);
+    res.json({ success: true, message: `Socio ${nombre} eliminado correctamente.` });
+  } catch (err) {
+    console.error('Error al borrar socio:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ENDPOINT UNIFICADO PARA CREAR O GUARDAR CONFIGURACIÓN COMPLETA
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
@@ -647,51 +628,44 @@ app.post('/api/socios/config', async (req, res) => {
       cartelera_paises, ajustes 
     } = req.body;
 
-    if (!nombre) {
-      return res.status(400).json({ error: 'Nombre de socio requerido.' });
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({ error: 'El nombre del socio es obligatorio.' });
     }
 
-    const { rows } = await pool.query(
-      `UPDATE nombres_fb SET 
-        roles = COALESCE($1, roles),
-        moneda_socio = COALESCE($2, moneda_socio),
-        talla = COALESCE($3, talla),
-        whatsapp = COALESCE($4, whatsapp),
-        pen = COALESCE($5, pen),
-        cop = COALESCE($6, cop),
-        clp = COALESCE($7, clp),
-        ars = COALESCE($8, ars),
-        ves = COALESCE($9, ves),
-        brl = COALESCE($10, brl),
-        mxn = COALESCE($11, mxn),
-        pyg = COALESCE($12, pyg),
-        dop = COALESCE($13, dop),
-        crc = COALESCE($14, crc),
-        eur = COALESCE($15, eur),
-        cad = COALESCE($16, cad),
-        usd = COALESCE($17, usd),
-        ecu = COALESCE($18, ecu),
-        pan = COALESCE($19, pan),
-        usdt = COALESCE($20, usdt),
-        cartelera_paises = COALESCE($21::jsonb, cartelera_paises),
-        ajustes = COALESCE($22::jsonb, ajustes)
-       WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($23))
-       RETURNING *;`,
-      [
-        roles || null, moneda_socio || null, talla || null, whatsapp || null,
-        pen || null, cop || null, clp || null, ars || null, ves || null,
-        brl || null, mxn || null, pyg || null, dop || null, crc || null,
-        eur || null, cad || null, usd || null, ecu || null, pan || null,
-        usdt || null,
-        cartelera_paises ? JSON.stringify(cartelera_paises) : null,
-        ajustes ? JSON.stringify(ajustes) : null,
-        nombre
-      ]
-    );
+    const socioNombre = nombre.trim();
+    const idGrupo = 'GRP_' + socioNombre.toUpperCase().replace(/\s+/g, '_');
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Socio no encontrado.' });
-    }
+    const jsonCartelera = JSON.stringify(cartelera_paises || []);
+    const jsonAjustes = JSON.stringify(ajustes || {});
+
+    const query = `
+      INSERT INTO nombres_fb (
+        id_grupo, nombre, roles, moneda_socio, talla, whatsapp,
+        pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
+        cartelera_paises, ajustes
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23::jsonb, $24::jsonb)
+      ON CONFLICT (id_grupo) DO UPDATE SET
+        nombre = EXCLUDED.nombre,
+        roles = EXCLUDED.roles,
+        moneda_socio = EXCLUDED.moneda_socio,
+        talla = EXCLUDED.talla,
+        whatsapp = EXCLUDED.whatsapp,
+        pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp, ars = EXCLUDED.ars,
+        ves = EXCLUDED.ves, brl = EXCLUDED.brl, mxn = EXCLUDED.mxn, pyg = EXCLUDED.pyg,
+        dop = EXCLUDED.dop, crc = EXCLUDED.crc, eur = EXCLUDED.eur, cad = EXCLUDED.cad,
+        usd = EXCLUDED.usd, ecu = EXCLUDED.ecu, pan = EXCLUDED.pan, usdt = EXCLUDED.usdt,
+        cartelera_paises = EXCLUDED.cartelera_paises,
+        ajustes = EXCLUDED.ajustes
+      RETURNING *;
+    `;
+
+    const { rows } = await pool.query(query, [
+      idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', talla || 'M', whatsapp || '',
+      pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
+      dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
+      jsonCartelera, jsonAjustes
+    ]);
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
