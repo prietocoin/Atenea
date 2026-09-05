@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// Función de Truncado según Regla de Precisión
+// Función de Truncado según Regla de Precisión (Evolucionada n8n)
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -41,6 +41,7 @@ function aplicarReglaPrecision(val) {
   }
 }
 
+// Cálculo automático de talla según conteo de países activos
 function calcularTallaAutomatica(conteo) {
   if (conteo <= 2) return 'S';
   if (conteo <= 5) return 'M';
@@ -48,6 +49,7 @@ function calcularTallaAutomatica(conteo) {
   return 'XL';
 }
 
+// Matriz y Configuración Semilla de los 38 Socios
 const SEED_SOCIOS_CONFIG = {
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
@@ -520,9 +522,9 @@ const getComprobantesHandler = async (req, res) => {
       query += ` AND v.conteo > 1`;
     }
 
-    if (socio) {
-      query += ` AND (v.nombre_socio_1 = $${paramIndex} OR v.nombre_socio_2 = $${paramIndex})`;
-      values.push(socio);
+    if (socio && socio.trim()) {
+      query += ` AND (UPPER(TRIM(v.nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(v.nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
+      values.push(socio.trim());
       paramIndex++;
     }
 
