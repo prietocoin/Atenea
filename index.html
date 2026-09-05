@@ -103,7 +103,7 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS (30% IMAGEN / 70% CONTENEDOR DATOS CON T1/T2 A LA DERECHA) -->
+          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS (M1/M2 AL EXTREMO DE NOMBRE SOCIO, T1/T2 CAJA 56PX) -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
@@ -156,27 +156,29 @@
                     <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
                   </div>
 
-                  <!-- BLOQUE DE SOCIOS (T1 Y T2 AL EXTREMO DERECHO EN BOTÓN ESTÁTICO DE w-[72px]) -->
+                  <!-- BLOQUE DE SOCIOS (NOMBRE Y MONTO NATIVO A LA IZQ/CENTRO, TASA CAJA DE 56PX FIJA A LA DERECHA) -->
                   <div class="flex flex-col gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800/80 my-0.5 text-[9px]">
                     <!-- SOCIO 1 -->
                     <div class="flex items-center justify-between gap-1">
-                      <div class="flex items-center gap-1 min-w-0 truncate">
-                        <span class="font-bold text-purple-300 truncate" x-text="item.nombre_socio_1 || '-'"></span>
-                        <span class="text-emerald-300 font-bold font-mono text-[8px] shrink-0" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
+                      <span class="font-bold text-purple-300 truncate min-w-0" x-text="item.nombre_socio_1 || '-'"></span>
+                      <div class="flex items-center gap-1.5 shrink-0 font-mono">
+                        <template x-if="item.m1_socio !== undefined">
+                          <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
+                        </template>
+                        <div class="shrink-0 w-[56px] text-center px-0.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300 font-mono text-[8px] font-bold truncate" x-text="'T1:' + (formatTasa(item.tasa_1) || '-')"></div>
                       </div>
-                      <!-- BOTÓN FIJO DE TASA 1 AL EXTREMO DERECHO -->
-                      <div class="shrink-0 w-[72px] text-center px-1 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300 font-mono text-[8.5px] font-bold truncate" x-text="'T1:' + (formatTasa(item.tasa_1) || '-')"></div>
                     </div>
 
                     <!-- SOCIO 2 -->
                     <template x-if="item.nombre_socio_2">
                       <div class="flex items-center justify-between gap-1 border-t border-slate-800/60 pt-0.5">
-                        <div class="flex items-center gap-1 min-w-0 truncate">
-                          <span class="font-bold text-pink-300 truncate" x-text="item.nombre_socio_2"></span>
-                          <span class="text-emerald-300 font-bold font-mono text-[8px] shrink-0" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
+                        <span class="font-bold text-pink-300 truncate min-w-0" x-text="item.nombre_socio_2"></span>
+                        <div class="flex items-center gap-1.5 shrink-0 font-mono">
+                          <template x-if="item.m2_socio !== undefined">
+                            <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
+                          </template>
+                          <div class="shrink-0 w-[56px] text-center px-0.5 py-0.5 rounded bg-pink-950/80 border border-pink-500/30 text-pink-300 font-mono text-[8px] font-bold truncate" x-text="'T2:' + (formatTasa(item.tasa_2) || '-')"></div>
                         </div>
-                        <!-- BOTÓN FIJO DE TASA 2 AL EXTREMO DERECHO -->
-                        <div class="shrink-0 w-[72px] text-center px-1 py-0.5 rounded bg-pink-950/80 border border-pink-500/30 text-pink-300 font-mono text-[8.5px] font-bold truncate" x-text="'T2:' + (formatTasa(item.tasa_2) || '-')"></div>
                       </div>
                     </template>
                   </div>
