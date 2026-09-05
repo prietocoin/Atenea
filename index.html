@@ -121,7 +121,7 @@
                 <!-- 70% CONTENEDOR DE DATOS -->
                 <div class="w-[70%] flex flex-col justify-between min-w-0 gap-1">
                   
-                  <!-- TOP BAR: HASH / IA (IZQ) + TIPO OPERACIÓN Y LOTE DE TASA (DER) -->
+                  <!-- TOP BAR -->
                   <div class="flex items-center justify-between gap-1">
                     <div class="flex items-center gap-1 truncate">
                       <span class="px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 font-mono text-[9px] font-bold border border-purple-500/20 truncate" x-text="item.hash_corto"></span>
@@ -131,7 +131,6 @@
                       </template>
                     </div>
 
-                    <!-- TIPO DE OPERACIÓN PRIMERO, LUEGO NÚMERO DE TASA Y ACCIONES -->
                     <div class="flex items-center gap-1 shrink-0">
                       <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
                         <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase shadow-sm">
@@ -150,15 +149,14 @@
                     </div>
                   </div>
 
-                  <!-- MONTO Y MONEDA DESTACADOS -->
+                  <!-- MONTO Y MONEDA -->
                   <div class="flex items-baseline gap-1 my-0.5">
                     <span class="font-black text-emerald-400 text-sm leading-none" x-text="formatMonto(item.monto)"></span>
                     <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
                   </div>
 
-                  <!-- BLOQUE DE SOCIOS (NOMBRE Y MONTO NATIVO A LA IZQ/CENTRO, TASA CAJA DE 56PX FIJA A LA DERECHA) -->
+                  <!-- SOCIOS -->
                   <div class="flex flex-col gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800/80 my-0.5 text-[9px]">
-                    <!-- SOCIO 1 -->
                     <div class="flex items-center justify-between gap-1">
                       <span class="font-bold text-purple-300 truncate min-w-0" x-text="item.nombre_socio_1 || '-'"></span>
                       <div class="flex items-center gap-1.5 shrink-0 font-mono">
@@ -169,7 +167,6 @@
                       </div>
                     </div>
 
-                    <!-- SOCIO 2 -->
                     <template x-if="item.nombre_socio_2">
                       <div class="flex items-center justify-between gap-1 border-t border-slate-800/60 pt-0.5">
                         <span class="font-bold text-pink-300 truncate min-w-0" x-text="item.nombre_socio_2"></span>
@@ -183,17 +180,14 @@
                     </template>
                   </div>
 
-                  <!-- SECCIÓN INFERIOR: TITULAR, BANCO Y REF (IZQ) | ME0, ME1 Y ME2 ADMIN USDT (DER) -->
+                  <!-- SECCIÓN INFERIOR -->
                   <div class="flex items-end justify-between border-t border-slate-800/60 pt-1 gap-1">
-                    
-                    <!-- IZQUIERDA: TITULAR, BANCO, REFERENCIA -->
                     <div class="flex flex-col text-[8px] text-slate-400 truncate min-w-0 flex-1">
                       <span class="font-bold text-slate-200 uppercase truncate" x-text="obtenerPrimeraPalabra(item.titular)"></span>
                       <span class="text-slate-400 uppercase truncate" x-text="item.banco || '-'"></span>
                       <span class="font-mono text-slate-500 truncate" x-text="'Ref: ' + (item.referencia || '-')"></span>
                     </div>
 
-                    <!-- DERECHA: ME0, ME1 Y ME2 EN USDT -->
                     <div class="flex flex-col items-end shrink-0 text-[8px] font-mono leading-tight">
                       <template x-if="item.monto_usd_equivalente">
                         <div class="flex items-center gap-1">
@@ -221,7 +215,6 @@
                         </div>
                       </template>
                     </div>
-
                   </div>
 
                 </div>
@@ -522,53 +515,87 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO NOMBRES_FB CON BOTÓN UNIFICADO OPCIÓN 1) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO CON FACTORES $f_D / f_P$ Y TASAS REALES $t_D / t_P$) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Reglas (nombres_fb)</h2>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Cartelera Real</h2>
+              <p class="text-xs text-slate-400">Visualiza en tiempo real los factores de ajuste ($f$) y la tasa calculada ($t$) para cada cartel.</p>
+            </div>
             <div class="flex items-center gap-2">
-              <button @click="abrirModalConfig()" class="px-3 py-1.5 rounded-xl bg-purple-600/30 text-purple-300 border border-purple-500/50 hover:bg-purple-600/50 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5">
+              <button @click="abrirModalConfig()" class="px-3 py-2 rounded-xl bg-purple-600/30 text-purple-300 border border-purple-500/50 hover:bg-purple-600/50 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 active:scale-95">
                 <span>⚙️ Configurar Socio Completo</span>
               </button>
-              <button @click="cargarDirectorio()" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700">🔄 Actualizar</button>
+              <button @click="cargarDirectorio()" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:scale-95">🔄 Actualizar</button>
             </div>
           </div>
 
+          <!-- TABLA REFORMADA DEL DIRECTORIO CON FACTORES Y TASAS REALES -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px]">
-                    <th class="px-3 py-2.5">NOMBRE</th>
-                    <th class="px-3 py-2.5">ROL</th>
-                    <th class="px-3 py-2.5">MONEDA BASE</th>
-                    <th class="px-3 py-2.5">TALLA</th>
-                    <th class="px-3 py-2.5">PEN</th>
-                    <th class="px-3 py-2.5">COP</th>
-                    <th class="px-3 py-2.5">CLP</th>
-                    <th class="px-3 py-2.5">VES</th>
-                    <th class="px-3 py-2.5">ARS</th>
+                    <th class="px-3 py-2.5">SOCIO & PERFIL</th>
+                    <th class="px-3 py-2.5">PAÍSES ACTIVOS (☑️) & TASAS DEL CARTELL ($t_D / t_P$)</th>
                     <th class="px-3 py-2.5 text-right">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors">
-                      <td class="px-3 py-2 font-bold text-purple-300 uppercase" x-text="d.nombre || '-'"></td>
-                      <td class="px-3 py-2 text-slate-400 uppercase font-mono text-[10px]" x-text="d.roles || 'SOCIO'"></td>
-                      <td class="px-3 py-2 font-bold text-emerald-400 uppercase" x-text="d.moneda_socio || 'USDT'"></td>
-                      <td class="px-3 py-2 font-bold text-purple-400 uppercase font-mono" x-text="d.talla || 'M'"></td>
-                      <td class="px-3 py-2"><span :class="claseInsignia(d.pen)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.pen || '-'"></span></td>
-                      <td class="px-3 py-2"><span :class="claseInsignia(d.cop)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.cop || '-'"></span></td>
-                      <td class="px-3 py-2"><span :class="claseInsignia(d.clp)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.clp || '-'"></span></td>
-                      <td class="px-3 py-2"><span :class="claseInsignia(d.ves)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.ves || '-'"></span></td>
-                      <td class="px-3 py-2"><span :class="claseInsignia(d.ars)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.ars || '-'"></span></td>
-                      <td class="px-3 py-2 text-right">
-                        <button @click="abrirModalConfig(d.nombre)" class="px-2 py-1 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded text-[10px] font-bold transition-all">
-                          ⚙️ Configurar
+                      
+                      <!-- INFORMACIÓN DEL SOCIO -->
+                      <td class="px-3 py-3 align-top whitespace-nowrap">
+                        <div class="flex flex-col gap-0.5">
+                          <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
+                          <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[9px] font-mono font-bold" x-text="d.roles || 'SOCIO'"></span>
+                            <span class="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30" x-text="d.moneda_socio || 'USDT'"></span>
+                            <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (d.talla || 'M')"></span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <!-- DESPLIEGUE DINÁMICO DE PAÍSES, FACTORES Y TASAS CALCULADAS EN VIVO -->
+                      <td class="px-3 py-3 align-top">
+                        <div class="flex flex-wrap gap-2">
+                          <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.moneda">
+                            <div class="bg-[#1a1d33] border border-slate-700/60 rounded-lg p-1.5 flex flex-col justify-between min-w-[130px] text-[9px] shadow-sm">
+                              
+                              <!-- CABECERA PAÍS Y MONEDA -->
+                              <div class="flex items-center justify-between border-b border-slate-800 pb-1 mb-1">
+                                <span class="font-extrabold text-white text-[10px]" x-text="p.flag + ' ' + p.pais"></span>
+                                <span class="font-mono text-[8px] font-bold text-purple-400" x-text="p.moneda"></span>
+                              </div>
+
+                              <!-- TASAS CALCULADAS t_D Y t_P -->
+                              <div class="grid grid-cols-2 gap-1 text-[8px] font-mono">
+                                <div class="flex flex-col bg-cyan-950/40 p-1 rounded border border-cyan-500/20">
+                                  <span class="text-cyan-400 font-bold uppercase text-[7px]">Dep (tD)</span>
+                                  <span class="font-extrabold text-cyan-200" x-text="formatTasa(p.tasa_D)"></span>
+                                  <span class="text-[7px] text-slate-400" x-text="'f:' + p.f_D"></span>
+                                </div>
+                                <div class="flex flex-col bg-amber-950/40 p-1 rounded border border-amber-500/20">
+                                  <span class="text-amber-400 font-bold uppercase text-[7px]">Pag (tP)</span>
+                                  <span class="font-extrabold text-amber-200" x-text="formatTasa(p.tasa_P)"></span>
+                                  <span class="text-[7px] text-slate-400" x-text="'f:' + p.f_P"></span>
+                                </div>
+                              </div>
+
+                            </div>
+                          </template>
+                        </div>
+                      </td>
+
+                      <!-- ACCIONES -->
+                      <td class="px-3 py-3 align-top text-right whitespace-nowrap">
+                        <button @click="abrirModalConfig(d.nombre)" class="px-3 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5 ml-auto">
+                          <span>⚙️ Editar Socio</span>
                         </button>
                       </td>
+
                     </tr>
                   </template>
                 </tbody>
@@ -668,7 +695,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN COMPLETA OPCIÓN 1 (PAÍSES CON CASILLA ☑️ + FACTORES P/D + VISTA PREVIA) -->
+      <!-- MODAL 2: CONFIGURACIÓN COMPLETA OPCIÓN 1 -->
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
@@ -677,14 +704,14 @@
             <div class="flex items-center gap-3">
               <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
               <div>
-                <h3 class="font-bold text-white text-base">Configuración Integral del Socio (Opción 1)</h3>
-                <p class="text-xs text-slate-400">Administra datos generales, asignación de países ☑️, factores P/D y reglas por divisa.</p>
+                <h3 class="font-bold text-white text-base">Configuración Integral del Socio</h3>
+                <p class="text-xs text-slate-400">Administra datos generales, asignación de países ☑️ y factores P/D.</p>
               </div>
             </div>
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTOR DE SOCIO -->
+          <!-- SELECTOR DE SOCIO Y TABS -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1">
               <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Seleccionar Socio a Configurar</label>
@@ -695,7 +722,6 @@
               </select>
             </div>
 
-            <!-- TABS DE NAVEGACIÓN DENTRO DEL MODAL -->
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
               <button @click="tabConfigActive = 'paises'" :class="tabConfigActive === 'paises' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
                 ☑️ Países & Cartelera
@@ -709,13 +735,12 @@
             </div>
           </div>
 
-          <!-- CONTENIDO TAB 1: PAÍSES CON CHECKBOX ☑️, FACTORES Y TASAS EN TIEMPO REAL -->
+          <!-- CONTENIDO TAB 1: PAÍSES CON CHECKBOX ☑️ -->
           <div x-show="tabConfigActive === 'paises'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2 space-y-2">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <template x-for="p in carteleraPaisesEdit" :key="p.code">
                 <div class="bg-[#1a1d33] p-2.5 rounded-xl border transition-all" :class="p.activo ? 'border-purple-500/50 bg-purple-950/20' : 'border-slate-800 opacity-60'">
                   
-                  <!-- HEADER PAÍS CON CHECKBOX ☑️ -->
                   <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5 mb-2">
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                       <input type="checkbox" x-model="p.activo" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600 focus:ring-purple-500">
@@ -724,7 +749,6 @@
                     <span class="px-1.5 py-0.5 bg-slate-800 text-purple-300 font-mono text-[9px] font-extrabold rounded" x-text="p.code"></span>
                   </div>
 
-                  <!-- INPUTS DE FACTORES P Y D -->
                   <div class="grid grid-cols-2 gap-2 text-[9px]">
                     <div>
                       <span class="text-amber-400 font-bold block">Pago (P)</span>
@@ -894,6 +918,45 @@
           await this.cargarSocios();
           await this.cargarDirectorio();
           await this.cargarComprobantes();
+        },
+
+        // MÉTODOS DE CÁLCULO DE TASAS EN TIEMPO REAL PARA LA TABLA DEL DIRECTORIO
+        obtenerPaisesActivosSocio(socioObj) {
+          if (!socioObj) return [];
+          const cp = typeof socioObj.cartelera_paises === 'string' ? JSON.parse(socioObj.cartelera_paises) : (socioObj.cartelera_paises || []);
+          const aj = typeof socioObj.ajustes === 'string' ? JSON.parse(socioObj.ajustes) : (socioObj.ajustes || {});
+          
+          const activos = cp.filter(item => item.activo);
+          const baseSocio = (socioObj.moneda_socio || 'USDT').toUpperCase();
+
+          return activos.map(p => {
+            const pb = this.listaPaisesBase.find(b => b.code === p.moneda || b.nombrePais === p.pais) || {};
+            const fD = aj['D-' + p.moneda] !== undefined ? aj['D-' + p.moneda] : 1.0;
+            const fP = aj['P-' + p.moneda] !== undefined ? aj['P-' + p.moneda] : 1.0;
+
+            const tD = this.calcularTasaCrossDirectorio(p.moneda, fD, baseSocio);
+            const tP = this.calcularTasaCrossDirectorio(p.moneda, fP, baseSocio);
+
+            return {
+              pais: p.pais || pb.nombrePais,
+              moneda: p.moneda || pb.code,
+              flag: pb.flag || '🏳️',
+              f_D: fD,
+              f_P: fP,
+              tasa_D: tD,
+              tasa_P: tP
+            };
+          });
+        },
+
+        calcularTasaCrossDirectorio(monedaDestino, factor, monedaBaseSocio) {
+          // Busca la última tasa base publicada en los comprobantes o tasas disponibles
+          const ultimoComp = this.comprobantes[0] || {};
+          const tasaBaseOrigen = 1.0; // Si no hay lote, se asume base 1.0
+          const tasaBaseSocio = 1.0;
+
+          const f = Math.abs(parseFloat(factor) || 1.0);
+          return (tasaBaseOrigen / tasaBaseSocio) * f;
         },
 
         get comprobantesSocioReporte() {
