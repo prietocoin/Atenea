@@ -28,17 +28,25 @@ function aplicarReglaPrecision(val) {
   if (v === 0) return 0;
 
   if (v > 499.99) {
-    return Math.trunc(v); // Mayor a 499.99: sin decimales
+    return Math.trunc(v);
   } else if (v < 10) {
     if (v < 1) {
       const magnitud = Math.floor(Math.log10(v));
       const f = Math.pow(10, 2 - magnitud);
-      return Math.trunc(v * f) / f; // Menor a 1: 3 cifras significativas
+      return Math.trunc(v * f) / f;
     }
-    return Math.trunc(v * 1000) / 1000; // Entre 1 y 10: 3 decimales
+    return Math.trunc(v * 1000) / 1000;
   } else {
-    return Math.trunc(v * 100) / 100; // Entre 10 y 499.99: 2 decimales
+    return Math.trunc(v * 100) / 100;
   }
+}
+
+// Cálculo automático de talla según conteo de países activos
+function calcularTallaAutomatica(conteo) {
+  if (conteo <= 2) return 'S';
+  if (conteo <= 5) return 'M';
+  if (conteo <= 8) return 'L';
+  return 'XL';
 }
 
 // Matriz y Configuración Semilla de los 38 Socios (Hoole.xlsx)
@@ -162,7 +170,6 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
     `);
 
-    // 1. Garantizar esquema completo en nombres_fb
     await pool.query(`
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10);
@@ -186,7 +193,6 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
 
-    // 2. Sembrar/Actualizar configuración de socios
     for (const [socioKey, config] of Object.entries(SEED_SOCIOS_CONFIG)) {
       const check = await pool.query(
         `SELECT id_grupo FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`,
@@ -243,9 +249,8 @@ async function initDB() {
         );
       }
     }
-    console.log('✅ Base de datos sembrada con Opción 1 (nombres_fb).');
+    console.log('✅ Base de datos sembrada.');
 
-    // 3. Recreación limpia de Vista v_comprobantes_auditados
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -449,7 +454,6 @@ const getComprobantesHandler = async (req, res) => {
         v.conteo, 
         v.lote_tasa_asignado, 
         
-        -- Tasa Base Oficial
         COALESCE(
           v.tasa_mercado_aplicada,
           CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
@@ -457,10 +461,8 @@ const getComprobantesHandler = async (req, res) => {
         
         v.monto_usd_equivalente,
 
-        -- Tipo de transacción único (definido por Socio 1 x Moneda)
         t.tipo_op,
 
-        -- Moneda Nativa y Tasa Base del Socio 1 (Normalizado USD -> USDT)
         CASE 
           WHEN UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
           ELSE UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT')))
@@ -472,7 +474,6 @@ const getComprobantesHandler = async (req, res) => {
         ) AS tasa_base_socio_1,
         COALESCE((n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_1,
 
-        -- Moneda Nativa y Tasa Base del Socio 2 (Normalizado USD -> USDT)
         CASE 
           WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
           ELSE UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT')))
@@ -540,7 +541,6 @@ const getComprobantesHandler = async (req, res) => {
 
     const { rows } = await pool.query(query, values);
 
-    // Cálculo dinámico de Tasa Cross con TRUNCADO DE PRECISIÓN
     const rowsProcesadas = rows.map(row => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
@@ -699,11 +699,11 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
   }
 });
 
-// ENDPOINT UNIFICADO PARA CREAR O GUARDAR CONFIGURACIÓN COMPLETA
+// ENDPOINT UNIFICADO CON TALLA AUTOMÁTICA
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
-      nombre, roles, moneda_socio, talla, whatsapp, 
+      nombre, roles, moneda_socio, whatsapp, 
       pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
       cartelera_paises, ajustes 
     } = req.body;
@@ -715,7 +715,12 @@ app.post('/api/socios/config', async (req, res) => {
     const socioNombre = nombre.trim();
     const idGrupo = 'GRP_' + socioNombre.toUpperCase().replace(/\s+/g, '_');
 
-    const jsonCartelera = JSON.stringify(cartelera_paises || []);
+    // Conteo dinámico de países activos para auto-asignar la Talla
+    const cpArray = cartelera_paises || [];
+    const conteoActivos = cpArray.filter(p => p.activo).length;
+    const tallaCalculada = calcularTallaAutomatica(conteoActivos);
+
+    const jsonCartelera = JSON.stringify(cpArray);
     const jsonAjustes = JSON.stringify(ajustes || {});
 
     const query = `
@@ -741,7 +746,7 @@ app.post('/api/socios/config', async (req, res) => {
     `;
 
     const { rows } = await pool.query(query, [
-      idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', talla || 'M', whatsapp || '',
+      idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
       pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
       dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
       jsonCartelera, jsonAjustes
