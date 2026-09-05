@@ -508,13 +508,13 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO SIN COLUMNA ANCHA) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Reglas (nombres_fb)</h2>
-              <p class="text-xs text-slate-400">Directorio centralizado con insignias de carteles activos ☑️ y gestión de perfiles.</p>
+              <p class="text-xs text-slate-400">Directorio centralizado con perfil, insignias de países activos y configuración integral.</p>
             </div>
             <div class="flex items-center gap-2">
               <button @click="prepararNuevoSocio()" class="px-3.5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 active:scale-95">
@@ -524,14 +524,13 @@
             </div>
           </div>
 
-          <!-- TABLA LIMPIA DEL DIRECTORIO -->
+          <!-- TABLA LIMPIA Y REFORMADA SIN LA COLUMNA DE CARTELES -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px]">
                     <th class="px-3 py-2.5">SOCIO & PERFIL</th>
-                    <th class="px-3 py-2.5">CARTELES ACTIVOS (☑️)</th>
                     <th class="px-3 py-2.5">WHATSAPP / ID GRUPO</th>
                     <th class="px-3 py-2.5 text-right">ACCIONES</th>
                   </tr>
@@ -540,27 +539,24 @@
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       
-                      <!-- INFORMACIÓN DEL SOCIO -->
+                      <!-- INFORMACIÓN DEL SOCIO + PAÍSES ACTIVOS DENTRO DEL PERFIL -->
                       <td class="px-3 py-3 align-middle whitespace-nowrap">
-                        <div class="flex flex-col gap-0.5">
+                        <div class="flex flex-col gap-1">
                           <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
-                          <div class="flex items-center gap-1.5 mt-0.5">
+                          <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[9px] font-mono font-bold" x-text="d.roles || 'SOCIO'"></span>
                             <span class="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30" x-text="d.moneda_socio || 'USDT'"></span>
                             <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (d.talla || 'M') + ' [' + limitePaisesSegunTalla(d.talla) + ']'"></span>
                           </div>
-                        </div>
-                      </td>
-
-                      <!-- INSIGNIAS COMPACTAS DE PAÍSES ACTIVOS (☑️) -->
-                      <td class="px-3 py-3 align-middle">
-                        <div class="flex flex-wrap gap-1">
-                          <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.code">
-                            <span class="px-2 py-0.5 rounded bg-[#1a1d33] border border-slate-700/60 font-mono text-[9px] font-bold text-slate-200 flex items-center gap-1 shadow-sm">
-                              <span x-text="p.flag"></span>
-                              <span x-text="p.code"></span>
-                            </span>
-                          </template>
+                          <!-- INSIGNIAS DE PAÍSES ACTIVOS INTEGRADAS DENTRO DE LA FICHA -->
+                          <div class="flex flex-wrap gap-1 mt-1">
+                            <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.code">
+                              <span class="px-1.5 py-0.2 rounded bg-[#1a1d33] border border-slate-700/60 font-mono text-[8.5px] font-bold text-slate-300 flex items-center gap-1 shadow-sm">
+                                <span x-text="p.flag"></span>
+                                <span x-text="p.code"></span>
+                              </span>
+                            </template>
+                          </div>
                         </div>
                       </td>
 
@@ -752,14 +748,14 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 2: CARTELES (POSTER PREVIEW CON TASAS RESULTANTES REALES t_D / t_P) -->
+          <!-- SUBPANTALLA 2: CARTELES (POSTER PREVIEW CON TASAS RESULTANTES REALES DEL MERCADO) -->
           <div x-show="tabConfigActive === 'carteles'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-3 space-y-3">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <span class="text-xs font-bold text-slate-300">Vista Previa del Poster / Cartel Real</span>
               <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla: ' + socioConfigEdit.talla + ' [' + limitePaisesSegunTalla(socioConfigEdit.talla) + ' Países Visibles]'"></span>
             </div>
 
-            <!-- TARJETAS ESTILIZADAS IGUALES AL PÓSTER MOSTRANDO LA TASA CALCULADA REAL -->
+            <!-- TARJETAS ESTILIZADAS IGUALES AL PÓSTER MOSTRANDO LA TASA CALCULADA REAL DE MERCADO -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               <template x-for="p in obtenerPaisesLimitadosSocio()" :key="p.code">
                 <div class="bg-[#16192b] border border-purple-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow-lg">
@@ -895,6 +891,8 @@
         comprobantes: [],
         socios: [],
         directorio: [],
+        ultimasTasasMercado: {},
+        ultimoLoteId: '',
         filtroSocio: '',
         filtroFecha: '',
         filtroHash: '',
@@ -958,9 +956,23 @@
         metricas: { recibidos: 0, iaOk: 0, descartados: 0, duplicados: 0 },
 
         async init() {
+          await this.cargarUltimasTasasMercado();
           await this.cargarSocios();
           await this.cargarDirectorio();
           await this.cargarComprobantes();
+        },
+
+        async cargarUltimasTasasMercado() {
+          try {
+            const res = await fetch('/api/tasas/ultimas');
+            if (res.ok) {
+              const data = await res.json();
+              this.ultimasTasasMercado = data.tasas || {};
+              this.ultimoLoteId = data.id_tasa || '';
+            }
+          } catch (err) {
+            console.error("Error cargando ultimas tasas mercado:", err);
+          }
         },
 
         limitePaisesSegunTalla(talla) {
@@ -989,15 +1001,26 @@
           return activos.slice(0, limite);
         },
 
+        // CÁLCULO DE CARTEL CON TASA REAL DE LA TABLA MERCADO_TASAS
         calcularTasaSocio(monedaCode, factor) {
-          const f = Math.abs(parseFloat(factor) || 1.0);
+          if (!factor) return 0;
+          const f = Math.abs(parseFloat(factor) || 0);
           const monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
 
-          // El cálculo toma la tasa de la Moneda Maestra USDT (1.0) y aplica el multiplicador
-          const tasaBaseOrigen = 1.0; 
-          const tasaBaseSocio = 1.0;
+          // 1. Tasa Base de la divisa de destino en la tabla mercado_tasas (Lote vigente)
+          const tasaBaseDestino = parseFloat(this.ultimasTasasMercado[monedaCode.toUpperCase()] || 1.0);
 
-          return (tasaBaseOrigen / tasaBaseSocio) * f;
+          // 2. Tasa Base de la moneda nativa del socio en mercado_tasas
+          let tasaBaseSocio = 1.0;
+          if (!['USD', 'USDT', 'PYUSD'].includes(monedaBaseSocio)) {
+            tasaBaseSocio = parseFloat(this.ultimasTasasMercado[monedaBaseSocio] || 1.0);
+          }
+
+          if (tasaBaseSocio <= 0) tasaBaseSocio = 1.0;
+
+          // Cross-rate real de mercado multiplicado por el factor de ajuste del socio
+          const tasaCross = (tasaBaseDestino / tasaBaseSocio) * f;
+          return tasaCross;
         },
 
         prepararNuevoSocio() {
@@ -1220,6 +1243,7 @@
                 tipo: 'exito',
                 mensaje: `¡Lote ${data.id_tasa} publicado a producción con éxito!`
               };
+              await this.cargarUltimasTasasMercado();
               await this.cargarComprobantes();
             } else {
               this.notificacionTasas = {
