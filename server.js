@@ -456,7 +456,7 @@ const getComprobantesHandler = async (req, res) => {
         
         COALESCE(
           v.tasa_mercado_aplicada,
-          CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
+          CASE WHEN UPPER(f.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
         ) AS tasa_base,
         
         v.monto_usd_equivalente,
