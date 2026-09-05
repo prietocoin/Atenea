@@ -508,7 +508,7 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO ULTRALIMPIO SIN BADGES NI COLUMNAS EXTRAS) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO SIN BADGES DE PAÍSES) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -524,7 +524,7 @@
             </div>
           </div>
 
-          <!-- TABLA LIMPIA Y REFORMADA -->
+          <!-- TABLA LIMPIA Y REFORMADA DEL DIRECTORIO -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
@@ -539,6 +539,7 @@
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       
+                      <!-- INFORMACIÓN DEL SOCIO -->
                       <td class="px-3 py-3 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1">
                           <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
@@ -550,8 +551,10 @@
                         </div>
                       </td>
 
+                      <!-- WHATSAPP / ID GRUPO -->
                       <td class="px-3 py-3 align-middle font-mono text-[10px] text-slate-400 whitespace-nowrap" x-text="d.whatsapp || d.id_grupo || '-'"></td>
 
+                      <!-- ACCIONES -->
                       <td class="px-3 py-3 align-middle text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
                           <button @click="abrirModalConfig(d.nombre)" class="px-2.5 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
@@ -678,7 +681,7 @@
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS -->
+          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS (UNIFICADA A SOLO 2 TABS) -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1">
               <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Socio en Edición</label>
@@ -734,7 +737,7 @@
                   <!-- FILA HORIZONTAL DE PAGO Y DEPÓSITO (GRILLA DE 2 COLUMNAS) -->
                   <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
                     
-                    <!-- SUB-BLOQUE IZQUIERDO: PAGO -->
+                    <!-- SUB-BLOQUE IZQUIERDO: PAGO (f_P A LA IZQ, t_P A LA DERECHA) -->
                     <div class="bg-amber-950/40 p-1.5 rounded border border-amber-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-amber-400 font-black shrink-0 text-[8px]">PAGO</span>
@@ -746,7 +749,7 @@
                       </div>
                     </div>
 
-                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO -->
+                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO (f_D A LA IZQ, t_D A LA DERECHA) -->
                     <div class="bg-cyan-950/40 p-1.5 rounded border border-cyan-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-cyan-400 font-black shrink-0 text-[8px]">DEPÓSITO</span>
@@ -863,6 +866,7 @@
         modalAbierto: false,
         itemEdicion: null,
 
+        // MODAL CONFIGURACIÓN SOCIO
         modalConfigSocioAbierto: false,
         tabConfigActive: 'reglas',
         guardandoConfig: false,
