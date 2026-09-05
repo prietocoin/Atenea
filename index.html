@@ -508,13 +508,13 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO ULTRALIMPIO) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO ULTRALIMPIO SIN BADGES NI COLUMNAS EXTRAS) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Reglas (nombres_fb)</h2>
-              <p class="text-xs text-slate-400">Directorio centralizado con perfil, insignias de países activos y configuración integral.</p>
+              <p class="text-xs text-slate-400">Directorio centralizado con perfil y configuración integral.</p>
             </div>
             <div class="flex items-center gap-2">
               <button @click="prepararNuevoSocio()" class="px-3.5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 active:scale-95">
@@ -546,14 +546,6 @@
                             <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[9px] font-mono font-bold" x-text="d.roles || 'SOCIO'"></span>
                             <span class="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30" x-text="d.moneda_socio || 'USDT'"></span>
                             <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (calcularTallaDinamica(contarPaisesActivos(d))) + ' [' + contarPaisesActivos(d) + ']'"></span>
-                          </div>
-                          <div class="flex flex-wrap gap-1 mt-1">
-                            <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.code">
-                              <span class="px-1.5 py-0.2 rounded bg-[#1a1d33] border border-slate-700/60 font-mono text-[8.5px] font-bold text-slate-300 flex items-center gap-1 shadow-sm">
-                                <span x-text="p.flag"></span>
-                                <span x-text="p.code"></span>
-                              </span>
-                            </template>
                           </div>
                         </div>
                       </td>
@@ -697,7 +689,7 @@
               </select>
             </div>
 
-            <!-- SOLO 2 SUBPANTALLAS: REGLAS Y PERFIL -->
+            <!-- SOLO 2 NAVEGADORES: REGLAS Y PERFIL -->
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
               <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-4 py-1.5 rounded text-xs font-bold transition-all">
                 📜 Reglas
@@ -708,7 +700,7 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 1: REGLAS -->
+          <!-- SUBPANTALLA 1: REGLAS (PAGO Y DEPÓSITO HORIZONTALES LADO A LADO EN CADA PAÍS) -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
             
             <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-800/60">
@@ -720,6 +712,7 @@
               <template x-for="p in carteleraPaisesEdit" :key="p.code">
                 <div class="bg-[#1a1d33] p-2.5 rounded-xl border transition-all space-y-2" :class="p.activo ? 'border-purple-500/50 bg-purple-950/20 shadow-md' : 'border-slate-800 opacity-60'">
                   
+                  <!-- CABECERA DE LA TARJETA DEL PAÍS -->
                   <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                       <input type="checkbox" x-model="p.activo" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600 focus:ring-purple-500">
@@ -738,28 +731,29 @@
                     </div>
                   </div>
 
-                  <div class="space-y-1.5 font-mono text-[9px]">
+                  <!-- FILA HORIZONTAL DE PAGO Y DEPÓSITO (GRILLA DE 2 COLUMNAS) -->
+                  <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
                     
-                    <!-- PAGO -->
-                    <div class="bg-amber-950/40 p-1.5 rounded border border-amber-500/20 flex items-center justify-between gap-2">
-                      <div class="flex items-center gap-1.5 flex-1">
+                    <!-- SUB-BLOQUE IZQUIERDO: PAGO (f_P A LA IZQ, t_P A LA DERECHA) -->
+                    <div class="bg-amber-950/40 p-1.5 rounded border border-amber-500/20 flex items-center justify-between gap-1.5">
+                      <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-amber-400 font-black shrink-0 text-[8px]">PAGO</span>
-                        <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['P-' + p.code]" placeholder="f_P" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-amber-300 font-bold outline-none focus:border-amber-500">
+                        <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['P-' + p.code]" placeholder="f_P" class="w-full bg-[#131525] border border-slate-700 rounded px-1 py-0.5 text-amber-300 font-bold outline-none focus:border-amber-500 min-w-0">
                       </div>
-                      <div class="flex flex-col items-end shrink-0 pl-2 border-l border-amber-500/20">
-                        <span class="text-[7px] text-slate-400 font-sans uppercase">Tasa Real (tP)</span>
+                      <div class="flex flex-col items-end shrink-0 pl-1.5 border-l border-amber-500/20">
+                        <span class="text-[7px] text-slate-400 font-sans uppercase">tP</span>
                         <span class="font-extrabold text-amber-200 text-xs" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['P-' + p.code]))"></span>
                       </div>
                     </div>
 
-                    <!-- DEPÓSITO -->
-                    <div class="bg-cyan-950/40 p-1.5 rounded border border-cyan-500/20 flex items-center justify-between gap-2">
-                      <div class="flex items-center gap-1.5 flex-1">
+                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO (f_D A LA IZQ, t_D A LA DERECHA) -->
+                    <div class="bg-cyan-950/40 p-1.5 rounded border border-cyan-500/20 flex items-center justify-between gap-1.5">
+                      <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-cyan-400 font-black shrink-0 text-[8px]">DEPÓSITO</span>
-                        <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" placeholder="f_D" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-cyan-300 font-bold outline-none focus:border-cyan-500">
+                        <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" placeholder="f_D" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-cyan-300 font-bold outline-none focus:border-cyan-500 min-w-0">
                       </div>
-                      <div class="flex flex-col items-end shrink-0 pl-2 border-l border-cyan-500/20">
-                        <span class="text-[7px] text-slate-400 font-sans uppercase">Tasa Real (tD)</span>
+                      <div class="flex flex-col items-end shrink-0 pl-1.5 border-l border-cyan-500/20">
+                        <span class="text-[7px] text-slate-400 font-sans uppercase">tD</span>
                         <span class="font-extrabold text-cyan-200 text-xs" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['D-' + p.code]))"></span>
                       </div>
                     </div>
@@ -865,11 +859,11 @@
         filtroSocio: '',
         filtroFecha: '',
         filtroHash: '',
-        soloDuplicados: true,
+        soloDuplicados: false,
         modalAbierto: false,
         itemEdicion: null,
 
-        // MODAL CONFIGURACIÓN SOCIO (SOLO 2 NAVEGADORES: REGLAS Y PERFIL)
+        // MODAL CONFIGURACIÓN SOCIO (2 NAVEGADORES: REGLAS Y PERFIL)
         modalConfigSocioAbierto: false,
         tabConfigActive: 'reglas',
         guardandoConfig: false,
