@@ -590,7 +590,7 @@ const getComprobantesHandler = async (req, res) => {
     console.error('Error en GET /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
-};
+});
 
 app.get('/api/comprobantes', getComprobantesHandler);
 app.get('/api/cola', getComprobantesHandler);
@@ -715,7 +715,6 @@ app.post('/api/socios/config', async (req, res) => {
     const socioNombre = nombre.trim();
     const idGrupo = 'GRP_' + socioNombre.toUpperCase().replace(/\s+/g, '_');
 
-    // Conteo dinámico de países activos para auto-asignar la Talla
     const cpArray = cartelera_paises || [];
     const conteoActivos = cpArray.filter(p => p.activo).length;
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
