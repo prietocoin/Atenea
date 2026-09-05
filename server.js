@@ -270,7 +270,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// --- COMPROBANTES Y CÁLCULO DE TASA 1 Y TASA 2 ---
+// --- COMPROBANTES Y CÁLCULO UNIFICADO DE TASA 1 Y TASA 2 ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -292,6 +292,7 @@ const getComprobantesHandler = async (req, res) => {
         v.conteo, 
         v.lote_tasa_asignado, 
         
+        -- Tasa Base Oficial
         COALESCE(
           v.tasa_mercado_aplicada,
           CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
@@ -299,52 +300,31 @@ const getComprobantesHandler = async (req, res) => {
         
         v.monto_usd_equivalente,
 
-        -- Tasa 1 para Socio 1
+        -- Tipo de transacción único (definido por Socio 1 x Moneda)
+        t.tipo_op,
+
+        -- Tasa 1 para Socio 1 (usando t.tipo_op)
         COALESCE(
           ROUND((
             COALESCE(v.tasa_mercado_aplicada, CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END)
             * ABS(
               COALESCE(
-                (n1.ajustes->>(
-                  COALESCE(
-                    CASE v.moneda
-                      WHEN 'PEN' THEN n1.pen
-                      WHEN 'COP' THEN n1.cop
-                      WHEN 'CLP' THEN n1.clp
-                      WHEN 'VES' THEN n1.ves
-                      WHEN 'ARS' THEN n1.ars
-                      WHEN 'USD' THEN n1.usd
-                      ELSE 'D'
-                    END, 'D'
-                  ) || '-' || v.moneda
-                ))::numeric,
-                1
+                (n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric,
+                1.0
               )
             )
           )::numeric, 6),
           COALESCE(v.tasa_mercado_aplicada, CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END)
         ) AS tasa_1,
 
-        -- Tasa 2 para Socio 2
+        -- Tasa 2 para Socio 2 (usando EL MISMO t.tipo_op de Socio 1)
         COALESCE(
           ROUND((
             COALESCE(v.tasa_mercado_aplicada, CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END)
             * ABS(
               COALESCE(
-                (n2.ajustes->>(
-                  COALESCE(
-                    CASE v.moneda
-                      WHEN 'PEN' THEN n2.pen
-                      WHEN 'COP' THEN n2.cop
-                      WHEN 'CLP' THEN n2.clp
-                      WHEN 'VES' THEN n2.ves
-                      WHEN 'ARS' THEN n2.ars
-                      WHEN 'USD' THEN n2.usd
-                      ELSE 'D'
-                    END, 'D'
-                  ) || '-' || v.moneda
-                ))::numeric,
-                1
+                (n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric,
+                1.0
               )
             )
           )::numeric, 6),
@@ -354,6 +334,23 @@ const getComprobantesHandler = async (req, res) => {
       FROM v_comprobantes_auditados v
       LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
       LEFT JOIN nombres_fb n2 ON UPPER(TRIM(n2.nombre)) = UPPER(TRIM(v.nombre_socio_2))
+
+      -- Determinación unificada del tipo de operación basada en Socio 1
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          CASE v.moneda
+            WHEN 'PEN' THEN n1.pen
+            WHEN 'COP' THEN n1.cop
+            WHEN 'CLP' THEN n1.clp
+            WHEN 'VES' THEN n1.ves
+            WHEN 'ARS' THEN n1.ars
+            WHEN 'USD' THEN n1.usd
+            ELSE 'D'
+          END,
+          'D'
+        ) AS tipo_op
+      ) t ON TRUE
+
       WHERE v.conteo > 1
     `;
 
