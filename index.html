@@ -103,12 +103,11 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS (30% IMAGEN / 70% CONTENEDOR DATOS) -->
+          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
                 
-                <!-- 30% IMAGEN -->
                 <div class="w-[30%] shrink-0 flex flex-col justify-start">
                   <div class="relative aspect-square w-full">
                     <img :src="item.url_imagen" class="w-full h-full object-cover rounded-lg border border-slate-700/50 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
@@ -118,10 +117,7 @@
                   </div>
                 </div>
 
-                <!-- 70% CONTENEDOR DE DATOS -->
                 <div class="w-[70%] flex flex-col justify-between min-w-0 gap-1">
-                  
-                  <!-- TOP BAR -->
                   <div class="flex items-center justify-between gap-1">
                     <div class="flex items-center gap-1 truncate">
                       <span class="px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 font-mono text-[9px] font-bold border border-purple-500/20 truncate" x-text="item.hash_corto"></span>
@@ -149,13 +145,11 @@
                     </div>
                   </div>
 
-                  <!-- MONTO Y MONEDA -->
                   <div class="flex items-baseline gap-1 my-0.5">
                     <span class="font-black text-emerald-400 text-sm leading-none" x-text="formatMonto(item.monto)"></span>
                     <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
                   </div>
 
-                  <!-- SOCIOS -->
                   <div class="flex flex-col gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800/80 my-0.5 text-[9px]">
                     <div class="flex items-center justify-between gap-1">
                       <span class="font-bold text-purple-300 truncate min-w-0" x-text="item.nombre_socio_1 || '-'"></span>
@@ -180,7 +174,6 @@
                     </template>
                   </div>
 
-                  <!-- SECCIÓN INFERIOR -->
                   <div class="flex items-end justify-between border-t border-slate-800/60 pt-1 gap-1">
                     <div class="flex flex-col text-[8px] text-slate-400 truncate min-w-0 flex-1">
                       <span class="font-bold text-slate-200 uppercase truncate" x-text="obtenerPrimeraPalabra(item.titular)"></span>
@@ -515,30 +508,31 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO CON FACTORES $f_D / f_P$ Y TASAS REALES $t_D / t_P$) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO CON VISTA LIMPIA Y SUBPANTALLAS) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Cartelera Real</h2>
-              <p class="text-xs text-slate-400">Visualiza en tiempo real los factores de ajuste ($f$) y la tasa calculada ($t$) para cada cartel.</p>
+              <p class="text-xs text-slate-400">Directorio centralizado con insignias de carteles activos ☑️ y gestión de perfiles.</p>
             </div>
             <div class="flex items-center gap-2">
-              <button @click="abrirModalConfig()" class="px-3 py-2 rounded-xl bg-purple-600/30 text-purple-300 border border-purple-500/50 hover:bg-purple-600/50 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 active:scale-95">
-                <span>⚙️ Configurar Socio Completo</span>
+              <button @click="prepararNuevoSocio()" class="px-3.5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 active:scale-95">
+                <span>➕ Nuevo Socio</span>
               </button>
               <button @click="cargarDirectorio()" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:scale-95">🔄 Actualizar</button>
             </div>
           </div>
 
-          <!-- TABLA REFORMADA DEL DIRECTORIO CON FACTORES Y TASAS REALES -->
+          <!-- TABLA LIMPIA DEL DIRECTORIO -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px]">
                     <th class="px-3 py-2.5">SOCIO & PERFIL</th>
-                    <th class="px-3 py-2.5">PAÍSES ACTIVOS (☑️) & TASAS DEL CARTELL ($t_D / t_P$)</th>
+                    <th class="px-3 py-2.5">CARTELL ACTIVOS (☑️)</th>
+                    <th class="px-3 py-2.5">WHATSAPP / ID GRUPO</th>
                     <th class="px-3 py-2.5 text-right">ACCIONES</th>
                   </tr>
                 </thead>
@@ -547,53 +541,42 @@
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       
                       <!-- INFORMACIÓN DEL SOCIO -->
-                      <td class="px-3 py-3 align-top whitespace-nowrap">
+                      <td class="px-3 py-3 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-0.5">
                           <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
                           <div class="flex items-center gap-1.5 mt-0.5">
                             <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[9px] font-mono font-bold" x-text="d.roles || 'SOCIO'"></span>
                             <span class="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30" x-text="d.moneda_socio || 'USDT'"></span>
-                            <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (d.talla || 'M')"></span>
+                            <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (d.talla || 'M') + ' [' + limitePaisesSegunTalla(d.talla) + ']'"></span>
                           </div>
                         </div>
                       </td>
 
-                      <!-- DESPLIEGUE DINÁMICO DE PAÍSES, FACTORES Y TASAS CALCULADAS EN VIVO -->
-                      <td class="px-3 py-3 align-top">
-                        <div class="flex flex-wrap gap-2">
+                      <!-- INSIGNIAS COMPACTAS DE PAÍSES ACTIVOS (☑️) -->
+                      <td class="px-3 py-3 align-middle">
+                        <div class="flex flex-wrap gap-1">
                           <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.moneda">
-                            <div class="bg-[#1a1d33] border border-slate-700/60 rounded-lg p-1.5 flex flex-col justify-between min-w-[130px] text-[9px] shadow-sm">
-                              
-                              <!-- CABECERA PAÍS Y MONEDA -->
-                              <div class="flex items-center justify-between border-b border-slate-800 pb-1 mb-1">
-                                <span class="font-extrabold text-white text-[10px]" x-text="p.flag + ' ' + p.pais"></span>
-                                <span class="font-mono text-[8px] font-bold text-purple-400" x-text="p.moneda"></span>
-                              </div>
-
-                              <!-- TASAS CALCULADAS t_D Y t_P -->
-                              <div class="grid grid-cols-2 gap-1 text-[8px] font-mono">
-                                <div class="flex flex-col bg-cyan-950/40 p-1 rounded border border-cyan-500/20">
-                                  <span class="text-cyan-400 font-bold uppercase text-[7px]">Dep (tD)</span>
-                                  <span class="font-extrabold text-cyan-200" x-text="formatTasa(p.tasa_D)"></span>
-                                  <span class="text-[7px] text-slate-400" x-text="'f:' + p.f_D"></span>
-                                </div>
-                                <div class="flex flex-col bg-amber-950/40 p-1 rounded border border-amber-500/20">
-                                  <span class="text-amber-400 font-bold uppercase text-[7px]">Pag (tP)</span>
-                                  <span class="font-extrabold text-amber-200" x-text="formatTasa(p.tasa_P)"></span>
-                                  <span class="text-[7px] text-slate-400" x-text="'f:' + p.f_P"></span>
-                                </div>
-                              </div>
-
-                            </div>
+                            <span class="px-2 py-0.5 rounded bg-[#1a1d33] border border-slate-700/60 font-mono text-[9px] font-bold text-slate-200 flex items-center gap-1 shadow-sm">
+                              <span x-text="p.flag"></span>
+                              <span x-text="p.code"></span>
+                            </span>
                           </template>
                         </div>
                       </td>
 
+                      <!-- WHATSAPP / ID GRUPO -->
+                      <td class="px-3 py-3 align-middle font-mono text-[10px] text-slate-400 whitespace-nowrap" x-text="d.whatsapp || d.id_grupo || '-'"></td>
+
                       <!-- ACCIONES -->
-                      <td class="px-3 py-3 align-top text-right whitespace-nowrap">
-                        <button @click="abrirModalConfig(d.nombre)" class="px-3 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5 ml-auto">
-                          <span>⚙️ Editar Socio</span>
-                        </button>
+                      <td class="px-3 py-3 align-middle text-right whitespace-nowrap">
+                        <div class="flex items-center justify-end gap-1">
+                          <button @click="abrirModalConfig(d.nombre)" class="px-2.5 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
+                            <span>⚙️ Configurar</span>
+                          </button>
+                          <button @click="borrarSocioDirectorio(d.nombre)" title="Borrar Socio" class="p-1.5 rounded-xl bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 transition-all border border-rose-500/30 active:scale-95">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          </button>
+                        </div>
                       </td>
 
                     </tr>
@@ -695,7 +678,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN COMPLETA OPCIÓN 1 -->
+      <!-- MODAL 2: CONFIGURACIÓN COMPLETA CON 4 SUBPANTALLAS (FACTORES, CARTELES, DIVISAS, PERFIL) -->
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
@@ -705,16 +688,16 @@
               <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
               <div>
                 <h3 class="font-bold text-white text-base">Configuración Integral del Socio</h3>
-                <p class="text-xs text-slate-400">Administra datos generales, asignación de países ☑️ y factores P/D.</p>
+                <p class="text-xs text-slate-400">Navega por las subpantallas para gestionar factores, carteles, divisas y perfil.</p>
               </div>
             </div>
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTOR DE SOCIO Y TABS -->
+          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1">
-              <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Seleccionar Socio a Configurar</label>
+              <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Socio en Edición</label>
               <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
                 <template x-for="s in socios" :key="s">
                   <option :value="s" x-text="s"></option>
@@ -722,21 +705,25 @@
               </select>
             </div>
 
-            <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
-              <button @click="tabConfigActive = 'paises'" :class="tabConfigActive === 'paises' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-                ☑️ Países & Cartelera
+            <!-- BOTONES DE LAS 4 SUBPANTALLAS -->
+            <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800 flex-wrap">
+              <button @click="tabConfigActive = 'factores'" :class="tabConfigActive === 'factores' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1.5 rounded text-xs font-bold transition-all">
+                📊 Factores
               </button>
-              <button @click="tabConfigActive = 'divisas'" :class="tabConfigActive === 'divisas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-                🔀 Divisas Auditoría
+              <button @click="tabConfigActive = 'carteles'" :class="tabConfigActive === 'carteles' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1.5 rounded text-xs font-bold transition-all">
+                🖼️ Carteles
               </button>
-              <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+              <button @click="tabConfigActive = 'divisas'" :class="tabConfigActive === 'divisas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1.5 rounded text-xs font-bold transition-all">
+                🔀 Divisas
+              </button>
+              <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1.5 rounded text-xs font-bold transition-all">
                 👤 Perfil
               </button>
             </div>
           </div>
 
-          <!-- CONTENIDO TAB 1: PAÍSES CON CHECKBOX ☑️ -->
-          <div x-show="tabConfigActive === 'paises'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2 space-y-2">
+          <!-- SUBPANTALLA 1: FACTORES (CHECKBOX ☑️ Y MULTIPLICADORES P/D) -->
+          <div x-show="tabConfigActive === 'factores'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2 space-y-2">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <template x-for="p in carteleraPaisesEdit" :key="p.code">
                 <div class="bg-[#1a1d33] p-2.5 rounded-xl border transition-all" :class="p.activo ? 'border-purple-500/50 bg-purple-950/20' : 'border-slate-800 opacity-60'">
@@ -751,11 +738,11 @@
 
                   <div class="grid grid-cols-2 gap-2 text-[9px]">
                     <div>
-                      <span class="text-amber-400 font-bold block">Pago (P)</span>
+                      <span class="text-amber-400 font-bold block">Factor Pago (f_P)</span>
                       <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['P-' + p.code]" class="w-full bg-[#131525] border border-slate-700 rounded px-2 py-1 text-amber-300 font-mono font-bold outline-none focus:border-amber-500">
                     </div>
                     <div>
-                      <span class="text-cyan-400 font-bold block">Depósito (D)</span>
+                      <span class="text-cyan-400 font-bold block">Factor Depósito (f_D)</span>
                       <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" class="w-full bg-[#131525] border border-slate-700 rounded px-2 py-1 text-cyan-300 font-mono font-bold outline-none focus:border-cyan-500">
                     </div>
                   </div>
@@ -765,9 +752,45 @@
             </div>
           </div>
 
-          <!-- CONTENIDO TAB 2: DIVISAS Y REGLAS DE AUDITORÍA (D/P/A/C) -->
+          <!-- SUBPANTALLA 2: CARTELES (POSTER PREVIEW CON TASAS RESULTANTES REALES t_D / t_P) -->
+          <div x-show="tabConfigActive === 'carteles'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-3 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <span class="text-xs font-bold text-slate-300">Vista Previa del Poster / Cartel Real</span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla: ' + socioConfigEdit.talla + ' (' + limitePaisesSegunTalla(socioConfigEdit.talla) + ' Países Visibles)'"></span>
+            </div>
+
+            <!-- TARJETAS ESTILIZADAS IGUALES AL PÓSTER -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              <template x-for="p in obtenerPaisesLimitadosSocio()" :key="p.code">
+                <div class="bg-[#16192b] border border-purple-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow-lg">
+                  
+                  <div class="flex items-center justify-between border-b border-slate-800/80 pb-1 mb-2">
+                    <span class="font-extrabold text-white text-xs" x-text="p.flag + ' ' + p.nombrePais"></span>
+                    <span class="font-mono text-[9px] font-bold text-purple-400" x-text="p.code"></span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-1.5 font-mono">
+                    <div class="bg-cyan-950/50 p-1.5 rounded border border-cyan-500/30 flex flex-col items-center">
+                      <span class="text-[7.5px] font-extrabold text-cyan-400 uppercase">DEP (tD)</span>
+                      <span class="text-xs font-black text-cyan-200 mt-0.5" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['D-' + p.code]))"></span>
+                      <span class="text-[7px] text-slate-400 mt-0.5" x-text="'f: ' + (socioConfigEdit.ajustes['D-' + p.code] || 1)"></span>
+                    </div>
+
+                    <div class="bg-amber-950/50 p-1.5 rounded border border-amber-500/30 flex flex-col items-center">
+                      <span class="text-[7.5px] font-extrabold text-amber-400 uppercase">PAG (tP)</span>
+                      <span class="text-xs font-black text-amber-200 mt-0.5" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['P-' + p.code]))"></span>
+                      <span class="text-[7px] text-slate-400 mt-0.5" x-text="'f: ' + (socioConfigEdit.ajustes['P-' + p.code] || 1)"></span>
+                    </div>
+                  </div>
+
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- SUBPANTALLA 3: DIVISAS (SELECCIÓN PREDETERMINADA D/P/A/C) -->
           <div x-show="tabConfigActive === 'divisas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-3">
-            <p class="text-xs text-slate-400 mb-3 font-semibold">Configura la regla operativa predeterminada (D: Depósito, P: Pago, A: Abono, C: Compra) por cada divisa de auditoría:</p>
+            <p class="text-xs text-slate-400 mb-3 font-semibold">Regla predeterminada de auditoría por divisa:</p>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <template x-for="m in ['PEN','COP','CLP','ARS','VES','BRL','MXN','PYG','DOP','CRC','EUR','CAD','USD','ECU','PAN','USDT']" :key="m">
                 <div class="bg-[#1a1d33] p-2 rounded-lg border border-slate-800 flex items-center justify-between">
@@ -783,9 +806,14 @@
             </div>
           </div>
 
-          <!-- CONTENIDO TAB 3: PERFIL GENERAL -->
-          <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-3">
+          <!-- SUBPANTALLA 4: PERFIL (DATOS GENERALES, CREAR Y BORRAR PERFIL) -->
+          <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
+            
             <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre del Socio / Perfil</label>
+                <input type="text" x-model="socioConfigEdit.nombre" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white font-bold rounded-lg px-2.5 py-2 outline-none focus:border-purple-500">
+              </div>
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rol</label>
                 <select x-model="socioConfigEdit.roles" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
@@ -794,6 +822,9 @@
                   <option value="COMPRAS">COMPRAS</option>
                 </select>
               </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Moneda Base Nativa</label>
                 <select x-model="socioConfigEdit.moneda_socio" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
@@ -809,31 +840,43 @@
                   <option value="ECU">ECU</option>
                 </select>
               </div>
-            </div>
 
-            <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Talla Plantilla</label>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Talla Plantilla Cartel</label>
                 <select x-model="socioConfigEdit.talla" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
-                  <option value="S">S (4 Países)</option>
-                  <option value="M">M (8 Países)</option>
-                  <option value="L">L (12 Países)</option>
+                  <option value="S">S [2 Países]</option>
+                  <option value="M">M [4 Países]</option>
+                  <option value="L">L [6 Países]</option>
+                  <option value="XL">XL [8 Países]</option>
                 </select>
               </div>
-              <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Remote JID / Teléfono</label>
-                <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none focus:border-purple-500">
-              </div>
             </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Remote JID / Teléfono</label>
+              <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none focus:border-purple-500">
+            </div>
+
+            <!-- BOTONES DE GESTIÓN DE PERFIL: CREAR NUEVO Y BORRAR -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
+              <button @click="prepararNuevoSocio()" class="px-3.5 py-2 bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                <span>➕ Crear Nuevo Perfil</span>
+              </button>
+
+              <button @click="borrarSocioDirectorio(socioConfigEdit.nombre)" class="px-3.5 py-2 bg-rose-600/20 text-rose-300 border border-rose-500/30 hover:bg-rose-600/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                <span>🗑️ Borrar Perfil</span>
+              </button>
+            </div>
+
           </div>
 
           <!-- PIE DE MODAL -->
           <div class="flex items-center justify-between pt-2 border-t border-slate-800 shrink-0">
-            <span class="text-[10px] text-slate-500">Socio en edición: <strong class="text-white" x-text="socioConfigEdit.nombre"></strong></span>
+            <span class="text-[10px] text-slate-500">Socio en edición: <strong class="text-white" x-text="socioConfigEdit.nombre || 'Nuevo Socio'"></strong></span>
             <div class="flex gap-2">
               <button @click="modalConfigSocioAbierto = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-700">Cancelar</button>
-              <button @click="guardarConfigSocio()" :disabled="guardandoConfig" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-purple-900/50 flex items-center gap-2">
-                <span x-show="!guardandoConfig">💾 Guardar Configuración</span>
+              <button @click="guardarConfigSocio()" :disabled="guardandoConfig" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-purple-900/50 flex items-center gap-2 active:scale-95">
+                <span x-show="!guardandoConfig">💾 Guardar Cambios</span>
                 <span x-show="guardandoConfig">Guardando...</span>
               </button>
             </div>
@@ -861,7 +904,7 @@
 
         // MODAL CONFIGURACIÓN SOCIO OPCIÓN 1
         modalConfigSocioAbierto: false,
-        tabConfigActive: 'paises',
+        tabConfigActive: 'factores',
         guardandoConfig: false,
 
         socioConfigEdit: {
@@ -920,43 +963,77 @@
           await this.cargarComprobantes();
         },
 
-        // MÉTODOS DE CÁLCULO DE TASAS EN TIEMPO REAL PARA LA TABLA DEL DIRECTORIO
+        limitePaisesSegunTalla(talla) {
+          const mapa = { 'S': 2, 'M': 4, 'L': 6, 'XL': 8 };
+          return mapa[(talla || 'M').toUpperCase()] || 4;
+        },
+
         obtenerPaisesActivosSocio(socioObj) {
           if (!socioObj) return [];
           const cp = typeof socioObj.cartelera_paises === 'string' ? JSON.parse(socioObj.cartelera_paises) : (socioObj.cartelera_paises || []);
-          const aj = typeof socioObj.ajustes === 'string' ? JSON.parse(socioObj.ajustes) : (socioObj.ajustes || {});
-          
           const activos = cp.filter(item => item.activo);
-          const baseSocio = (socioObj.moneda_socio || 'USDT').toUpperCase();
-
+          
           return activos.map(p => {
             const pb = this.listaPaisesBase.find(b => b.code === p.moneda || b.nombrePais === p.pais) || {};
-            const fD = aj['D-' + p.moneda] !== undefined ? aj['D-' + p.moneda] : 1.0;
-            const fP = aj['P-' + p.moneda] !== undefined ? aj['P-' + p.moneda] : 1.0;
-
-            const tD = this.calcularTasaCrossDirectorio(p.moneda, fD, baseSocio);
-            const tP = this.calcularTasaCrossDirectorio(p.moneda, fP, baseSocio);
-
             return {
               pais: p.pais || pb.nombrePais,
-              moneda: p.moneda || pb.code,
-              flag: pb.flag || '🏳️',
-              f_D: fD,
-              f_P: fP,
-              tasa_D: tD,
-              tasa_P: tP
+              code: p.moneda || pb.code,
+              flag: pb.flag || '🏳️'
             };
           });
         },
 
-        calcularTasaCrossDirectorio(monedaDestino, factor, monedaBaseSocio) {
-          // Busca la última tasa base publicada en los comprobantes o tasas disponibles
-          const ultimoComp = this.comprobantes[0] || {};
-          const tasaBaseOrigen = 1.0; // Si no hay lote, se asume base 1.0
-          const tasaBaseSocio = 1.0;
+        obtenerPaisesLimitadosSocio() {
+          const limite = this.limitePaisesSegunTalla(this.socioConfigEdit.talla);
+          const activos = this.carteleraPaisesEdit.filter(p => p.activo);
+          return activos.slice(0, limite);
+        },
 
+        calcularTasaSocio(monedaCode, factor) {
           const f = Math.abs(parseFloat(factor) || 1.0);
-          return (tasaBaseOrigen / tasaBaseSocio) * f;
+          return 1.0 * f;
+        },
+
+        prepararNuevoSocio() {
+          this.socioConfigEdit = {
+            nombre: 'NUEVO_SOCIO',
+            roles: 'SOCIO',
+            moneda_socio: 'USDT',
+            talla: 'M',
+            whatsapp: '',
+            pen: 'D', cop: 'D', clp: 'D', ars: 'D', ves: 'D', brl: 'D', mxn: 'D', pyg: 'D',
+            dop: 'D', crc: 'D', eur: 'D', cad: 'D', usd: 'P', ecu: 'D', pan: 'D', usdt: 'A',
+            ajustes: {}
+          };
+
+          this.carteleraPaisesEdit = this.listaPaisesBase.map(pb => ({
+            ...pb,
+            activo: true
+          }));
+
+          this.tabConfigActive = 'perfil';
+          this.modalConfigSocioAbierto = true;
+        },
+
+        async borrarSocioDirectorio(nombre) {
+          if (!nombre) return;
+          if (!confirm(`¿Estás seguro de borrar permanentemente al socio "${nombre}" del directorio?`)) return;
+
+          try {
+            const res = await fetch(`/api/directorio/${encodeURIComponent(nombre)}`, {
+              method: 'DELETE'
+            });
+
+            if (res.ok) {
+              this.modalConfigSocioAbierto = false;
+              await this.cargarDirectorio();
+              await this.cargarSocios();
+            } else {
+              alert('Error al eliminar socio.');
+            }
+          } catch (err) {
+            console.error("Error borrando socio:", err);
+          }
         },
 
         get comprobantesSocioReporte() {
@@ -1011,6 +1088,7 @@
         abrirModalConfig(nombre = '') {
           this.socioConfigEdit.nombre = nombre || (this.socios[0] || '');
           this.cargarSocioParaEditar();
+          this.tabConfigActive = 'factores';
           this.modalConfigSocioAbierto = true;
         },
 
@@ -1067,6 +1145,7 @@
             if (res.ok) {
               this.modalConfigSocioAbierto = false;
               await this.cargarDirectorio();
+              await this.cargarSocios();
               await this.cargarComprobantes();
             } else {
               alert('Error al guardar la configuración.');
