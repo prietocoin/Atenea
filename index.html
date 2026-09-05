@@ -131,7 +131,6 @@
                       </template>
                     </div>
 
-                    <!-- LOTE Y BADGE ÚNICO DE TIPO DE OPERACIÓN (TOP DERECHA) -->
                     <div class="flex items-center gap-1">
                       <template x-if="item.lote_tasa_asignado">
                         <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
@@ -153,7 +152,7 @@
                     </template>
                   </div>
 
-                  <!-- SOCIOS STACKED (Socio | Tasa | Monto M1/M2) -->
+                  <!-- SOCIOS STACKED (Tasa Cross | Monto Socio | Admin USDT) -->
                   <div class="flex flex-col gap-1.5 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800">
                     
                     <!-- SOCIO 1 -->
@@ -161,12 +160,15 @@
                       <div class="flex items-center gap-1.5 truncate pr-1">
                         <span class="text-[10px] font-bold text-purple-200 truncate" x-text="item.nombre_socio_1 || '-'"></span>
                       </div>
-                      <div class="flex items-center gap-1.5 shrink-0">
+                      <div class="flex items-center gap-1 shrink-0">
                         <template x-if="item.tasa_1">
                           <span class="text-[8px] font-mono text-slate-400" x-text="'T1:' + item.tasa_1"></span>
                         </template>
-                        <template x-if="item.m1 !== undefined">
-                          <span class="text-[8px] font-black text-emerald-300 bg-emerald-950/60 px-1 rounded border border-emerald-500/30" x-text="'M1: $' + formatMonto(item.m1)"></span>
+                        <template x-if="item.m1_socio !== undefined">
+                          <span class="text-[8px] font-black text-emerald-300 bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="formatMonto(item.m1_socio) + ' ' + item.moneda_socio_1"></span>
+                        </template>
+                        <template x-if="item.m1_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_1)">
+                          <span class="text-[8px] font-bold text-slate-400" x-text="'($' + formatMonto(item.m1_usdt) + ')'"></span>
                         </template>
                       </div>
                     </div>
@@ -177,12 +179,15 @@
                         <div class="flex items-center gap-1.5 truncate pr-1">
                           <span class="text-[10px] font-bold text-pink-200 truncate" x-text="item.nombre_socio_2"></span>
                         </div>
-                        <div class="flex items-center gap-1.5 shrink-0">
+                        <div class="flex items-center gap-1 shrink-0">
                           <template x-if="item.tasa_2">
                             <span class="text-[8px] font-mono text-slate-400" x-text="'T2:' + item.tasa_2"></span>
                           </template>
-                          <template x-if="item.m2 !== undefined">
-                            <span class="text-[8px] font-black text-emerald-300 bg-emerald-950/60 px-1 rounded border border-emerald-500/30" x-text="'M2: $' + formatMonto(item.m2)"></span>
+                          <template x-if="item.m2_socio !== undefined">
+                            <span class="text-[8px] font-black text-emerald-300 bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="formatMonto(item.m2_socio) + ' ' + item.moneda_socio_2"></span>
+                          </template>
+                          <template x-if="item.m2_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_2)">
+                            <span class="text-[8px] font-bold text-slate-400" x-text="'($' + formatMonto(item.m2_usdt) + ')'"></span>
                           </template>
                         </div>
                       </div>
@@ -208,7 +213,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO: TABLA CON M1 Y M2 -->
+          <!-- 💻 VISTA ESCRITORIO: TABLA CON CROSS-RATE, MONEDA SOCIO Y ADMIN USDT -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -220,7 +225,7 @@
                     <th class="px-3 py-2.5">LOTE & TIPO</th>
                     <th class="px-3 py-2.5">BANCO / TITULAR</th>
                     <th class="px-3 py-2.5">REFERENCIA</th>
-                    <th class="px-3 py-2.5">SOCIOS & TASAS (1 & 2)</th>
+                    <th class="px-3 py-2.5">SOCIOS, TASAS & MONTOS (1 & 2)</th>
                     <th class="px-3 py-2.5">FECHA / HORA</th>
                   </tr>
                 </thead>
@@ -285,18 +290,21 @@
 
                       <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
 
-                      <!-- SOCIOS, TASAS Y MONTOS M1/M2 -->
+                      <!-- SOCIOS, TASAS CROSS, MONEDA SOCIO Y ADMIN USDT -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1.5">
                           <!-- SOCIO 1 -->
                           <div class="flex flex-col">
                             <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
-                            <div class="flex items-center gap-1 text-[9px] font-mono mt-0.5">
+                            <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
                               <template x-if="item.tasa_1">
-                                <span class="text-purple-400 font-bold" x-text="'T1: ' + item.tasa_1"></span>
+                                <span class="text-purple-400 font-bold" x-text="'T1: ' + item.tasa_1 + ' ' + (item.moneda !== item.moneda_socio_1 ? item.moneda + '/' + item.moneda_socio_1 : '')"></span>
                               </template>
-                              <template x-if="item.m1 !== undefined">
-                                <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: $' + formatMonto(item.m1) + ' USDT'"></span>
+                              <template x-if="item.m1_socio !== undefined">
+                                <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: ' + formatMonto(item.m1_socio) + ' ' + item.moneda_socio_1"></span>
+                              </template>
+                              <template x-if="item.m1_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_1)">
+                                <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m1_usdt) + ' USD)'"></span>
                               </template>
                             </div>
                           </div>
@@ -305,12 +313,15 @@
                           <template x-if="item.nombre_socio_2">
                             <div class="flex flex-col border-t border-slate-800/60 pt-1">
                               <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
-                              <div class="flex items-center gap-1 text-[9px] font-mono mt-0.5">
+                              <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
                                 <template x-if="item.tasa_2">
-                                  <span class="text-pink-400 font-bold" x-text="'T2: ' + item.tasa_2"></span>
+                                  <span class="text-pink-400 font-bold" x-text="'T2: ' + item.tasa_2 + ' ' + (item.moneda !== item.moneda_socio_2 ? item.moneda + '/' + item.moneda_socio_2 : '')"></span>
                                 </template>
-                                <template x-if="item.m2 !== undefined">
-                                  <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: $' + formatMonto(item.m2) + ' USDT'"></span>
+                                <template x-if="item.m2_socio !== undefined">
+                                  <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: ' + formatMonto(item.m2_socio) + ' ' + item.moneda_socio_2"></span>
+                                </template>
+                                <template x-if="item.m2_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_2)">
+                                  <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m2_usdt) + ' USD)'"></span>
                                 </template>
                               </div>
                             </div>
