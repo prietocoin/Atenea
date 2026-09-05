@@ -339,6 +339,34 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
+// ENDPOINT PARA OBTENER ÚLTIMAS TASAS PUBLICADAS DEL MERCADO
+app.get('/api/tasas/ultimas', async (req, res) => {
+  try {
+    const lastLotRes = await pool.query(`
+      SELECT id_tasa FROM mercado_tasas ORDER BY timestamp DESC, id DESC LIMIT 1;
+    `);
+
+    if (lastLotRes.rows.length === 0) {
+      return res.json({ id_tasa: 'T360', tasas: { USD: 1.0, USDT: 1.0, PYUSD: 1.2, ECU: 1.0, PAN: 1.0 } });
+    }
+
+    const lastIdTasa = lastLotRes.rows[0].id_tasa;
+    const ratesRes = await pool.query(
+      `SELECT moneda, tasa_base FROM mercado_tasas WHERE id_tasa = $1;`,
+      [lastIdTasa]
+    );
+
+    const tasasObj = { USD: 1.0, USDT: 1.0, PYUSD: 1.2, ECU: 1.0, PAN: 1.0 };
+    ratesRes.rows.forEach(r => {
+      tasasObj[r.moneda.toUpperCase()] = parseFloat(r.tasa_base);
+    });
+
+    res.json({ id_tasa: lastIdTasa, tasas: tasasObj });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- TASAS ---
 app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
