@@ -41,7 +41,7 @@ function aplicarReglaPrecision(val) {
   }
 }
 
-// Matriz y Configuración Semilla de los 38 Socios
+// Matriz y Configuración Semilla de los 38 Socios (Hoole.xlsx)
 const SEED_SOCIOS_CONFIG = {
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
@@ -75,21 +75,73 @@ const SEED_SOCIOS_CONFIG = {
     ],
     "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.96, "D-ECU": 1.042, "P-MXN": 0.97, "D-MXN": -1.03, "P-BRL": -0.952, "D-BRL": 1.053, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
   },
+  "JOSEM": {
+    "id_grupo": "120363345944393252@g.us",
+    "nombre": "JoseM",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "L",
+    "whatsapp": "",
+    "pen": "D", "cop": "D", "clp": "P", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
+    ],
+    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+  },
   "NELSY": {
     "id_grupo": "GRP_NELSY",
     "nombre": "Nelsy",
     "roles": "SOCIO",
     "moneda_socio": "USDT",
-    "talla": "M",
+    "talla": "L",
     "whatsapp": "",
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
     ],
     "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": 0.98, "D-ARS": -1.02, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": 0.99, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+  },
+  "MERLI": {
+    "id_grupo": "120363307631639715@g.us",
+    "nombre": "Merli",
+    "roles": "SOCIO",
+    "moneda_socio": "PEN",
+    "talla": "L",
+    "whatsapp": "120363307631639715@g.us",
+    "pen": "A", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "D",
+    "cartelera_paises": [
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 1 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 3 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 4 },
+      { "pais": "EEUU-Zelle", "moneda": "USD", "activo": true, "orden": 5 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 6 }
+    ],
+    "ajustes": { "P-USDT": -0.9259, "D-USDT": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-VES": -0.967, "D-VES": 1.047 }
+  },
+  "JAVIER": {
+    "id_grupo": "120363401374720092@g.us",
+    "nombre": "Javier",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "S",
+    "whatsapp": "120363422300818123@g.us",
+    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 2 }
+    ],
+    "ajustes": { "P-PEN": -0.976, "D-PEN": 1.026, "P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064 }
   }
 };
 
