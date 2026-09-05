@@ -508,7 +508,7 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO ULTRALIMPIO SIN COLUMNA ANCHA) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO ULTRALIMPIO) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -524,7 +524,7 @@
             </div>
           </div>
 
-          <!-- TABLA LIMPIA Y REFORMADA -->
+          <!-- TABLA LIMPIA DEL DIRECTORIO -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
@@ -539,7 +539,6 @@
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       
-                      <!-- INFORMACIÓN DEL SOCIO + PAÍSES ACTIVOS INTEGRADOS -->
                       <td class="px-3 py-3 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1">
                           <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
@@ -559,10 +558,8 @@
                         </div>
                       </td>
 
-                      <!-- WHATSAPP / ID GRUPO -->
                       <td class="px-3 py-3 align-middle font-mono text-[10px] text-slate-400 whitespace-nowrap" x-text="d.whatsapp || d.id_grupo || '-'"></td>
 
-                      <!-- ACCIONES -->
                       <td class="px-3 py-3 align-middle text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
                           <button @click="abrirModalConfig(d.nombre)" class="px-2.5 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
@@ -673,7 +670,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL UNIFICADA (SOLO 2 SUBPANTALLAS: REGLAS Y PERFIL) -->
+      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL UNIFICADA (2 SUBPANTALLAS: REGLAS Y PERFIL) -->
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
@@ -689,7 +686,7 @@
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS (UNIFICADA A SOLO 2 TABS) -->
+          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1">
               <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Socio en Edición</label>
@@ -700,7 +697,7 @@
               </select>
             </div>
 
-            <!-- NAVEGACIÓN SIMPLIFICADA: REGLAS Y PERFIL -->
+            <!-- SOLO 2 SUBPANTALLAS: REGLAS Y PERFIL -->
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
               <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-4 py-1.5 rounded text-xs font-bold transition-all">
                 📜 Reglas
@@ -711,7 +708,7 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 1: REGLAS (UNIFICA PAÍSES, FACTORES f_P/f_D, TASAS CALCULADAS t_P/t_D Y SELECTOR DE AUDITORÍA) -->
+          <!-- SUBPANTALLA 1: REGLAS -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
             
             <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-800/60">
@@ -723,7 +720,6 @@
               <template x-for="p in carteleraPaisesEdit" :key="p.code">
                 <div class="bg-[#1a1d33] p-2.5 rounded-xl border transition-all space-y-2" :class="p.activo ? 'border-purple-500/50 bg-purple-950/20 shadow-md' : 'border-slate-800 opacity-60'">
                   
-                  <!-- CABECERA: CHECKBOX PAÍS + SELECTOR AUDITORÍA D/P/A/C INTEGRADO DERECHA -->
                   <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                       <input type="checkbox" x-model="p.activo" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600 focus:ring-purple-500">
@@ -742,7 +738,6 @@
                     </div>
                   </div>
 
-                  <!-- FILAS INTEGRADAS: PAGO (f_P a la izquierda, t_P a la derecha) Y DEPÓSITO (f_D a la izquierda, t_D a la derecha) -->
                   <div class="space-y-1.5 font-mono text-[9px]">
                     
                     <!-- PAGO -->
@@ -777,7 +772,7 @@
 
           </div>
 
-          <!-- SUBPANTALLA 2: PERFIL (DATOS GENERALES, CREAR Y BORRAR PERFIL) -->
+          <!-- SUBPANTALLA 2: PERFIL -->
           <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
             
             <div class="grid grid-cols-2 gap-3">
@@ -827,7 +822,7 @@
               <span class="px-3 py-1 bg-purple-900/50 text-purple-200 font-mono font-black text-sm rounded-lg border border-purple-500/40" x-text="calcularTallaDinamica(contarPaisesActivosEdit())"></span>
             </div>
 
-            <!-- GESTIÓN DE PERFIL: CREAR NUEVO Y BORRAR -->
+            <!-- GESTIÓN DE PERFIL -->
             <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
               <button @click="prepararNuevoSocio()" class="px-3.5 py-2 bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
                 <span>➕ Crear Nuevo Perfil</span>
