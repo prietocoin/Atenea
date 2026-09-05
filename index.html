@@ -121,7 +121,7 @@
                 <!-- DERECHA: INFORMACIÓN -->
                 <div class="flex-1 flex flex-col min-w-0 justify-between gap-1.5">
                   
-                  <!-- HASH Y BADGES ARRIBA -->
+                  <!-- HASH ARRIBA Y TIPO/LOTE ARRIBA A LA DERECHA -->
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                       <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 font-mono text-[10px] font-black border border-purple-500/30 truncate" x-text="item.hash_corto"></span>
@@ -130,9 +130,18 @@
                         <span class="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-bold">✓ IA</span>
                       </template>
                     </div>
-                    <template x-if="item.lote_tasa_asignado">
-                      <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
-                    </template>
+
+                    <!-- LOTE Y BADGE ÚNICO DE TIPO DE OPERACIÓN (TOP DERECHA) -->
+                    <div class="flex items-center gap-1">
+                      <template x-if="item.lote_tasa_asignado">
+                        <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
+                      </template>
+                      <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
+                        <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded shadow border text-[9px] font-black uppercase active:scale-95 transition-transform">
+                          <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
+                        </button>
+                      </template>
+                    </div>
                   </div>
 
                   <!-- MONTO Y MONEDA -->
@@ -144,7 +153,7 @@
                     </template>
                   </div>
 
-                  <!-- SOCIOS STACKED (Socio | Tasa | Monto | P/D) -->
+                  <!-- SOCIOS STACKED (Socio | Tasa | Monto M1/M2) -->
                   <div class="flex flex-col gap-1.5 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800">
                     
                     <!-- SOCIO 1 -->
@@ -154,15 +163,10 @@
                       </div>
                       <div class="flex items-center gap-1.5 shrink-0">
                         <template x-if="item.tasa_1">
-                          <span class="text-[8px] font-mono text-slate-400" x-text="item.tasa_1"></span>
+                          <span class="text-[8px] font-mono text-slate-400" x-text="'T1:' + item.tasa_1"></span>
                         </template>
                         <template x-if="item.m1 !== undefined">
-                          <span class="text-[8px] font-black text-emerald-300 bg-emerald-950/60 px-1 rounded border border-emerald-500/30" x-text="'$' + formatMonto(item.m1)"></span>
-                        </template>
-                        <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-                          <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase shadow-sm">
-                            <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
-                          </button>
+                          <span class="text-[8px] font-black text-emerald-300 bg-emerald-950/60 px-1 rounded border border-emerald-500/30" x-text="'M1: $' + formatMonto(item.m1)"></span>
                         </template>
                       </div>
                     </div>
@@ -175,15 +179,10 @@
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
                           <template x-if="item.tasa_2">
-                            <span class="text-[8px] font-mono text-slate-400" x-text="item.tasa_2"></span>
+                            <span class="text-[8px] font-mono text-slate-400" x-text="'T2:' + item.tasa_2"></span>
                           </template>
                           <template x-if="item.m2 !== undefined">
-                            <span class="text-[8px] font-black text-emerald-300 bg-emerald-950/60 px-1 rounded border border-emerald-500/30" x-text="'$' + formatMonto(item.m2)"></span>
-                          </template>
-                          <template x-if="getCodigoOperativo(item.nombre_socio_2, item.moneda)">
-                            <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_2, item.moneda))" class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase shadow-sm">
-                              <span x-text="getCodigoOperativo(item.nombre_socio_2, item.moneda)"></span>
-                            </button>
+                            <span class="text-[8px] font-black text-emerald-300 bg-emerald-950/60 px-1 rounded border border-emerald-500/30" x-text="'M2: $' + formatMonto(item.m2)"></span>
                           </template>
                         </div>
                       </div>
