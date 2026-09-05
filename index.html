@@ -524,7 +524,7 @@
             </div>
           </div>
 
-          <!-- TABLA LIMPIA DEL DIRECTORIO -->
+          <!-- TABLA LIMPIA Y REFORMADA -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
@@ -689,7 +689,7 @@
               </select>
             </div>
 
-            <!-- SOLO 2 NAVEGADORES: REGLAS Y PERFIL -->
+            <!-- NAVEGACIÓN SIMPLIFICADA: REGLAS Y PERFIL -->
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
               <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-4 py-1.5 rounded text-xs font-bold transition-all">
                 📜 Reglas
@@ -734,7 +734,7 @@
                   <!-- FILA HORIZONTAL DE PAGO Y DEPÓSITO (GRILLA DE 2 COLUMNAS) -->
                   <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
                     
-                    <!-- SUB-BLOQUE IZQUIERDO: PAGO (f_P A LA IZQ, t_P A LA DERECHA) -->
+                    <!-- SUB-BLOQUE IZQUIERDO: PAGO -->
                     <div class="bg-amber-950/40 p-1.5 rounded border border-amber-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-amber-400 font-black shrink-0 text-[8px]">PAGO</span>
@@ -746,7 +746,7 @@
                       </div>
                     </div>
 
-                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO (f_D A LA IZQ, t_D A LA DERECHA) -->
+                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO -->
                     <div class="bg-cyan-950/40 p-1.5 rounded border border-cyan-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-cyan-400 font-black shrink-0 text-[8px]">DEPÓSITO</span>
@@ -863,7 +863,6 @@
         modalAbierto: false,
         itemEdicion: null,
 
-        // MODAL CONFIGURACIÓN SOCIO (2 NAVEGADORES: REGLAS Y PERFIL)
         modalConfigSocioAbierto: false,
         tabConfigActive: 'reglas',
         guardandoConfig: false,
@@ -1048,7 +1047,7 @@
           if (this.filtroSocio) params.append('socio', this.filtroSocio);
           if (this.filtroFecha) params.append('fechaInicio', this.filtroFecha);
           if (this.filtroHash) params.append('hash', this.filtroHash);
-          if (this.soloDuplicados) params.append('soloDuplicados', 'true');
+          params.append('soloDuplicados', this.soloDuplicados ? 'true' : 'false');
 
           try {
             const res = await fetch(`/api/comprobantes?${params.toString()}`);
