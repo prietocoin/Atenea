@@ -195,7 +195,6 @@
 
                     <!-- DERECHA: ME0, ME1 Y ME2 EN USDT -->
                     <div class="flex flex-col items-end shrink-0 text-[8px] font-mono leading-tight">
-                      <!-- ME0: MONTO EQUIVALENTE BASE -->
                       <template x-if="item.monto_usd_equivalente">
                         <div class="flex items-center gap-1">
                           <span class="font-bold text-slate-400 text-[7px] uppercase">ME0</span>
@@ -205,7 +204,6 @@
                           </span>
                         </div>
                       </template>
-                      <!-- ME1: SOCIO 1 USDT -->
                       <div class="flex items-center gap-1 mt-0.5">
                         <span class="font-bold text-purple-400 text-[7px] uppercase">ME1</span>
                         <span class="text-emerald-300 font-bold flex items-center gap-0.5">
@@ -213,7 +211,6 @@
                           <span x-text="formatMonto(item.m1_usdt)"></span>
                         </span>
                       </div>
-                      <!-- ME2: SOCIO 2 USDT -->
                       <template x-if="item.nombre_socio_2">
                         <div class="flex items-center gap-1 mt-0.5">
                           <span class="font-bold text-pink-400 text-[7px] uppercase">ME2</span>
@@ -232,7 +229,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO: TABLA CON CROSS-RATE, MONEDA SOCIO Y ADMIN USDT -->
+          <!-- 💻 VISTA ESCRITORIO -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -275,7 +272,6 @@
                         </div>
                       </td>
 
-                      <!-- MONTO, VOLUMEN USD E HISTORIAL TASA BASE DE CARTELERA -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col">
                           <span class="font-bold text-emerald-400 text-xs" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></span>
@@ -288,7 +284,6 @@
                         </div>
                       </td>
 
-                      <!-- LOTE Y TIPO DE OPERACIÓN -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-1.5">
                           <template x-if="item.lote_tasa_asignado">
@@ -309,10 +304,8 @@
 
                       <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
 
-                      <!-- SOCIOS, TASAS CROSS, MONEDA SOCIO Y ADMIN USDT -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1.5">
-                          <!-- SOCIO 1 -->
                           <div class="flex flex-col">
                             <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
                             <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
@@ -328,7 +321,6 @@
                             </div>
                           </div>
 
-                          <!-- SOCIO 2 -->
                           <template x-if="item.nombre_socio_2">
                             <div class="flex flex-col border-t border-slate-800/60 pt-1">
                               <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
@@ -530,14 +522,14 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO NOMBRES_FB CON BOTÓN DE EDICIÓN DE AJUSTES) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO NOMBRES_FB CON BOTÓN UNIFICADO OPCIÓN 1) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Reglas (nombres_fb)</h2>
             <div class="flex items-center gap-2">
-              <button @click="abrirModalAjustes()" class="px-3 py-1.5 rounded-xl bg-purple-600/30 text-purple-300 border border-purple-500/50 hover:bg-purple-600/50 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5">
-                <span>⚙️ Configurar Factores por Socio</span>
+              <button @click="abrirModalConfig()" class="px-3 py-1.5 rounded-xl bg-purple-600/30 text-purple-300 border border-purple-500/50 hover:bg-purple-600/50 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5">
+                <span>⚙️ Configurar Socio Completo</span>
               </button>
               <button @click="cargarDirectorio()" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700">🔄 Actualizar</button>
             </div>
@@ -551,6 +543,7 @@
                     <th class="px-3 py-2.5">NOMBRE</th>
                     <th class="px-3 py-2.5">ROL</th>
                     <th class="px-3 py-2.5">MONEDA BASE</th>
+                    <th class="px-3 py-2.5">TALLA</th>
                     <th class="px-3 py-2.5">PEN</th>
                     <th class="px-3 py-2.5">COP</th>
                     <th class="px-3 py-2.5">CLP</th>
@@ -564,15 +557,16 @@
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       <td class="px-3 py-2 font-bold text-purple-300 uppercase" x-text="d.nombre || '-'"></td>
                       <td class="px-3 py-2 text-slate-400 uppercase font-mono text-[10px]" x-text="d.roles || 'SOCIO'"></td>
-                      <td class="px-3 py-2 font-bold text-emerald-400 uppercase" x-text="d.moneda_socio || 'USD'"></td>
+                      <td class="px-3 py-2 font-bold text-emerald-400 uppercase" x-text="d.moneda_socio || 'USDT'"></td>
+                      <td class="px-3 py-2 font-bold text-purple-400 uppercase font-mono" x-text="d.talla || 'M'"></td>
                       <td class="px-3 py-2"><span :class="claseInsignia(d.pen)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.pen || '-'"></span></td>
                       <td class="px-3 py-2"><span :class="claseInsignia(d.cop)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.cop || '-'"></span></td>
                       <td class="px-3 py-2"><span :class="claseInsignia(d.clp)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.clp || '-'"></span></td>
                       <td class="px-3 py-2"><span :class="claseInsignia(d.ves)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.ves || '-'"></span></td>
                       <td class="px-3 py-2"><span :class="claseInsignia(d.ars)" class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase" x-text="d.ars || '-'"></span></td>
                       <td class="px-3 py-2 text-right">
-                        <button @click="abrirModalAjustes(d.nombre)" class="px-2 py-1 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded text-[10px] font-bold transition-all">
-                          ⚙️ Ajustes
+                        <button @click="abrirModalConfig(d.nombre)" class="px-2 py-1 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded text-[10px] font-bold transition-all">
+                          ⚙️ Configurar
                         </button>
                       </td>
                     </tr>
@@ -674,67 +668,149 @@
         </div>
       </div>
 
-      <!-- MODAL 2: GRILLA DE EDICIÓN DE FACTORES Y AJUSTES POR SOCIO -->
-      <div x-show="modalAjustesAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
-        <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-2xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalAjustesAbierto = false">
+      <!-- MODAL 2: CONFIGURACIÓN COMPLETA OPCIÓN 1 (PAÍSES CON CASILLA ☑️ + FACTORES P/D + VISTA PREVIA) -->
+      <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
           <!-- CABECERA -->
           <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
             <div class="flex items-center gap-3">
               <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
               <div>
-                <h3 class="font-bold text-white text-base">Matriz de Factores de Ajuste</h3>
-                <p class="text-xs text-slate-400">Edita los multiplicadores por divisa y tipo de operación (Pago/Depósito).</p>
+                <h3 class="font-bold text-white text-base">Configuración Integral del Socio (Opción 1)</h3>
+                <p class="text-xs text-slate-400">Administra datos generales, asignación de países ☑️, factores P/D y reglas por divisa.</p>
               </div>
             </div>
-            <button @click="modalAjustesAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
+            <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTOR DE SOCIO Y BUSCADOR -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0 bg-[#1a1d33] p-3 rounded-xl border border-slate-800">
-            <div>
-              <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Seleccionar Socio</label>
-              <select x-model="nombreSocioAjuste" @change="cambiarSocioAjuste()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
+          <!-- SELECTOR DE SOCIO -->
+          <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex-1">
+              <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Seleccionar Socio a Configurar</label>
+              <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
                 <template x-for="s in socios" :key="s">
                   <option :value="s" x-text="s"></option>
                 </template>
               </select>
             </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filtrar Divisa</label>
-              <input type="text" x-model="filtroMonedaAjustes" placeholder="Buscar ARS, PEN, COP..." class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500 uppercase">
+
+            <!-- TABS DE NAVEGACIÓN DENTRO DEL MODAL -->
+            <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
+              <button @click="tabConfigActive = 'paises'" :class="tabConfigActive === 'paises' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+                ☑️ Países & Cartelera
+              </button>
+              <button @click="tabConfigActive = 'divisas'" :class="tabConfigActive === 'divisas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+                🔀 Divisas Auditoría
+              </button>
+              <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+                👤 Perfil
+              </button>
             </div>
           </div>
 
-          <!-- GRILLA DE VALORES EDITABLES -->
-          <div class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2 space-y-2">
+          <!-- CONTENIDO TAB 1: PAÍSES CON CHECKBOX ☑️, FACTORES Y TASAS EN TIEMPO REAL -->
+          <div x-show="tabConfigActive === 'paises'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2 space-y-2">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <template x-for="m in listaMonedas.filter(mon => !filtroMonedaAjustes || mon.includes(filtroMonedaAjustes.toUpperCase()))" :key="m">
-                <div class="bg-[#1a1d33] p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
-                  <span class="font-black text-xs text-purple-300 w-12" x-text="m"></span>
-                  <div class="flex items-center gap-2 flex-1">
-                    <div class="flex-1">
-                      <span class="block text-[8px] font-bold text-amber-400 uppercase">Pago (P)</span>
-                      <input type="number" step="any" x-model.number="matrizEditSocio['P-' + m]" class="w-full bg-[#131525] border border-slate-700 text-xs text-amber-300 font-mono font-bold rounded px-1.5 py-1 outline-none focus:border-amber-500">
+              <template x-for="p in carteleraPaisesEdit" :key="p.code">
+                <div class="bg-[#1a1d33] p-2.5 rounded-xl border transition-all" :class="p.activo ? 'border-purple-500/50 bg-purple-950/20' : 'border-slate-800 opacity-60'">
+                  
+                  <!-- HEADER PAÍS CON CHECKBOX ☑️ -->
+                  <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5 mb-2">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" x-model="p.activo" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600 focus:ring-purple-500">
+                      <span class="font-black text-xs text-white" x-text="p.flag + ' ' + p.nombrePais"></span>
+                    </label>
+                    <span class="px-1.5 py-0.5 bg-slate-800 text-purple-300 font-mono text-[9px] font-extrabold rounded" x-text="p.code"></span>
+                  </div>
+
+                  <!-- INPUTS DE FACTORES P Y D -->
+                  <div class="grid grid-cols-2 gap-2 text-[9px]">
+                    <div>
+                      <span class="text-amber-400 font-bold block">Pago (P)</span>
+                      <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['P-' + p.code]" class="w-full bg-[#131525] border border-slate-700 rounded px-2 py-1 text-amber-300 font-mono font-bold outline-none focus:border-amber-500">
                     </div>
-                    <div class="flex-1">
-                      <span class="block text-[8px] font-bold text-cyan-400 uppercase">Depósito (D)</span>
-                      <input type="number" step="any" x-model.number="matrizEditSocio['D-' + m]" class="w-full bg-[#131525] border border-slate-700 text-xs text-cyan-300 font-mono font-bold rounded px-1.5 py-1 outline-none focus:border-cyan-500">
+                    <div>
+                      <span class="text-cyan-400 font-bold block">Depósito (D)</span>
+                      <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" class="w-full bg-[#131525] border border-slate-700 rounded px-2 py-1 text-cyan-300 font-mono font-bold outline-none focus:border-cyan-500">
                     </div>
                   </div>
+
                 </div>
               </template>
             </div>
           </div>
 
+          <!-- CONTENIDO TAB 2: DIVISAS Y REGLAS DE AUDITORÍA (D/P/A/C) -->
+          <div x-show="tabConfigActive === 'divisas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-3">
+            <p class="text-xs text-slate-400 mb-3 font-semibold">Configura la regla operativa predeterminada (D: Depósito, P: Pago, A: Abono, C: Compra) por cada divisa de auditoría:</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <template x-for="m in ['PEN','COP','CLP','ARS','VES','BRL','MXN','PYG','DOP','CRC','EUR','CAD','USD','ECU','PAN','USDT']" :key="m">
+                <div class="bg-[#1a1d33] p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                  <span class="font-bold text-xs text-purple-300" x-text="m"></span>
+                  <select x-model="socioConfigEdit[m.toLowerCase()]" class="bg-[#131525] border border-slate-700 text-xs font-black text-white rounded px-1.5 py-1 outline-none focus:border-purple-500">
+                    <option value="D">D</option>
+                    <option value="P">P</option>
+                    <option value="A">A</option>
+                    <option value="C">C</option>
+                  </select>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- CONTENIDO TAB 3: PERFIL GENERAL -->
+          <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rol</label>
+                <select x-model="socioConfigEdit.roles" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
+                  <option value="SOCIO">SOCIO</option>
+                  <option value="GRUPO">GRUPO</option>
+                  <option value="COMPRAS">COMPRAS</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Moneda Base Nativa</label>
+                <select x-model="socioConfigEdit.moneda_socio" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
+                  <option value="USDT">USDT</option>
+                  <option value="PEN">PEN</option>
+                  <option value="COP">COP</option>
+                  <option value="BRL">BRL</option>
+                  <option value="VES">VES</option>
+                  <option value="ARS">ARS</option>
+                  <option value="EUR">EUR</option>
+                  <option value="CLP">CLP</option>
+                  <option value="MXN">MXN</option>
+                  <option value="ECU">ECU</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Talla Plantilla</label>
+                <select x-model="socioConfigEdit.talla" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
+                  <option value="S">S (4 Países)</option>
+                  <option value="M">M (8 Países)</option>
+                  <option value="L">L (12 Países)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Remote JID / Teléfono</label>
+                <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none focus:border-purple-500">
+              </div>
+            </div>
+          </div>
+
           <!-- PIE DE MODAL -->
           <div class="flex items-center justify-between pt-2 border-t border-slate-800 shrink-0">
-            <span class="text-[10px] text-slate-500">Socio activo: <strong class="text-white" x-text="nombreSocioAjuste"></strong></span>
+            <span class="text-[10px] text-slate-500">Socio en edición: <strong class="text-white" x-text="socioConfigEdit.nombre"></strong></span>
             <div class="flex gap-2">
-              <button @click="modalAjustesAbierto = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-700">Cancelar</button>
-              <button @click="guardarAjustesSocio()" :disabled="guardandoAjustes" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-purple-900/50 flex items-center gap-2">
-                <span x-show="!guardandoAjustes">💾 Guardar Factores</span>
-                <span x-show="guardandoAjustes">Guardando...</span>
+              <button @click="modalConfigSocioAbierto = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-700">Cancelar</button>
+              <button @click="guardarConfigSocio()" :disabled="guardandoConfig" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-purple-900/50 flex items-center gap-2">
+                <span x-show="!guardandoConfig">💾 Guardar Configuración</span>
+                <span x-show="guardandoConfig">Guardando...</span>
               </button>
             </div>
           </div>
@@ -759,12 +835,42 @@
         modalAbierto: false,
         itemEdicion: null,
 
-        // EDITAR FACTORES DE AJUSTE
-        modalAjustesAbierto: false,
-        nombreSocioAjuste: '',
-        matrizEditSocio: {},
-        filtroMonedaAjustes: '',
-        guardandoAjustes: false,
+        // MODAL CONFIGURACIÓN SOCIO OPCIÓN 1
+        modalConfigSocioAbierto: false,
+        tabConfigActive: 'paises',
+        guardandoConfig: false,
+
+        socioConfigEdit: {
+          nombre: '',
+          roles: 'SOCIO',
+          moneda_socio: 'USDT',
+          talla: 'M',
+          whatsapp: '',
+          pen: 'D', cop: 'D', clp: 'D', ars: 'D', ves: 'D', brl: 'D', mxn: 'D', pyg: 'D',
+          dop: 'D', crc: 'D', eur: 'D', cad: 'D', usd: 'P', ecu: 'D', pan: 'D', usdt: 'A',
+          ajustes: {}
+        },
+
+        carteleraPaisesEdit: [],
+
+        listaPaisesBase: [
+          { nombrePais: 'Argentina', code: 'ARS', flag: '🇦🇷' },
+          { nombrePais: 'Venezuela', code: 'VES', flag: '🇻🇪' },
+          { nombrePais: 'Peru', code: 'PEN', flag: '🇵🇪' },
+          { nombrePais: 'Colombia', code: 'COP', flag: '🇨🇴' },
+          { nombrePais: 'Chile', code: 'CLP', flag: '🇨🇱' },
+          { nombrePais: 'Brazil', code: 'BRL', flag: '🇧🇷' },
+          { nombrePais: 'Paraguay', code: 'PYG', flag: '🇵🇾' },
+          { nombrePais: 'Ecuador', code: 'ECU', flag: '🇪🇨' },
+          { nombrePais: 'Mexico', code: 'MXN', flag: '🇲🇽' },
+          { nombrePais: 'Bolivia', code: 'BOB', flag: '🇧🇴' },
+          { nombrePais: 'Europa', code: 'EUR', flag: '🇪🇺' },
+          { nombrePais: 'Dominicana', code: 'DOP', flag: '🇩🇴' },
+          { nombrePais: 'Costa Rica', code: 'CRC', flag: '🇨🇷' },
+          { nombrePais: 'EEUU-Zelle', code: 'USD', flag: '🇺🇸' },
+          { nombrePais: 'Panama', code: 'PAN', flag: '🇵🇦' },
+          { nombrePais: 'Canada', code: 'CAD', flag: '🇨🇦' }
+        ],
 
         // REPORTE POR SOCIO
         socioReporteSeleccionado: '',
@@ -839,55 +945,73 @@
           }
         },
 
-        abrirModalAjustes(nombre = '') {
-          this.nombreSocioAjuste = nombre || (this.socios[0] || '');
-          this.cambiarSocioAjuste();
-          this.modalAjustesAbierto = true;
+        abrirModalConfig(nombre = '') {
+          this.socioConfigEdit.nombre = nombre || (this.socios[0] || '');
+          this.cargarSocioParaEditar();
+          this.modalConfigSocioAbierto = true;
         },
 
-        cambiarSocioAjuste() {
-          if (!this.nombreSocioAjuste) return;
-          const socioNorm = this.nombreSocioAjuste.trim().toUpperCase();
+        cargarSocioParaEditar() {
+          if (!this.socioConfigEdit.nombre) return;
+          const socioNorm = this.socioConfigEdit.nombre.trim().toUpperCase();
           const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-          
-          let ex = {};
-          if (reg && reg.ajustes) {
-            ex = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : reg.ajustes;
-          }
 
-          const temp = {};
-          this.listaMonedas.forEach(m => {
-            temp['P-' + m] = ex['P-' + m] !== undefined ? ex['P-' + m] : (ex[m] || 1.0);
-            temp['D-' + m] = ex['D-' + m] !== undefined ? ex['D-' + m] : (ex[m] || 1.0);
-          });
-          this.matrizEditSocio = temp;
+          if (reg) {
+            this.socioConfigEdit.roles = reg.roles || 'SOCIO';
+            this.socioConfigEdit.moneda_socio = (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio) || 'USDT';
+            this.socioConfigEdit.talla = reg.talla || 'M';
+            this.socioConfigEdit.whatsapp = reg.whatsapp || '';
+
+            ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'].forEach(m => {
+              this.socioConfigEdit[m] = reg[m] || 'D';
+            });
+
+            this.socioConfigEdit.ajustes = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
+
+            const cp = typeof reg.cartelera_paises === 'string' ? JSON.parse(reg.cartelera_paises) : (reg.cartelera_paises || []);
+            
+            this.carteleraPaisesEdit = this.listaPaisesBase.map(pb => {
+              const ex = cp.find(item => item.moneda === pb.code || item.pais === pb.nombrePais);
+              return {
+                ...pb,
+                activo: ex ? !!ex.activo : true
+              };
+            });
+          }
         },
 
-        async guardarAjustesSocio() {
-          if (!this.nombreSocioAjuste) return;
-          this.guardandoAjustes = true;
+        async guardarConfigSocio() {
+          if (!this.socioConfigEdit.nombre) return;
+          this.guardandoConfig = true;
 
           try {
-            const res = await fetch('/api/socios/ajustes', {
+            const payload = {
+              ...this.socioConfigEdit,
+              cartelera_paises: this.carteleraPaisesEdit.map((p, idx) => ({
+                pais: p.nombrePais,
+                moneda: p.code,
+                activo: p.activo,
+                orden: idx + 1
+              }))
+            };
+
+            const res = await fetch('/api/socios/config', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                nombre: this.nombreSocioAjuste,
-                ajustes: this.matrizEditSocio
-              })
+              body: JSON.stringify(payload)
             });
 
             if (res.ok) {
-              this.modalAjustesAbierto = false;
+              this.modalConfigSocioAbierto = false;
               await this.cargarDirectorio();
               await this.cargarComprobantes();
             } else {
-              alert('Error al guardar ajustes.');
+              alert('Error al guardar la configuración.');
             }
           } catch (err) {
-            console.error("Error al guardar factores:", err);
+            console.error("Error guardando socio:", err);
           } finally {
-            this.guardandoAjustes = false;
+            this.guardandoConfig = false;
           }
         },
 
