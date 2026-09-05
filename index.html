@@ -103,7 +103,7 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS (M1/M2 AL EXTREMO DE NOMBRE SOCIO, T1/T2 CAJA 56PX) -->
+          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS (30% IMAGEN / 70% CONTENEDOR DATOS) -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
@@ -183,7 +183,7 @@
                     </template>
                   </div>
 
-                  <!-- SECCIÓN INFERIOR: TITULAR, BANCO Y REF (IZQ) | ME1 Y ME2 ADMIN USDT (DER) -->
+                  <!-- SECCIÓN INFERIOR: TITULAR, BANCO Y REF (IZQ) | ME0, ME1 Y ME2 ADMIN USDT (DER) -->
                   <div class="flex items-end justify-between border-t border-slate-800/60 pt-1 gap-1">
                     
                     <!-- IZQUIERDA: TITULAR, BANCO, REFERENCIA -->
@@ -193,15 +193,27 @@
                       <span class="font-mono text-slate-500 truncate" x-text="'Ref: ' + (item.referencia || '-')"></span>
                     </div>
 
-                    <!-- DERECHA: ME1 Y ME2 EN USDT -->
+                    <!-- DERECHA: ME0, ME1 Y ME2 EN USDT -->
                     <div class="flex flex-col items-end shrink-0 text-[8px] font-mono leading-tight">
-                      <div class="flex items-center gap-1">
+                      <!-- ME0: MONTO EQUIVALENTE BASE -->
+                      <template x-if="item.monto_usd_equivalente">
+                        <div class="flex items-center gap-1">
+                          <span class="font-bold text-slate-400 text-[7px] uppercase">ME0</span>
+                          <span class="text-emerald-300 font-bold flex items-center gap-0.5">
+                            <span>🪙</span>
+                            <span x-text="formatMonto(item.monto_usd_equivalente)"></span>
+                          </span>
+                        </div>
+                      </template>
+                      <!-- ME1: SOCIO 1 USDT -->
+                      <div class="flex items-center gap-1 mt-0.5">
                         <span class="font-bold text-purple-400 text-[7px] uppercase">ME1</span>
                         <span class="text-emerald-300 font-bold flex items-center gap-0.5">
                           <span>🪙</span>
                           <span x-text="formatMonto(item.m1_usdt)"></span>
                         </span>
                       </div>
+                      <!-- ME2: SOCIO 2 USDT -->
                       <template x-if="item.nombre_socio_2">
                         <div class="flex items-center gap-1 mt-0.5">
                           <span class="font-bold text-pink-400 text-[7px] uppercase">ME2</span>
