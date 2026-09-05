@@ -22,6 +22,25 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
+// Función de Truncado según Regla de Precisión (Mismísima lógica n8n)
+function aplicarReglaPrecision(val) {
+  const v = Math.abs(parseFloat(val) || 0);
+  if (v === 0) return 0;
+
+  if (v > 499.99) {
+    return Math.trunc(v); // Mayor a 499.99: sin decimales
+  } else if (v < 10) {
+    if (v < 1) {
+      const magnitud = Math.floor(Math.log10(v));
+      const f = Math.pow(10, 2 - magnitud);
+      return Math.trunc(v * f) / f; // Menor a 1: 3 cifras significativas
+    }
+    return Math.trunc(v * 1000) / 1000; // Entre 1 y 10: 3 decimales
+  } else {
+    return Math.trunc(v * 100) / 100; // Entre 10 y 499.99: 2 decimales
+  }
+}
+
 // Matriz completa de los 38 socios (Hoole - T_Ajustes.csv)
 const MATRIZ_AJUSTES_SOCIOS = {
   "OMAR": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "D-ECU": 1.064, "P-BRL": 0.971, "D-BRL": -1.031, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": 0.962, "D-EUR": -1.042, "P-BOB": -0.926, "D-BOB": 1.087},
@@ -116,7 +135,7 @@ async function initDB() {
     }
     console.log('✅ Matriz completa de 38 socios sembrada en nombres_fb.');
 
-    // 3. Recreación limpia de Vista v_comprobantes_auditados
+    // 3. Recreación limpia de Vista v_comprobantes_auditados con fallback a 1.0 para USD/USDT
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -375,7 +394,7 @@ const getComprobantesHandler = async (req, res) => {
 
     const { rows } = await pool.query(query, values);
 
-    // Cálculo dinámico de Tasa Cross, M1/M2 en moneda socio y M1/M2 en USDT Admin
+    // Cálculo dinámico de Tasa Cross, M1/M2 en moneda socio y M1/M2 en USDT Admin + TRUNCADO DE PRECISIÓN
     const rowsProcesadas = rows.map(row => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
@@ -385,9 +404,9 @@ const getComprobantesHandler = async (req, res) => {
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
       const factor1 = Math.abs(parseFloat(row.factor_1) || 1.0);
 
-      // Tasa Cross Base = TasaOrigen / TasaSocio1 (Ej: 1575 ARS / 3.37 PEN = 467.359)
       const tasaCrossBase1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
-      const tasa1 = parseFloat((tasaCrossBase1 * factor1).toFixed(6));
+      const tasa1Raw = tasaCrossBase1 * factor1;
+      const tasa1 = aplicarReglaPrecision(tasa1Raw);
 
       const m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
@@ -398,7 +417,8 @@ const getComprobantesHandler = async (req, res) => {
       const factor2 = Math.abs(parseFloat(row.factor_2) || 1.0);
 
       const tasaCrossBase2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
-      const tasa2 = parseFloat((tasaCrossBase2 * factor2).toFixed(6));
+      const tasa2Raw = tasaCrossBase2 * factor2;
+      const tasa2 = aplicarReglaPrecision(tasa2Raw);
 
       const m2Socio = tasa2 > 0 ? parseFloat((monto / tasa2).toFixed(2)) : 0;
       const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
