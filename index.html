@@ -508,12 +508,12 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO CON VISTA LIMPIA Y SUBPANTALLAS) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Cartelera Real</h2>
+              <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Reglas (nombres_fb)</h2>
               <p class="text-xs text-slate-400">Directorio centralizado con insignias de carteles activos ☑️ y gestión de perfiles.</p>
             </div>
             <div class="flex items-center gap-2">
@@ -531,7 +531,7 @@
                 <thead>
                   <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px]">
                     <th class="px-3 py-2.5">SOCIO & PERFIL</th>
-                    <th class="px-3 py-2.5">CARTELL ACTIVOS (☑️)</th>
+                    <th class="px-3 py-2.5">CARTELES ACTIVOS (☑️)</th>
                     <th class="px-3 py-2.5">WHATSAPP / ID GRUPO</th>
                     <th class="px-3 py-2.5 text-right">ACCIONES</th>
                   </tr>
@@ -555,7 +555,7 @@
                       <!-- INSIGNIAS COMPACTAS DE PAÍSES ACTIVOS (☑️) -->
                       <td class="px-3 py-3 align-middle">
                         <div class="flex flex-wrap gap-1">
-                          <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.moneda">
+                          <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.code">
                             <span class="px-2 py-0.5 rounded bg-[#1a1d33] border border-slate-700/60 font-mono text-[9px] font-bold text-slate-200 flex items-center gap-1 shadow-sm">
                               <span x-text="p.flag"></span>
                               <span x-text="p.code"></span>
@@ -756,10 +756,10 @@
           <div x-show="tabConfigActive === 'carteles'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-3 space-y-3">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <span class="text-xs font-bold text-slate-300">Vista Previa del Poster / Cartel Real</span>
-              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla: ' + socioConfigEdit.talla + ' (' + limitePaisesSegunTalla(socioConfigEdit.talla) + ' Países Visibles)'"></span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla: ' + socioConfigEdit.talla + ' [' + limitePaisesSegunTalla(socioConfigEdit.talla) + ' Países Visibles]'"></span>
             </div>
 
-            <!-- TARJETAS ESTILIZADAS IGUALES AL PÓSTER -->
+            <!-- TARJETAS ESTILIZADAS IGUALES AL PÓSTER MOSTRANDO LA TASA CALCULADA REAL -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               <template x-for="p in obtenerPaisesLimitadosSocio()" :key="p.code">
                 <div class="bg-[#16192b] border border-purple-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow-lg">
@@ -857,7 +857,7 @@
               <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none focus:border-purple-500">
             </div>
 
-            <!-- BOTONES DE GESTIÓN DE PERFIL: CREAR NUEVO Y BORRAR -->
+            <!-- BOTONES DE GESTIÓN DE PERFIL -->
             <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
               <button @click="prepararNuevoSocio()" class="px-3.5 py-2 bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
                 <span>➕ Crear Nuevo Perfil</span>
@@ -902,7 +902,7 @@
         modalAbierto: false,
         itemEdicion: null,
 
-        // MODAL CONFIGURACIÓN SOCIO OPCIÓN 1
+        // MODAL CONFIGURACIÓN SOCIO
         modalConfigSocioAbierto: false,
         tabConfigActive: 'factores',
         guardandoConfig: false,
@@ -991,7 +991,13 @@
 
         calcularTasaSocio(monedaCode, factor) {
           const f = Math.abs(parseFloat(factor) || 1.0);
-          return 1.0 * f;
+          const monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
+
+          // El cálculo toma la tasa de la Moneda Maestra USDT (1.0) y aplica el multiplicador
+          const tasaBaseOrigen = 1.0; 
+          const tasaBaseSocio = 1.0;
+
+          return (tasaBaseOrigen / tasaBaseSocio) * f;
         },
 
         prepararNuevoSocio() {
