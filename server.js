@@ -116,7 +116,7 @@ async function initDB() {
     }
     console.log('✅ Matriz completa de 38 socios sembrada en nombres_fb.');
 
-    // 3. Recreación limpia de Vista v_comprobantes_auditados con fallback a 1.0 para USD/USDT
+    // 3. Recreación limpia de Vista v_comprobantes_auditados
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -270,7 +270,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// --- COMPROBANTES Y CÁLCULO UNIFICADO DE TASA 1 Y TASA 2 ---
+// --- COMPROBANTES Y CÁLCULO UNIFICADO OPCIÓN A (CROSS-RATE DIRECTO + MONEDA SOCIO + ADMIN USDT) ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -292,7 +292,7 @@ const getComprobantesHandler = async (req, res) => {
         v.conteo, 
         v.lote_tasa_asignado, 
         
-        -- Tasa Base Oficial
+        -- Tasa Base Oficial Moneda Origen vs USD
         COALESCE(
           v.tasa_mercado_aplicada,
           CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
@@ -303,39 +303,34 @@ const getComprobantesHandler = async (req, res) => {
         -- Tipo de transacción único (definido por Socio 1 x Moneda)
         t.tipo_op,
 
-        -- Tasa 1 para Socio 1 (usando t.tipo_op)
+        -- Moneda Nativa y Tasa Base del Socio 1
+        COALESCE(UPPER(TRIM(n1.moneda_socio)), 'USD') AS moneda_socio_1,
         COALESCE(
-          ROUND((
-            COALESCE(v.tasa_mercado_aplicada, CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END)
-            * ABS(
-              COALESCE(
-                (n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric,
-                1.0
-              )
-            )
-          )::numeric, 6),
-          COALESCE(v.tasa_mercado_aplicada, CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END)
-        ) AS tasa_1,
+          mt_s1.tasa_base,
+          CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USD')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
+        ) AS tasa_base_socio_1,
+        COALESCE((n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_1,
 
-        -- Tasa 2 para Socio 2 (usando EL MISMO t.tipo_op de Socio 1)
+        -- Moneda Nativa y Tasa Base del Socio 2
+        COALESCE(UPPER(TRIM(n2.moneda_socio)), 'USD') AS moneda_socio_2,
         COALESCE(
-          ROUND((
-            COALESCE(v.tasa_mercado_aplicada, CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END)
-            * ABS(
-              COALESCE(
-                (n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric,
-                1.0
-              )
-            )
-          )::numeric, 6),
-          COALESCE(v.tasa_mercado_aplicada, CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END)
-        ) AS tasa_2
+          mt_s2.tasa_base,
+          CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USD')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
+        ) AS tasa_base_socio_2,
+        COALESCE((n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_2
 
       FROM v_comprobantes_auditados v
       LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
       LEFT JOIN nombres_fb n2 ON UPPER(TRIM(n2.nombre)) = UPPER(TRIM(v.nombre_socio_2))
 
-      -- Determinación unificada del tipo de operación basada en Socio 1
+      LEFT JOIN mercado_tasas mt_s1
+        ON mt_s1.id_tasa = v.lote_tasa_asignado
+       AND mt_s1.moneda = UPPER(COALESCE(n1.moneda_socio, 'USD'))
+
+      LEFT JOIN mercado_tasas mt_s2
+        ON mt_s2.id_tasa = v.lote_tasa_asignado
+       AND mt_s2.moneda = UPPER(COALESCE(n2.moneda_socio, 'USD'))
+
       LEFT JOIN LATERAL (
         SELECT COALESCE(
           CASE v.moneda
@@ -380,16 +375,45 @@ const getComprobantesHandler = async (req, res) => {
 
     const { rows } = await pool.query(query, values);
 
-    // Cálculo final de M1 y M2 (Monto dividido por Tasa del Socio)
+    // Cálculo dinámico de Tasa Cross, M1/M2 en moneda socio y M1/M2 en USDT Admin
     const rowsProcesadas = rows.map(row => {
       const monto = parseFloat(row.monto) || 0;
-      const t1 = parseFloat(row.tasa_1) || parseFloat(row.tasa_base) || 1.0;
-      const t2 = parseFloat(row.tasa_2) || parseFloat(row.tasa_base) || 1.0;
+      const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
+
+      // --- SOCIO 1 ---
+      const monedaSocio1 = (row.moneda_socio_1 || 'USD').toUpperCase();
+      const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
+      const factor1 = Math.abs(parseFloat(row.factor_1) || 1.0);
+
+      // Tasa Cross Base = TasaOrigen / TasaSocio1 (Ej: 1575 ARS / 3.37 PEN = 467.359)
+      const tasaCrossBase1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
+      const tasa1 = parseFloat((tasaCrossBase1 * factor1).toFixed(6));
+
+      const m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
+      const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
+
+      // --- SOCIO 2 ---
+      const monedaSocio2 = (row.moneda_socio_2 || 'USD').toUpperCase();
+      const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
+      const factor2 = Math.abs(parseFloat(row.factor_2) || 1.0);
+
+      const tasaCrossBase2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
+      const tasa2 = parseFloat((tasaCrossBase2 * factor2).toFixed(6));
+
+      const m2Socio = tasa2 > 0 ? parseFloat((monto / tasa2).toFixed(2)) : 0;
+      const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
 
       return {
         ...row,
-        m1: t1 > 0 ? parseFloat((monto / t1).toFixed(2)) : 0,
-        m2: t2 > 0 ? parseFloat((monto / t2).toFixed(2)) : 0
+        tasa_1: tasa1,
+        moneda_socio_1: monedaSocio1,
+        m1_socio: m1Socio,
+        m1_usdt: m1Usdt,
+
+        tasa_2: tasa2,
+        moneda_socio_2: monedaSocio2,
+        m2_socio: m2Socio,
+        m2_usdt: m2Usdt
       };
     });
 
