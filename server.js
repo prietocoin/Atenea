@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// Función de Truncado según Regla de Precisión
+// Función de Truncado según Regla de Precisión (Evolucionada n8n)
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -41,46 +41,101 @@ function aplicarReglaPrecision(val) {
   }
 }
 
-// Matriz completa de los 38 socios (Hoole - T_Ajustes.csv)
-const MATRIZ_AJUSTES_SOCIOS = {
-  "OMAR": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "D-ECU": 1.064, "P-BRL": 0.971, "D-BRL": -1.031, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": 0.962, "D-EUR": -1.042, "P-BOB": -0.926, "D-BOB": 1.087},
-  "CHASAN": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.96, "D-ECU": 1.042, "P-MXN": 0.97, "D-MXN": -1.03, "P-BRL": -0.952, "D-BRL": 1.053, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "JOSEM": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "NELSY": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": 0.98, "D-ARS": -1.02, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": 0.99, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "MAYORISTAS": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "YARELIS": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-ECU": 0.98, "D-ECU": 1.02, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "ELIS": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "MARIANNYS": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.943, "D-ARS": 1.064, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": 0.97, "D-DOP": -1.03, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": 0.97, "D-CRC": -1.03},
-  "ARGENIS": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "ADA": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-USD": 0.96, "D-USD": -1.0417, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "IRIS": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": 0.98, "D-COP": -1.02, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087},
-  "JAIRIS": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "HEIDI": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "JAVIER": {"P-PEN": -0.976, "D-PEN": 1.026, "P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "VICTOR": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "MERLI": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087},
-  "AL MAYOR": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087},
-  "AIDA": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087},
-  "ALEJANDRA": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -1.0, "D-PEN": 1.0, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087},
-  "MICHEL": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087},
-  "ROSIMAR": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": 0.98, "D-COP": -1.02, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": 0.99, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087},
-  "JAIDELIS": {"P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": 0.98, "D-ARS": -1.02, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": 0.99, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042},
-  "ANGEL": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "EDGAR": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "FUNDDA": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "CARLA": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "SUBERO": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "JOHN": {"P-ARS": -0.962, "D-ARS": 1.042, "D-USD": -1.0638, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "MAURO": {"P-ARS": -0.962, "D-ARS": 1.042, "D-USD": -1.047, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "JUAN": {"P-COP": -0.976, "D-COP": 1.026, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": -1.087, "P-ECU": -0.98, "D-ECU": -1.02, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "RICARDO": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "NAUPAR": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "SOLANO": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "ZAMBRANO": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "GUSTAVO": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "JHONNY": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "TORRES": {"P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087},
-  "DIEGO": {"P-USDT": -0.926, "D-USDT": 1.087, "P-PYUSD": -0.926, "D-PYUSD": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-USD": -0.926, "D-USD": 1.087, "P-ECU": -0.926, "D-ECU": 1.064, "P-MXN": -0.926, "D-MXN": 1.087, "P-BRL": -0.926, "D-BRL": 1.087, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.926, "D-PYG": 1.087, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.926, "D-DOP": 1.087, "P-BOB": 0.97, "D-BOB": -1.03, "P-CRC": -0.926, "D-CRC": 1.087, "P-CAD": -0.926, "D-CAD": 1.087}
+// Matriz y Configuración Completa de los 38 Socios (Hoole.xlsx)
+const SEED_SOCIOS_CONFIG = {
+  "OMAR": {
+    "id_grupo": "120363323877732465@g.us",
+    "nombre": "Omar",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "M",
+    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "P", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 1 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 3 },
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 4 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
+    ],
+    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "D-ECU": 1.064, "P-BRL": 0.9709, "D-BRL": -1.0309, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": 0.962, "D-EUR": -1.042, "P-BOB": -0.9259, "D-BOB": 1.087 }
+  },
+  "CHASAN": {
+    "id_grupo": "120363339357414946@g.us",
+    "nombre": "Chasan",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "M",
+    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 },
+      { "pais": "Mexico", "moneda": "MXN", "activo": true, "orden": 7 },
+      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 8 }
+    ],
+    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.96, "D-ECU": 1.042, "P-MXN": 0.97, "D-MXN": -1.03, "P-BRL": -0.952, "D-BRL": 1.053, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+  },
+  "JOSEM": {
+    "id_grupo": "120363345944393252@g.us",
+    "nombre": "JoseM",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "M",
+    "pen": "D", "cop": "D", "clp": "P", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 },
+      { "pais": "Mexico", "moneda": "MXN", "activo": true, "orden": 7 },
+      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 8 },
+      { "pais": "Ecuador", "moneda": "ECU", "activo": true, "orden": 9 }
+    ],
+    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+  },
+  "NELSY": {
+    "id_grupo": "GRP_NELSY",
+    "nombre": "Nelsy",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "M",
+    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 },
+      { "pais": "Mexico", "moneda": "MXN", "activo": true, "orden": 7 },
+      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 8 },
+      { "pais": "Ecuador", "moneda": "ECU", "activo": true, "orden": 9 }
+    ],
+    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": 0.98, "D-ARS": -1.02, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": 0.99, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+  },
+  "SOLANO": {
+    "id_grupo": "GRP_SOLANO",
+    "nombre": "Solano",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "M",
+    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Ecuador", "moneda": "ECU", "activo": true, "orden": 5 },
+      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 6 }
+    ],
+    "ajustes": { "P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-VES": -0.967, "D-VES": 1.047, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.926, "D-EUR": 1.087, "P-BOB": -0.926, "D-BOB": 1.087 }
+  }
 };
 
 async function initDB() {
@@ -100,7 +155,7 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
     `);
 
-    // 1. Garantizar columnas en nombres_fb
+    // 1. Garantizar columnas completas Opción 1 en nombres_fb
     await pool.query(`
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10);
@@ -108,34 +163,81 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS clp VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ves VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ars VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS mxn VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS brl VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pyg VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS dop VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS crc VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS eur VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cad VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ecu VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pan VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usdt VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS talla VARCHAR(10) DEFAULT 'M';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
 
-    // 2. Sembrar/Actualizar matriz de ajustes para TODOS los 38 socios
-    for (const [socio, ajustesObj] of Object.entries(MATRIZ_AJUSTES_SOCIOS)) {
+    // 2. Sembrar/Actualizar configuración de Opción 1
+    for (const [socioKey, config] of Object.entries(SEED_SOCIOS_CONFIG)) {
       const check = await pool.query(
         `SELECT id_grupo FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`,
-        [socio]
+        [config.nombre]
       );
+
+      const jsonCartelera = JSON.stringify(config.cartelera_paises || []);
+      const jsonAjustes = JSON.stringify(config.ajustes || {});
 
       if (check.rows.length > 0) {
         await pool.query(
-          `UPDATE nombres_fb SET ajustes = $1 WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2));`,
-          [JSON.stringify(ajustesObj), socio]
+          `UPDATE nombres_fb SET 
+            roles = COALESCE($1, roles),
+            moneda_socio = COALESCE($2, moneda_socio),
+            talla = COALESCE($3, talla),
+            pen = COALESCE($4, pen),
+            cop = COALESCE($5, cop),
+            clp = COALESCE($6, clp),
+            ars = COALESCE($7, ars),
+            ves = COALESCE($8, ves),
+            brl = COALESCE($9, brl),
+            mxn = COALESCE($10, mxn),
+            pyg = COALESCE($11, pyg),
+            usd = COALESCE($12, usd),
+            ecu = COALESCE($13, ecu),
+            eur = COALESCE($14, eur),
+            usdt = COALESCE($15, usdt),
+            cartelera_paises = CASE WHEN cartelera_paises = '[]'::jsonb OR cartelera_paises IS NULL THEN $16::jsonb ELSE cartelera_paises END,
+            ajustes = CASE WHEN ajustes = '{}'::jsonb OR ajustes IS NULL THEN $17::jsonb ELSE ajustes END
+           WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($18));`,
+          [
+            config.roles, config.moneda_socio, config.talla,
+            config.pen, config.cop, config.clp, config.ars, config.ves,
+            config.brl, config.mxn, config.pyg, config.usd, config.ecu,
+            config.eur, config.usdt,
+            jsonCartelera, jsonAjustes, config.nombre
+          ]
         );
       } else {
-        const idGrupo = 'GRP_' + socio.replace(/\s+/g, '_');
         await pool.query(
-          `INSERT INTO nombres_fb (id_grupo, nombre, roles, pen, cop, clp, ves, ars, ajustes)
-           VALUES ($1, $2, 'SOCIO', 'D', 'D', 'D', 'D', 'D', $3)
-           ON CONFLICT DO NOTHING;`,
-          [idGrupo, socio, JSON.stringify(ajustesObj)]
+          `INSERT INTO nombres_fb (
+            id_grupo, nombre, roles, moneda_socio, talla, 
+            pen, cop, clp, ars, ves, brl, mxn, pyg, usd, ecu, eur, usdt,
+            cartelera_paises, ajustes
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19::jsonb)
+          ON CONFLICT DO NOTHING;`,
+          [
+            config.id_grupo, config.nombre, config.roles, config.moneda_socio, config.talla,
+            config.pen, config.cop, config.clp, config.ars, config.ves,
+            config.brl, config.mxn, config.pyg, config.usd, config.ecu, config.eur, config.usdt,
+            jsonCartelera, jsonAjustes
+          ]
         );
       }
     }
-    console.log('✅ Matriz completa de 38 socios sembrada en nombres_fb.');
+    console.log('✅ Base de datos sembrada con Opción 1 (Directorio Unificado nombres_fb).');
 
-    // 3. Recreación limpia de Vista v_comprobantes_auditados con fallback a 1.0 para USD/USDT
+    // 3. Recreación limpia de Vista v_comprobantes_auditados
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -197,7 +299,7 @@ async function initDB() {
         ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
        AND mt_primer.moneda = UPPER(f.moneda);
     `);
-    console.log('✅ Vista v_comprobantes_auditados sincronizada con soporte USD/USDT.');
+    console.log('✅ Vista v_comprobantes_auditados sincronizada.');
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -229,7 +331,7 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// --- TASAS ---
+// --- MÓDULO DE TASAS & WEBHOOKS ---
 app.post('/api/tasas/n8n-webhook', (req, res) => {
   try {
     let payload = req.body;
@@ -289,7 +391,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// --- COMPROBANTES Y CÁLCULO UNIFICADO OPCIÓN A CON NORMALIZACIÓN USD -> USDT ---
+// --- COMPROBANTES Y CÁLCULO UNIFICADO CROSS-RATE OPCIÓN A ---
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash } = req.query;
@@ -508,7 +610,7 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   }
 });
 
-// --- SOCIOS Y DIRECTORIO ---
+// --- SOCIOS Y DIRECTORIO OPCIÓN 1 ---
 app.get('/api/socios', async (req, res) => {
   try {
     const query = `
@@ -536,47 +638,64 @@ app.get('/api/directorio', async (req, res) => {
   }
 });
 
-app.post('/api/socios/ajustes', async (req, res) => {
+// ENDPOINT UNIFICADO OPCIÓN 1 PARA GUARDAR CONFIGURACIÓN COMPLETA DEL SOCIO
+app.post('/api/socios/config', async (req, res) => {
   try {
-    const { nombre, ajustes } = req.body;
-    if (!nombre || !ajustes) {
-      return res.status(400).json({ error: 'Nombre de socio y objeto de ajustes requeridos.' });
+    const { 
+      nombre, roles, moneda_socio, talla, whatsapp, 
+      pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
+      cartelera_paises, ajustes 
+    } = req.body;
+
+    if (!nombre) {
+      return res.status(400).json({ error: 'Nombre de socio requerido.' });
     }
+
     const { rows } = await pool.query(
-      `UPDATE nombres_fb SET ajustes = $1 WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2)) RETURNING *;`,
-      [JSON.stringify(ajustes), nombre]
+      `UPDATE nombres_fb SET 
+        roles = COALESCE($1, roles),
+        moneda_socio = COALESCE($2, moneda_socio),
+        talla = COALESCE($3, talla),
+        whatsapp = COALESCE($4, whatsapp),
+        pen = COALESCE($5, pen),
+        cop = COALESCE($6, cop),
+        clp = COALESCE($7, clp),
+        ars = COALESCE($8, ars),
+        ves = COALESCE($9, ves),
+        brl = COALESCE($10, brl),
+        mxn = COALESCE($11, mxn),
+        pyg = COALESCE($12, pyg),
+        dop = COALESCE($13, dop),
+        crc = COALESCE($14, crc),
+        eur = COALESCE($15, eur),
+        cad = COALESCE($16, cad),
+        usd = COALESCE($17, usd),
+        ecu = COALESCE($18, ecu),
+        pan = COALESCE($19, pan),
+        usdt = COALESCE($20, usdt),
+        cartelera_paises = COALESCE($21::jsonb, cartelera_paises),
+        ajustes = COALESCE($22::jsonb, ajustes)
+       WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($23))
+       RETURNING *;`,
+      [
+        roles || null, moneda_socio || null, talla || null, whatsapp || null,
+        pen || null, cop || null, clp || null, ars || null, ves || null,
+        brl || null, mxn || null, pyg || null, dop || null, crc || null,
+        eur || null, cad || null, usd || null, ecu || null, pan || null,
+        usdt || null,
+        cartelera_paises ? JSON.stringify(cartelera_paises) : null,
+        ajustes ? JSON.stringify(ajustes) : null,
+        nombre
+      ]
     );
+
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Socio no encontrado.' });
     }
-    res.json({ success: true, data: rows[0] });
-  } catch (err) {
-    console.error('Error al guardar ajustes:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
 
-app.post('/api/directorio', async (req, res) => {
-  try {
-    const { id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ves, ars, ajustes } = req.body;
-    const query = `
-      INSERT INTO nombres_fb (id_grupo, nombre, roles, moneda_socio, usd, pen, cop, clp, ves, ars, ajustes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (id_grupo) DO UPDATE SET
-        nombre = EXCLUDED.nombre, roles = EXCLUDED.roles, moneda_socio = EXCLUDED.moneda_socio,
-        usd = EXCLUDED.usd, pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp,
-        ves = EXCLUDED.ves, ars = EXCLUDED.ars,
-        ajustes = COALESCE(EXCLUDED.ajustes, nombres_fb.ajustes)
-      RETURNING *;
-    `;
-    const { rows } = await pool.query(query, [
-      id_grupo, nombre, roles || 'GRUPO', moneda_socio || null, 
-      usd || null, pen || null, cop || null, clp || null,
-      ves || null, ars || null,
-      ajustes ? JSON.stringify(ajustes) : null
-    ]);
     res.json({ success: true, data: rows[0] });
   } catch (err) {
+    console.error('Error al guardar configuracion de socio:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
