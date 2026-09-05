@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// Función de Truncado según Regla de Precisión (Evolucionada n8n)
+// Función de Truncado según Regla de Precisión
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -41,7 +41,6 @@ function aplicarReglaPrecision(val) {
   }
 }
 
-// Cálculo automático de talla según conteo de países activos
 function calcularTallaAutomatica(conteo) {
   if (conteo <= 2) return 'S';
   if (conteo <= 5) return 'M';
@@ -49,7 +48,6 @@ function calcularTallaAutomatica(conteo) {
   return 'XL';
 }
 
-// Matriz y Configuración Semilla de los Socios
 const SEED_SOCIOS_CONFIG = {
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
@@ -435,7 +433,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
 // --- COMPROBANTES Y CÁLCULO UNIFICADO ---
 const getComprobantesHandler = async (req, res) => {
   try {
-    const { socio, fechaInicio, hash } = req.query;
+    const { socio, fechaInicio, hash, soloDuplicados } = req.query;
 
     let query = `
       SELECT 
@@ -512,11 +510,15 @@ const getComprobantesHandler = async (req, res) => {
         ) AS tipo_op
       ) t ON TRUE
 
-      WHERE v.conteo > 1
+      WHERE 1=1
     `;
 
     const values = [];
     let paramIndex = 1;
+
+    if (soloDuplicados === 'true') {
+      query += ` AND v.conteo > 1`;
+    }
 
     if (socio) {
       query += ` AND (v.nombre_socio_1 = $${paramIndex} OR v.nombre_socio_2 = $${paramIndex})`;
