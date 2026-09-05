@@ -103,7 +103,7 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS -->
+          <!-- 📱 VISTA MÓVIL -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
@@ -524,7 +524,7 @@
             </div>
           </div>
 
-          <!-- TABLA LIMPIA Y REFORMADA SIN LA COLUMNA DE CARTELES -->
+          <!-- TABLA LIMPIA Y REFORMADA SIN LA COLUMNA ANCHA -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
@@ -539,23 +539,14 @@
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       
-                      <!-- INFORMACIÓN DEL SOCIO + PAÍSES ACTIVOS DENTRO DEL PERFIL -->
+                      <!-- INFORMACIÓN DEL SOCIO -->
                       <td class="px-3 py-3 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1">
                           <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
                           <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[9px] font-mono font-bold" x-text="d.roles || 'SOCIO'"></span>
                             <span class="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30" x-text="d.moneda_socio || 'USDT'"></span>
-                            <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (d.talla || 'M') + ' [' + limitePaisesSegunTalla(d.talla) + ']'"></span>
-                          </div>
-                          <!-- INSIGNIAS DE PAÍSES ACTIVOS INTEGRADAS DENTRO DE LA FICHA -->
-                          <div class="flex flex-wrap gap-1 mt-1">
-                            <template x-for="p in obtenerPaisesActivosSocio(d)" :key="p.code">
-                              <span class="px-1.5 py-0.2 rounded bg-[#1a1d33] border border-slate-700/60 font-mono text-[8.5px] font-bold text-slate-300 flex items-center gap-1 shadow-sm">
-                                <span x-text="p.flag"></span>
-                                <span x-text="p.code"></span>
-                              </span>
-                            </template>
+                            <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (calcularTallaDinamica(contarPaisesActivos(d))) + ' [' + contarPaisesActivos(d) + ']'"></span>
                           </div>
                         </div>
                       </td>
@@ -674,7 +665,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN COMPLETA CON 4 SUBPANTALLAS (FACTORES, CARTELES, DIVISAS, PERFIL) -->
+      <!-- MODAL 2: CONFIGURACIÓN COMPLETA CON 4 SUBPANTALLAS -->
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
@@ -684,7 +675,7 @@
               <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
               <div>
                 <h3 class="font-bold text-white text-base">Configuración Integral del Socio</h3>
-                <p class="text-xs text-slate-400">Navega por las subpantallas para gestionar factores, carteles, divisas y perfil.</p>
+                <p class="text-xs text-slate-400">Gestiona factores, visualiza la cartelera real de mercado y edita el perfil.</p>
               </div>
             </div>
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
@@ -718,7 +709,7 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 1: FACTORES (CHECKBOX ☑️ Y MULTIPLICADORES P/D) -->
+          <!-- SUBPANTALLA 1: FACTORES -->
           <div x-show="tabConfigActive === 'factores'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2 space-y-2">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <template x-for="p in carteleraPaisesEdit" :key="p.code">
@@ -748,16 +739,15 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 2: CARTELES (POSTER PREVIEW CON TASAS RESULTANTES REALES DEL MERCADO) -->
+          <!-- SUBPANTALLA 2: CARTELES -->
           <div x-show="tabConfigActive === 'carteles'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-3 space-y-3">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <span class="text-xs font-bold text-slate-300">Vista Previa del Poster / Cartel Real</span>
-              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla: ' + socioConfigEdit.talla + ' [' + limitePaisesSegunTalla(socioConfigEdit.talla) + ' Países Visibles]'"></span>
+              <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla Automática: ' + calcularTallaDinamica(contarPaisesActivosEdit()) + ' [' + contarPaisesActivosEdit() + ' Países Tildados]'"></span>
             </div>
 
-            <!-- TARJETAS ESTILIZADAS IGUALES AL PÓSTER MOSTRANDO LA TASA CALCULADA REAL DE MERCADO -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              <template x-for="p in obtenerPaisesLimitadosSocio()" :key="p.code">
+              <template x-for="p in obtenerPaisesActivosEdit()" :key="p.code">
                 <div class="bg-[#16192b] border border-purple-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow-lg">
                   
                   <div class="flex items-center justify-between border-b border-slate-800/80 pb-1 mb-2">
@@ -784,7 +774,7 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 3: DIVISAS (SELECCIÓN PREDETERMINADA D/P/A/C) -->
+          <!-- SUBPANTALLA 3: DIVISAS -->
           <div x-show="tabConfigActive === 'divisas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-3">
             <p class="text-xs text-slate-400 mb-3 font-semibold">Regla predeterminada de auditoría por divisa:</p>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -802,7 +792,7 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 4: PERFIL (DATOS GENERALES, CREAR Y BORRAR PERFIL) -->
+          <!-- SUBPANTALLA 4: PERFIL (LIMPIO, SIN CAMPO MANEJO DE TALLA) -->
           <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
             
             <div class="grid grid-cols-2 gap-3">
@@ -838,22 +828,12 @@
               </div>
 
               <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Talla Plantilla Cartel</label>
-                <select x-model="socioConfigEdit.talla" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
-                  <option value="S">S [2 Países]</option>
-                  <option value="M">M [4 Países]</option>
-                  <option value="L">L [6 Países]</option>
-                  <option value="XL">XL [8 Países]</option>
-                </select>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Remote JID / Teléfono</label>
+                <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none focus:border-purple-500">
               </div>
             </div>
 
-            <div>
-              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Remote JID / Teléfono</label>
-              <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none focus:border-purple-500">
-            </div>
-
-            <!-- BOTONES DE GESTIÓN DE PERFIL -->
+            <!-- GESTIÓN DE PERFIL -->
             <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
               <button @click="prepararNuevoSocio()" class="px-3.5 py-2 bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
                 <span>➕ Crear Nuevo Perfil</span>
@@ -900,7 +880,6 @@
         modalAbierto: false,
         itemEdicion: null,
 
-        // MODAL CONFIGURACIÓN SOCIO
         modalConfigSocioAbierto: false,
         tabConfigActive: 'factores',
         guardandoConfig: false,
@@ -937,10 +916,7 @@
           { nombrePais: 'Canada', code: 'CAD', flag: '🇨🇦' }
         ],
 
-        // REPORTE POR SOCIO
         socioReporteSeleccionado: '',
-
-        // TASAS
         tasasBaul: {},
         cargandoTasas: false,
         publicandoTasas: false,
@@ -975,9 +951,25 @@
           }
         },
 
-        limitePaisesSegunTalla(talla) {
-          const mapa = { 'S': 2, 'M': 4, 'L': 6, 'XL': 8 };
-          return mapa[(talla || 'M').toUpperCase()] || 4;
+        contarPaisesActivos(socioObj) {
+          if (!socioObj) return 0;
+          const cp = typeof socioObj.cartelera_paises === 'string' ? JSON.parse(socioObj.cartelera_paises) : (socioObj.cartelera_paises || []);
+          return cp.filter(item => item.activo).length;
+        },
+
+        calcularTallaDinamica(conteo) {
+          if (conteo <= 2) return 'S';
+          if (conteo <= 5) return 'M';
+          if (conteo <= 8) return 'L';
+          return 'XL';
+        },
+
+        contarPaisesActivosEdit() {
+          return this.carteleraPaisesEdit.filter(p => p.activo).length;
+        },
+
+        obtenerPaisesActivosEdit() {
+          return this.carteleraPaisesEdit.filter(p => p.activo);
         },
 
         obtenerPaisesActivosSocio(socioObj) {
@@ -995,22 +987,14 @@
           });
         },
 
-        obtenerPaisesLimitadosSocio() {
-          const limite = this.limitePaisesSegunTalla(this.socioConfigEdit.talla);
-          const activos = this.carteleraPaisesEdit.filter(p => p.activo);
-          return activos.slice(0, limite);
-        },
-
         // CÁLCULO DE CARTEL CON TASA REAL DE LA TABLA MERCADO_TASAS
         calcularTasaSocio(monedaCode, factor) {
           if (!factor) return 0;
           const f = Math.abs(parseFloat(factor) || 0);
           const monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
 
-          // 1. Tasa Base de la divisa de destino en la tabla mercado_tasas (Lote vigente)
           const tasaBaseDestino = parseFloat(this.ultimasTasasMercado[monedaCode.toUpperCase()] || 1.0);
 
-          // 2. Tasa Base de la moneda nativa del socio en mercado_tasas
           let tasaBaseSocio = 1.0;
           if (!['USD', 'USDT', 'PYUSD'].includes(monedaBaseSocio)) {
             tasaBaseSocio = parseFloat(this.ultimasTasasMercado[monedaBaseSocio] || 1.0);
@@ -1018,9 +1002,7 @@
 
           if (tasaBaseSocio <= 0) tasaBaseSocio = 1.0;
 
-          // Cross-rate real de mercado multiplicado por el factor de ajuste del socio
-          const tasaCross = (tasaBaseDestino / tasaBaseSocio) * f;
-          return tasaCross;
+          return (tasaBaseDestino / tasaBaseSocio) * f;
         },
 
         prepararNuevoSocio() {
@@ -1129,7 +1111,6 @@
           if (reg) {
             this.socioConfigEdit.roles = reg.roles || 'SOCIO';
             this.socioConfigEdit.moneda_socio = (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio) || 'USDT';
-            this.socioConfigEdit.talla = reg.talla || 'M';
             this.socioConfigEdit.whatsapp = reg.whatsapp || '';
 
             ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'].forEach(m => {
@@ -1147,6 +1128,8 @@
                 activo: ex ? !!ex.activo : true
               };
             });
+
+            this.socioConfigEdit.talla = this.calcularTallaDinamica(this.contarPaisesActivosEdit());
           }
         },
 
@@ -1157,6 +1140,7 @@
           try {
             const payload = {
               ...this.socioConfigEdit,
+              talla: this.calcularTallaDinamica(this.contarPaisesActivosEdit()),
               cartelera_paises: this.carteleraPaisesEdit.map((p, idx) => ({
                 pais: p.nombrePais,
                 moneda: p.code,
