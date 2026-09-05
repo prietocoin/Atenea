@@ -103,7 +103,7 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS (30% IMAGEN / 70% CONTENEDOR DATOS) -->
+          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS (30% IMAGEN / 70% CONTENEDOR DATOS CON T1/T2 A LA DERECHA) -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
@@ -156,23 +156,27 @@
                     <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
                   </div>
 
-                  <!-- BLOQUE DE SOCIOS (SOCIO 1 Y SOCIO 2 CON TASAS Y MONTOS NATIVOS) -->
+                  <!-- BLOQUE DE SOCIOS (T1 Y T2 AL EXTREMO DERECHO EN BOTÓN ESTÁTICO DE w-[72px]) -->
                   <div class="flex flex-col gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800/80 my-0.5 text-[9px]">
-                    <div class="flex items-center justify-between gap-1 truncate">
-                      <span class="font-bold text-purple-300 truncate" x-text="item.nombre_socio_1 || '-'"></span>
-                      <div class="flex items-center gap-1 shrink-0 font-mono text-[8px]">
-                        <span class="text-slate-400" x-text="'T1:' + (item.tasa_1 || '-')"></span>
-                        <span class="text-emerald-300 font-bold" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
+                    <!-- SOCIO 1 -->
+                    <div class="flex items-center justify-between gap-1">
+                      <div class="flex items-center gap-1 min-w-0 truncate">
+                        <span class="font-bold text-purple-300 truncate" x-text="item.nombre_socio_1 || '-'"></span>
+                        <span class="text-emerald-300 font-bold font-mono text-[8px] shrink-0" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
                       </div>
+                      <!-- BOTÓN FIJO DE TASA 1 AL EXTREMO DERECHO -->
+                      <div class="shrink-0 w-[72px] text-center px-1 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300 font-mono text-[8.5px] font-bold truncate" x-text="'T1:' + (formatTasa(item.tasa_1) || '-')"></div>
                     </div>
 
+                    <!-- SOCIO 2 -->
                     <template x-if="item.nombre_socio_2">
-                      <div class="flex items-center justify-between gap-1 border-t border-slate-800/60 pt-0.5 truncate">
-                        <span class="font-bold text-pink-300 truncate" x-text="item.nombre_socio_2"></span>
-                        <div class="flex items-center gap-1 shrink-0 font-mono text-[8px]">
-                          <span class="text-slate-400" x-text="'T2:' + (item.tasa_2 || '-')"></span>
-                          <span class="text-emerald-300 font-bold" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
+                      <div class="flex items-center justify-between gap-1 border-t border-slate-800/60 pt-0.5">
+                        <div class="flex items-center gap-1 min-w-0 truncate">
+                          <span class="font-bold text-pink-300 truncate" x-text="item.nombre_socio_2"></span>
+                          <span class="text-emerald-300 font-bold font-mono text-[8px] shrink-0" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
                         </div>
+                        <!-- BOTÓN FIJO DE TASA 2 AL EXTREMO DERECHO -->
+                        <div class="shrink-0 w-[72px] text-center px-1 py-0.5 rounded bg-pink-950/80 border border-pink-500/30 text-pink-300 font-mono text-[8.5px] font-bold truncate" x-text="'T2:' + (formatTasa(item.tasa_2) || '-')"></div>
                       </div>
                     </template>
                   </div>
@@ -299,7 +303,7 @@
                             <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
                             <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
                               <template x-if="item.tasa_1">
-                                <span class="text-purple-400 font-bold" x-text="'T1: ' + item.tasa_1 + ' ' + (item.moneda !== item.moneda_socio_1 ? item.moneda + '/' + item.moneda_socio_1 : '')"></span>
+                                <span class="text-purple-400 font-bold" x-text="'T1: ' + formatTasa(item.tasa_1) + ' ' + (item.moneda !== item.moneda_socio_1 ? item.moneda + '/' + item.moneda_socio_1 : '')"></span>
                               </template>
                               <template x-if="item.m1_socio !== undefined">
                                 <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: ' + formatMonto(item.m1_socio) + ' ' + item.moneda_socio_1"></span>
@@ -316,7 +320,7 @@
                               <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
                               <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
                                 <template x-if="item.tasa_2">
-                                  <span class="text-pink-400 font-bold" x-text="'T2: ' + item.tasa_2 + ' ' + (item.moneda !== item.moneda_socio_2 ? item.moneda + '/' + item.moneda_socio_2 : '')"></span>
+                                  <span class="text-pink-400 font-bold" x-text="'T2: ' + formatTasa(item.tasa_2) + ' ' + (item.moneda !== item.moneda_socio_2 ? item.moneda + '/' + item.moneda_socio_2 : '')"></span>
                                 </template>
                                 <template x-if="item.m2_socio !== undefined">
                                   <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: ' + formatMonto(item.m2_socio) + ' ' + item.moneda_socio_2"></span>
@@ -496,7 +500,7 @@
                             <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="c.lote_tasa_asignado || 'N/A'"></span>
                             <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + (c.tasa_base || c.tasa_mercado_aplicada || '0')"></span>
                             <template x-if="c.tasa_1">
-                              <span class="text-[9px] font-mono font-bold text-purple-300 block" x-text="'Tasa Socio: ' + c.tasa_1"></span>
+                              <span class="text-[9px] font-mono font-bold text-purple-300 block" x-text="'Tasa Socio: ' + formatTasa(c.tasa_1)"></span>
                             </template>
                           </td>
                           <td class="px-3 py-2 align-middle text-right font-bold text-slate-200 whitespace-nowrap" x-text="formatMonto(c.monto) + ' ' + c.moneda"></td>
@@ -1025,6 +1029,24 @@
         formatMonto(val) {
           if (val === null || val === undefined || isNaN(val)) return '0.00';
           return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        formatTasa(val) {
+          if (val === null || val === undefined || isNaN(val)) return '-';
+          const v = Math.abs(parseFloat(val) || 0);
+          if (v === 0) return '0';
+          if (v > 499.99) {
+            return Math.trunc(v).toString();
+          } else if (v < 10) {
+            if (v < 1) {
+              const magnitud = Math.floor(Math.log10(v));
+              const f = Math.pow(10, 2 - magnitud);
+              return (Math.trunc(v * f) / f).toString();
+            }
+            return (Math.trunc(v * 1000) / 1000).toString();
+          } else {
+            return (Math.trunc(v * 100) / 100).toFixed(2);
+          }
         },
 
         formatFecha(ts) {
