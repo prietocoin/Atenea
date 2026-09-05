@@ -49,7 +49,7 @@ function calcularTallaAutomatica(conteo) {
   return 'XL';
 }
 
-// Matriz y Configuración Semilla de los 38 Socios (Hoole.xlsx)
+// Matriz y Configuración Semilla de los Socios
 const SEED_SOCIOS_CONFIG = {
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
@@ -590,7 +590,7 @@ const getComprobantesHandler = async (req, res) => {
     console.error('Error en GET /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
-});
+};
 
 app.get('/api/comprobantes', getComprobantesHandler);
 app.get('/api/cola', getComprobantesHandler);
