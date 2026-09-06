@@ -58,6 +58,7 @@ const SEED_SOCIOS_CONFIG = {
     "moneda_socio": "USDT",
     "talla": "M",
     "whatsapp": "120363323877732465@g.us",
+    "activo": true,
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "P", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 1 },
@@ -74,6 +75,7 @@ const SEED_SOCIOS_CONFIG = {
     "moneda_socio": "USDT",
     "talla": "M",
     "whatsapp": "120363339357414946@g.us",
+    "activo": true,
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
@@ -90,6 +92,7 @@ const SEED_SOCIOS_CONFIG = {
     "moneda_socio": "USDT",
     "talla": "L",
     "whatsapp": "",
+    "activo": true,
     "pen": "D", "cop": "D", "clp": "P", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
@@ -108,6 +111,7 @@ const SEED_SOCIOS_CONFIG = {
     "moneda_socio": "USDT",
     "talla": "L",
     "whatsapp": "",
+    "activo": true,
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
@@ -126,6 +130,7 @@ const SEED_SOCIOS_CONFIG = {
     "moneda_socio": "PEN",
     "talla": "L",
     "whatsapp": "120363307631639715@g.us",
+    "activo": true,
     "pen": "A", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "D",
     "cartelera_paises": [
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 1 },
@@ -144,6 +149,7 @@ const SEED_SOCIOS_CONFIG = {
     "moneda_socio": "USDT",
     "talla": "S",
     "whatsapp": "120363422300818123@g.us",
+    "activo": true,
     "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
@@ -189,6 +195,7 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usdt VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS talla VARCHAR(10) DEFAULT 'M';
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
@@ -209,23 +216,25 @@ async function initDB() {
             moneda_socio = COALESCE($2, moneda_socio),
             talla = COALESCE($3, talla),
             whatsapp = COALESCE($4, whatsapp),
-            pen = COALESCE($5, pen),
-            cop = COALESCE($6, cop),
-            clp = COALESCE($7, clp),
-            ars = COALESCE($8, ars),
-            ves = COALESCE($9, ves),
-            brl = COALESCE($10, brl),
-            mxn = COALESCE($11, mxn),
-            pyg = COALESCE($12, pyg),
-            usd = COALESCE($13, usd),
-            ecu = COALESCE($14, ecu),
-            eur = COALESCE($15, eur),
-            usdt = COALESCE($16, usdt),
-            cartelera_paises = CASE WHEN cartelera_paises = '[]'::jsonb OR cartelera_paises IS NULL THEN $17::jsonb ELSE cartelera_paises END,
-            ajustes = CASE WHEN ajustes = '{}'::jsonb OR ajustes IS NULL THEN $18::jsonb ELSE ajustes END
-           WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($19));`,
+            activo = COALESCE($5, activo),
+            pen = COALESCE($6, pen),
+            cop = COALESCE($7, cop),
+            clp = COALESCE($8, clp),
+            ars = COALESCE($9, ars),
+            ves = COALESCE($10, ves),
+            brl = COALESCE($11, brl),
+            mxn = COALESCE($12, mxn),
+            pyg = COALESCE($13, pyg),
+            usd = COALESCE($14, usd),
+            ecu = COALESCE($15, ecu),
+            eur = COALESCE($16, eur),
+            usdt = COALESCE($17, usdt),
+            cartelera_paises = CASE WHEN cartelera_paises = '[]'::jsonb OR cartelera_paises IS NULL THEN $18::jsonb ELSE cartelera_paises END,
+            ajustes = CASE WHEN ajustes = '{}'::jsonb OR ajustes IS NULL THEN $19::jsonb ELSE ajustes END
+           WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($20));`,
           [
             config.roles, config.moneda_socio, config.talla, config.whatsapp,
+            config.activo ?? true,
             config.pen, config.cop, config.clp, config.ars, config.ves,
             config.brl, config.mxn, config.pyg, config.usd, config.ecu,
             config.eur, config.usdt,
@@ -235,13 +244,14 @@ async function initDB() {
       } else {
         await pool.query(
           `INSERT INTO nombres_fb (
-            id_grupo, nombre, roles, moneda_socio, talla, whatsapp,
+            id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo,
             pen, cop, clp, ars, ves, brl, mxn, pyg, usd, ecu, eur, usdt,
             cartelera_paises, ajustes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19::jsonb, $20::jsonb)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb)
           ON CONFLICT DO NOTHING;`,
           [
             config.id_grupo, config.nombre, config.roles, config.moneda_socio, config.talla, config.whatsapp,
+            config.activo ?? true,
             config.pen, config.cop, config.clp, config.ars, config.ves,
             config.brl, config.mxn, config.pyg, config.usd, config.ecu, config.eur, config.usdt,
             jsonCartelera, jsonAjustes
@@ -643,6 +653,27 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   }
 });
 
+// NUEVO ENDPOINT: CAMBIAR ESTADO ACTIVO / INACTIVO
+app.patch('/api/socios/:nombre/estado', async (req, res) => {
+  try {
+    const { nombre } = req.params;
+    const { activo } = req.body;
+
+    const { rows } = await pool.query(
+      `UPDATE nombres_fb SET activo = $1 WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2)) RETURNING nombre, activo;`,
+      [activo, nombre]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Socio no encontrado' });
+    }
+
+    res.json({ success: true, data: rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- SOCIOS Y DIRECTORIO ---
 app.get('/api/socios', async (req, res) => {
   try {
@@ -691,7 +722,7 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
-      nombre, roles, moneda_socio, whatsapp, 
+      nombre, roles, moneda_socio, whatsapp, activo,
       pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
       cartelera_paises, ajustes 
     } = req.body;
@@ -712,17 +743,18 @@ app.post('/api/socios/config', async (req, res) => {
 
     const query = `
       INSERT INTO nombres_fb (
-        id_grupo, nombre, roles, moneda_socio, talla, whatsapp,
+        id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo,
         pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
         cartelera_paises, ajustes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23::jsonb, $24::jsonb)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb, $25::jsonb)
       ON CONFLICT (id_grupo) DO UPDATE SET
         nombre = EXCLUDED.nombre,
         roles = EXCLUDED.roles,
         moneda_socio = EXCLUDED.moneda_socio,
         talla = EXCLUDED.talla,
         whatsapp = EXCLUDED.whatsapp,
+        activo = EXCLUDED.activo,
         pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp, ars = EXCLUDED.ars,
         ves = EXCLUDED.ves, brl = EXCLUDED.brl, mxn = EXCLUDED.mxn, pyg = EXCLUDED.pyg,
         dop = EXCLUDED.dop, crc = EXCLUDED.crc, eur = EXCLUDED.eur, cad = EXCLUDED.cad,
@@ -734,6 +766,7 @@ app.post('/api/socios/config', async (req, res) => {
 
     const { rows } = await pool.query(query, [
       idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
+      activo ?? true,
       pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
       dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
       jsonCartelera, jsonAjustes
