@@ -508,7 +508,7 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO SIN BADGES DE PAÍSES) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO CON ESTADO ACTIVO/INACTIVO) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -532,12 +532,13 @@
                   <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px]">
                     <th class="px-3 py-2.5">SOCIO & PERFIL</th>
                     <th class="px-3 py-2.5">WHATSAPP / ID GRUPO</th>
+                    <th class="px-3 py-2.5 text-center">ESTADO MAESTRO</th>
                     <th class="px-3 py-2.5 text-right">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
-                    <tr class="hover:bg-slate-800/30 transition-colors">
+                    <tr class="hover:bg-slate-800/30 transition-colors" :class="d.activo === false ? 'opacity-50' : ''">
                       
                       <!-- INFORMACIÓN DEL SOCIO -->
                       <td class="px-3 py-3 align-middle whitespace-nowrap">
@@ -553,6 +554,17 @@
 
                       <!-- WHATSAPP / ID GRUPO -->
                       <td class="px-3 py-3 align-middle font-mono text-[10px] text-slate-400 whitespace-nowrap" x-text="d.whatsapp || d.id_grupo || '-'"></td>
+
+                      <!-- SWITCH INTERRUPTOR ESTADO -->
+                      <td class="px-3 py-3 align-middle text-center whitespace-nowrap">
+                        <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                          <div class="relative inline-flex items-center">
+                            <input type="checkbox" :checked="d.activo !== false" @change="toggleEstadoSocio(d.nombre, $event.target.checked)" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                          </div>
+                          <span class="text-[10px] font-extrabold w-12 text-left" :class="d.activo !== false ? 'text-emerald-400' : 'text-slate-500'" x-text="d.activo !== false ? 'ACTIVO' : 'INACTIVO'"></span>
+                        </label>
+                      </td>
 
                       <!-- ACCIONES -->
                       <td class="px-3 py-3 align-middle text-right whitespace-nowrap">
@@ -681,7 +693,7 @@
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS (UNIFICADA A SOLO 2 TABS) -->
+          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1">
               <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Socio en Edición</label>
@@ -703,7 +715,7 @@
             </div>
           </div>
 
-          <!-- SUBPANTALLA 1: REGLAS (PAGO Y DEPÓSITO HORIZONTALES LADO A LADO EN CADA PAÍS) -->
+          <!-- SUBPANTALLA 1: REGLAS -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
             
             <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-800/60">
@@ -734,10 +746,10 @@
                     </div>
                   </div>
 
-                  <!-- FILA HORIZONTAL DE PAGO Y DEPÓSITO (GRILLA DE 2 COLUMNAS) -->
+                  <!-- FILA HORIZONTAL DE PAGO Y DEPÓSITO -->
                   <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
                     
-                    <!-- SUB-BLOQUE IZQUIERDO: PAGO (f_P A LA IZQ, t_P A LA DERECHA) -->
+                    <!-- SUB-BLOQUE IZQUIERDO: PAGO -->
                     <div class="bg-amber-950/40 p-1.5 rounded border border-amber-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-amber-400 font-black shrink-0 text-[8px]">PAGO</span>
@@ -749,7 +761,7 @@
                       </div>
                     </div>
 
-                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO (f_D A LA IZQ, t_D A LA DERECHA) -->
+                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO -->
                     <div class="bg-cyan-950/40 p-1.5 rounded border border-cyan-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-cyan-400 font-black shrink-0 text-[8px]">DEPÓSITO</span>
@@ -769,7 +781,7 @@
 
           </div>
 
-          <!-- SUBPANTALLA 2: PERFIL -->
+          <!-- SUBPANTALLA 2: PERFIL CON TOGGLE DE ESTADO -->
           <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
             
             <div class="grid grid-cols-2 gap-3">
@@ -808,6 +820,21 @@
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Remote JID / Teléfono</label>
                 <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none focus:border-purple-500">
               </div>
+            </div>
+
+            <!-- INTERRUPTOR DENTRO DEL PERFIL -->
+            <div class="p-3 bg-[#1a1d33] rounded-xl border border-slate-700 flex items-center justify-between">
+              <div>
+                <span class="block text-xs font-bold text-white">Estado de Publicación Automática</span>
+                <span class="text-[10px] text-slate-400">Si está inactivo, n8n ignorará este perfil al publicar las tasas.</span>
+              </div>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <div class="relative inline-flex items-center">
+                  <input type="checkbox" x-model="socioConfigEdit.activo" class="sr-only peer">
+                  <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </div>
+                <span class="text-xs font-bold" :class="socioConfigEdit.activo ? 'text-emerald-400' : 'text-slate-500'" x-text="socioConfigEdit.activo ? 'ACTIVO' : 'INACTIVO'"></span>
+              </label>
             </div>
 
             <!-- TALLA CALCULADA AUTOMÁTICAMENTE -->
@@ -877,6 +904,7 @@
           moneda_socio: 'USDT',
           talla: 'M',
           whatsapp: '',
+          activo: true,
           pen: 'D', cop: 'D', clp: 'D', ars: 'D', ves: 'D', brl: 'D', mxn: 'D', pyg: 'D',
           dop: 'D', crc: 'D', eur: 'D', cad: 'D', usd: 'P', ecu: 'D', pan: 'D', usdt: 'A',
           ajustes: {}
@@ -923,6 +951,24 @@
           await this.cargarSocios();
           await this.cargarDirectorio();
           await this.cargarComprobantes();
+        },
+
+        async toggleEstadoSocio(nombre, nuevoEstado) {
+          try {
+            const res = await fetch(`/api/socios/${encodeURIComponent(nombre)}/estado`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ activo: nuevoEstado })
+            });
+
+            if (res.ok) {
+              await this.cargarDirectorio();
+            } else {
+              alert('Error al cambiar el estado del socio.');
+            }
+          } catch (err) {
+            console.error("Error cambiando estado:", err);
+          }
         },
 
         async cargarUltimasTasasMercado() {
@@ -998,6 +1044,7 @@
             moneda_socio: 'USDT',
             talla: 'M',
             whatsapp: '',
+            activo: true,
             pen: 'D', cop: 'D', clp: 'D', ars: 'D', ves: 'D', brl: 'D', mxn: 'D', pyg: 'D',
             dop: 'D', crc: 'D', eur: 'D', cad: 'D', usd: 'P', ecu: 'D', pan: 'D', usdt: 'A',
             ajustes: {}
@@ -1098,6 +1145,7 @@
             this.socioConfigEdit.roles = reg.roles || 'SOCIO';
             this.socioConfigEdit.moneda_socio = (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio) || 'USDT';
             this.socioConfigEdit.whatsapp = reg.whatsapp || '';
+            this.socioConfigEdit.activo = reg.activo !== false;
 
             ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'].forEach(m => {
               this.socioConfigEdit[m] = reg[m] || 'D';
