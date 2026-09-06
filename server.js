@@ -41,7 +41,7 @@ function aplicarReglaPrecision(val) {
   }
 }
 
-// Cálculo de Talla Automática ajustado (S = <=3, M = <=6, L = >6)
+// Cálculo automático de talla: S <= 3, M <= 6, L > 6
 function calcularTallaAutomatica(conteo) {
   if (conteo <= 3) return 'S';
   if (conteo <= 6) return 'M';
@@ -260,6 +260,7 @@ async function initDB() {
     }
     console.log('✅ Base de datos sembrada.');
 
+    // RECREACIÓN DE LA VISTA CON LEFT JOIN PARA QUE NUNCA QUEDE EN BLANCO
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -717,7 +718,7 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
   }
 });
 
-// GUARDAR / ACTUALIZAR CONFIGURACIÓN DE SOCIO (ANTI-DUPLICADOS POR NOMBRE)
+// GUARDAR / ACTUALIZAR CONFIGURACIÓN DE SOCIO (ACTUALIZA DIRECTAMENTE POR NOMBRE)
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
@@ -739,36 +740,34 @@ app.post('/api/socios/config', async (req, res) => {
     const jsonAjustes = JSON.stringify(ajustes || {});
 
     // Buscar si el socio ya existe por Nombre
-    const checkQuery = `SELECT id, id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
+    const checkQuery = `SELECT id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
     const checkRes = await pool.query(checkQuery, [socioNombre]);
 
     let rows;
 
     if (checkRes.rows.length > 0) {
-      // SOCIO EXISTENTE: Actualizar registro actual
-      const existingId = checkRes.rows[0].id;
+      // SOCIO EXISTENTE: Actualizar directamente filtrando por nombre
       const updateQuery = `
         UPDATE nombres_fb SET
-          nombre = $1,
-          roles = $2,
-          moneda_socio = $3,
-          talla = $4,
-          whatsapp = $5,
-          activo = $6,
-          pen = $7, cop = $8, clp = $9, ars = $10, ves = $11, brl = $12, mxn = $13, pyg = $14,
-          dop = $15, crc = $16, eur = $17, cad = $18, usd = $19, ecu = $20, pan = $21, usdt = $22,
-          cartelera_paises = $23::jsonb,
-          ajustes = $24::jsonb
-        WHERE id = $25
+          roles = $1,
+          moneda_socio = $2,
+          talla = $3,
+          whatsapp = $4,
+          activo = $5,
+          pen = $6, cop = $7, clp = $8, ars = $9, ves = $10, brl = $11, mxn = $12, pyg = $13,
+          dop = $14, crc = $15, eur = $16, cad = $17, usd = $18, ecu = $19, pan = $20, usdt = $21,
+          cartelera_paises = $22::jsonb,
+          ajustes = $23::jsonb
+        WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($24))
         RETURNING *;
       `;
       const updateRes = await pool.query(updateQuery, [
-        socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, 
+        roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, 
         whatsapp || checkRes.rows[0].whatsapp || '',
         activo ?? true,
         pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
         dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
-        jsonCartelera, jsonAjustes, existingId
+        jsonCartelera, jsonAjustes, socioNombre
       ]);
       rows = updateRes.rows;
     } else {
