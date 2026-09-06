@@ -103,11 +103,10 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL: CARDS OPTIMIZADOS -->
+          <!-- 📱 VISTA MÓVIL -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
-                
                 <div class="w-[30%] shrink-0 flex flex-col justify-start">
                   <div class="relative aspect-square w-full">
                     <img :src="item.url_imagen" class="w-full h-full object-cover rounded-lg border border-slate-700/50 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
@@ -677,11 +676,10 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL UNIFICADA (2 SUBPANTALLAS: REGLAS Y PERFIL) -->
+      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL UNIFICADA -->
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
-          <!-- CABECERA -->
           <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
             <div class="flex items-center gap-3">
               <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
@@ -693,7 +691,6 @@
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTOR DE SOCIO Y BARRA DE SUBPANTALLAS -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1">
               <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Socio en Edición</label>
@@ -704,7 +701,6 @@
               </select>
             </div>
 
-            <!-- NAVEGACIÓN SIMPLIFICADA: REGLAS Y PERFIL -->
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
               <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-4 py-1.5 rounded text-xs font-bold transition-all">
                 📜 Reglas
@@ -727,7 +723,6 @@
               <template x-for="p in carteleraPaisesEdit" :key="p.code">
                 <div class="bg-[#1a1d33] p-2.5 rounded-xl border transition-all space-y-2" :class="p.activo ? 'border-purple-500/50 bg-purple-950/20 shadow-md' : 'border-slate-800 opacity-60'">
                   
-                  <!-- CABECERA DE LA TARJETA DEL PAÍS -->
                   <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                       <input type="checkbox" x-model="p.activo" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600 focus:ring-purple-500">
@@ -746,10 +741,7 @@
                     </div>
                   </div>
 
-                  <!-- FILA HORIZONTAL DE PAGO Y DEPÓSITO -->
                   <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
-                    
-                    <!-- SUB-BLOQUE IZQUIERDO: PAGO -->
                     <div class="bg-amber-950/40 p-1.5 rounded border border-amber-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-amber-400 font-black shrink-0 text-[8px]">PAGO</span>
@@ -761,7 +753,6 @@
                       </div>
                     </div>
 
-                    <!-- SUB-BLOQUE DERECHO: DEPÓSITO -->
                     <div class="bg-cyan-950/40 p-1.5 rounded border border-cyan-500/20 flex items-center justify-between gap-1.5">
                       <div class="flex items-center gap-1 min-w-0 flex-1">
                         <span class="text-cyan-400 font-black shrink-0 text-[8px]">DEPÓSITO</span>
@@ -772,7 +763,6 @@
                         <span class="font-extrabold text-cyan-200 text-xs" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['D-' + p.code]))"></span>
                       </div>
                     </div>
-
                   </div>
 
                 </div>
@@ -781,7 +771,7 @@
 
           </div>
 
-          <!-- SUBPANTALLA 2: PERFIL CON TOGGLE DE ESTADO -->
+          <!-- SUBPANTALLA 2: PERFIL -->
           <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
             
             <div class="grid grid-cols-2 gap-3">
@@ -990,11 +980,11 @@
           return cp.filter(item => item.activo).length;
         },
 
+        // Talla según umbrales de Google Slides: S (<=3), M (<=6), L (>6)
         calcularTallaDinamica(conteo) {
-          if (conteo <= 2) return 'S';
-          if (conteo <= 5) return 'M';
-          if (conteo <= 8) return 'L';
-          return 'XL';
+          if (conteo <= 3) return 'S';
+          if (conteo <= 6) return 'M';
+          return 'L';
         },
 
         contarPaisesActivosEdit() {
