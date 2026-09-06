@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// Función de Truncado según Regla de Precisión (Evolucionada n8n)
+// Función de Truncado según Regla de Precisión
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -41,12 +41,11 @@ function aplicarReglaPrecision(val) {
   }
 }
 
-// Cálculo automático de talla según conteo de países activos
+// Cálculo de Talla Automática ajustado (S = <=3, M = <=6, L = >6)
 function calcularTallaAutomatica(conteo) {
-  if (conteo <= 2) return 'S';
-  if (conteo <= 5) return 'M';
-  if (conteo <= 8) return 'L';
-  return 'XL';
+  if (conteo <= 3) return 'S';
+  if (conteo <= 6) return 'M';
+  return 'L';
 }
 
 // Matriz y Configuración Semilla de los Socios
@@ -261,7 +260,6 @@ async function initDB() {
     }
     console.log('✅ Base de datos sembrada.');
 
-    // RECREACIÓN DE LA VISTA CON LEFT JOIN PARA QUE NUNCA QUEDE EN BLANCO
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -437,7 +435,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// --- GET COMPROBANTES CON BÚSQUEDA INSENSIBLE A MAYÚSCULAS ---
+// GET COMPROBANTES CON BÚSQUEDA INSENSIBLE A MAYÚSCULAS
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash, soloDuplicados } = req.query;
@@ -554,7 +552,7 @@ const getComprobantesHandler = async (req, res) => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
 
-      // --- SOCIO 1 ---
+      // SOCIO 1
       let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
       if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
@@ -567,7 +565,7 @@ const getComprobantesHandler = async (req, res) => {
       const m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
 
-      // --- SOCIO 2 ---
+      // SOCIO 2
       let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
       if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
       const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
@@ -674,7 +672,7 @@ app.patch('/api/socios/:nombre/estado', async (req, res) => {
   }
 });
 
-// --- SOCIOS Y DIRECTORIO ---
+// SOCIOS Y DIRECTORIO
 app.get('/api/socios', async (req, res) => {
   try {
     const query = `
@@ -740,14 +738,14 @@ app.post('/api/socios/config', async (req, res) => {
     const jsonCartelera = JSON.stringify(cpArray);
     const jsonAjustes = JSON.stringify(ajustes || {});
 
-    // 1. Buscar si el socio ya existe por Nombre
+    // Buscar si el socio ya existe por Nombre
     const checkQuery = `SELECT id, id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
     const checkRes = await pool.query(checkQuery, [socioNombre]);
 
     let rows;
 
     if (checkRes.rows.length > 0) {
-      // SOCIO EXISTENTE: Actualizar registro actual preservando la referencia
+      // SOCIO EXISTENTE: Actualizar registro actual
       const existingId = checkRes.rows[0].id;
       const updateQuery = `
         UPDATE nombres_fb SET
