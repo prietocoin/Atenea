@@ -49,7 +49,7 @@ function calcularTallaAutomatica(conteo) {
   return 'XL';
 }
 
-// Matriz y Configuración Semilla de los 38 Socios
+// Matriz y Configuración Semilla de los Socios
 const SEED_SOCIOS_CONFIG = {
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
@@ -653,7 +653,7 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   }
 });
 
-// NUEVO ENDPOINT: CAMBIAR ESTADO ACTIVO / INACTIVO
+// CAMBIAR ESTADO ACTIVO / INACTIVO
 app.patch('/api/socios/:nombre/estado', async (req, res) => {
   try {
     const { nombre } = req.params;
@@ -719,6 +719,7 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
   }
 });
 
+// GUARDAR / ACTUALIZAR CONFIGURACIÓN DE SOCIO (ANTI-DUPLICADOS POR NOMBRE)
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
@@ -732,8 +733,6 @@ app.post('/api/socios/config', async (req, res) => {
     }
 
     const socioNombre = nombre.trim();
-    const idGrupo = 'GRP_' + socioNombre.toUpperCase().replace(/\s+/g, '_');
-
     const cpArray = cartelera_paises || [];
     const conteoActivos = cpArray.filter(p => p.activo).length;
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
@@ -741,39 +740,64 @@ app.post('/api/socios/config', async (req, res) => {
     const jsonCartelera = JSON.stringify(cpArray);
     const jsonAjustes = JSON.stringify(ajustes || {});
 
-    const query = `
-      INSERT INTO nombres_fb (
-        id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo,
-        pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
-        cartelera_paises, ajustes
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb, $25::jsonb)
-      ON CONFLICT (id_grupo) DO UPDATE SET
-        nombre = EXCLUDED.nombre,
-        roles = EXCLUDED.roles,
-        moneda_socio = EXCLUDED.moneda_socio,
-        talla = EXCLUDED.talla,
-        whatsapp = EXCLUDED.whatsapp,
-        activo = EXCLUDED.activo,
-        pen = EXCLUDED.pen, cop = EXCLUDED.cop, clp = EXCLUDED.clp, ars = EXCLUDED.ars,
-        ves = EXCLUDED.ves, brl = EXCLUDED.brl, mxn = EXCLUDED.mxn, pyg = EXCLUDED.pyg,
-        dop = EXCLUDED.dop, crc = EXCLUDED.crc, eur = EXCLUDED.eur, cad = EXCLUDED.cad,
-        usd = EXCLUDED.usd, ecu = EXCLUDED.ecu, pan = EXCLUDED.pan, usdt = EXCLUDED.usdt,
-        cartelera_paises = EXCLUDED.cartelera_paises,
-        ajustes = EXCLUDED.ajustes
-      RETURNING *;
-    `;
+    // 1. Buscar si el socio ya existe por Nombre
+    const checkQuery = `SELECT id, id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
+    const checkRes = await pool.query(checkQuery, [socioNombre]);
 
-    const { rows } = await pool.query(query, [
-      idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
-      activo ?? true,
-      pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
-      dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
-      jsonCartelera, jsonAjustes
-    ]);
+    let rows;
+
+    if (checkRes.rows.length > 0) {
+      // SOCIO EXISTENTE: Actualizar registro actual preservando la referencia
+      const existingId = checkRes.rows[0].id;
+      const updateQuery = `
+        UPDATE nombres_fb SET
+          nombre = $1,
+          roles = $2,
+          moneda_socio = $3,
+          talla = $4,
+          whatsapp = $5,
+          activo = $6,
+          pen = $7, cop = $8, clp = $9, ars = $10, ves = $11, brl = $12, mxn = $13, pyg = $14,
+          dop = $15, crc = $16, eur = $17, cad = $18, usd = $19, ecu = $20, pan = $21, usdt = $22,
+          cartelera_paises = $23::jsonb,
+          ajustes = $24::jsonb
+        WHERE id = $25
+        RETURNING *;
+      `;
+      const updateRes = await pool.query(updateQuery, [
+        socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, 
+        whatsapp || checkRes.rows[0].whatsapp || '',
+        activo ?? true,
+        pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
+        dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
+        jsonCartelera, jsonAjustes, existingId
+      ]);
+      rows = updateRes.rows;
+    } else {
+      // NUEVO SOCIO: Insertar nueva fila
+      const idGrupo = whatsapp && whatsapp.trim() ? whatsapp.trim() : ('GRP_' + socioNombre.toUpperCase().replace(/\s+/g, '_'));
+      const insertQuery = `
+        INSERT INTO nombres_fb (
+          id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo,
+          pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
+          cartelera_paises, ajustes
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb, $25::jsonb)
+        RETURNING *;
+      `;
+      const insertRes = await pool.query(insertQuery, [
+        idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
+        activo ?? true,
+        pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
+        dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
+        jsonCartelera, jsonAjustes
+      ]);
+      rows = insertRes.rows;
+    }
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
+    console.error("Error guardando socio:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
