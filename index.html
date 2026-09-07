@@ -1082,11 +1082,12 @@
         ],
 
         async init() {
-          await this.cargarUltimasTasasMercado();
-          await this.cargarSocios();
-          await this.cargarDirectorio();
-          await this.cargarComprobantes();
-          await this.cargarReportes();
+          // EJECUCIÓN AISLADA PARA EVITAR BLOQUEOS SI ALGÚN ENDPOINT TARDA O FALLA
+          await this.cargarUltimasTasasMercado().catch(e => console.error(e));
+          await this.cargarSocios().catch(e => console.error(e));
+          await this.cargarDirectorio().catch(e => console.error(e));
+          await this.cargarComprobantes().catch(e => console.error(e));
+          await this.cargarReportes().catch(e => console.error(e));
         },
 
         get listaHashesDisponibles() {
@@ -1128,7 +1129,7 @@
         get monedaBaseSocioReporte() {
           if (!this.filtroReporteNombre) return 'USDT';
           const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          const reg = (this.directorio || []).find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
           if (reg && reg.moneda_socio) {
             return (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio).toUpperCase();
           }
@@ -1231,21 +1232,29 @@
 
         abrirConfigGeneral() {
           this.paisMaestroGeneral = 'PEN';
-          this.socioConfigEdit.nombre = 'GENERAL';
           
-          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === 'GENERAL');
-          
-          if (reg) {
-            this.cargarSocioParaEditar();
+          const ejecutarAbrir = () => {
+            const reg = (this.directorio || []).find(d => d.nombre && d.nombre.trim().toUpperCase() === 'GENERAL');
+            
+            if (reg) {
+              this.socioConfigEdit.nombre = 'GENERAL';
+              this.cargarSocioParaEditar();
+            } else {
+              this.prepararNuevoSocio();
+              this.socioConfigEdit.nombre = 'GENERAL';
+              this.socioConfigEdit.roles = 'MATRIZ_GENERAL';
+              this.socioConfigEdit.activo = false;
+            }
+            
+            this.tabConfigActive = 'reglas';
+            this.modalConfigSocioAbierto = true;
+          };
+
+          if (!this.directorio || this.directorio.length === 0) {
+            this.cargarDirectorio().then(() => ejecutarAbrir());
           } else {
-            this.prepararNuevoSocio();
-            this.socioConfigEdit.nombre = 'GENERAL';
-            this.socioConfigEdit.roles = 'MATRIZ_GENERAL';
-            this.socioConfigEdit.activo = false;
+            ejecutarAbrir();
           }
-          
-          this.tabConfigActive = 'reglas';
-          this.modalConfigSocioAbierto = true;
         },
 
         agregarNuevoPaisAMatriz() {
@@ -1340,7 +1349,9 @@
         async cargarDirectorio() {
           try {
             const res = await fetch('/api/directorio');
-            if (res.ok) this.directorio = await res.json();
+            if (res.ok) {
+              this.directorio = await res.json();
+            }
           } catch (err) {
             console.error("Error al cargar directorio:", err);
           }
@@ -1356,7 +1367,7 @@
         cargarSocioParaEditar() {
           if (!this.socioConfigEdit.nombre) return;
           const socioNorm = this.socioConfigEdit.nombre.trim().toUpperCase();
-          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          const reg = (this.directorio || []).find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
 
           if (reg) {
             this.socioConfigEdit.roles = reg.roles || (socioNorm === 'GENERAL' ? 'MATRIZ_GENERAL' : 'SOCIO');
@@ -1571,7 +1582,7 @@
           }
         },
 
-        // EXACTA FUNCIÓN DE TRUNCADO MATEMÁTICO DE N8N APLICADA AL REPORTE
+        // ALGORITMO DE TRUNCADO MATEMÁTICO IDÉNTICO A N8N
         truncarTasaOficial(valor) {
           const num = Math.abs(parseFloat(valor) || 0);
           if (num === 0) return '0';
