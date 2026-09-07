@@ -22,6 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
+// FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
 const FACTORES_BASE_MERCADO = {
   "P-USDT": 1.0,   "D-USDT": 1.0,
   "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
@@ -41,6 +42,24 @@ const FACTORES_BASE_MERCADO = {
   "P-CAD": 0.962,  "D-CAD": 1.042,
   "P-BOB": 0.926,  "D-BOB": 1.087
 };
+
+function aplicarReglaPrecision(val) {
+  const v = Math.abs(parseFloat(val) || 0);
+  if (v === 0) return 0;
+
+  if (v > 499.99) {
+    return Math.trunc(v);
+  } else if (v < 10) {
+    if (v < 1) {
+      const magnitud = Math.floor(Math.log10(v));
+      const f = Math.pow(10, 2 - magnitud);
+      return Math.trunc(v * f) / f;
+    }
+    return Math.trunc(v * 1000) / 1000;
+  } else {
+    return Math.trunc(v * 100) / 100;
+  }
+}
 
 function calcularTallaAutomatica(conteo) {
   if (conteo <= 3) return 'S';
@@ -178,7 +197,64 @@ const SEED_SOCIOS_CONFIG = {
 
 async function initDB() {
   try {
+    // CREACIÓN GARANTIZADA DE TODAS LAS TABLAS DEL SISTEMA
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS nombres_fb (
+        id SERIAL PRIMARY KEY,
+        id_grupo VARCHAR(100),
+        nombre VARCHAR(100) UNIQUE,
+        roles VARCHAR(50) DEFAULT 'SOCIO',
+        moneda_socio VARCHAR(20) DEFAULT 'USDT',
+        talla VARCHAR(10) DEFAULT 'M',
+        whatsapp VARCHAR(100),
+        activo BOOLEAN DEFAULT TRUE,
+        recordar_activo BOOLEAN DEFAULT FALSE,
+        pen VARCHAR(10) DEFAULT 'A',
+        cop VARCHAR(10) DEFAULT 'A',
+        clp VARCHAR(10) DEFAULT 'A',
+        ars VARCHAR(10) DEFAULT 'A',
+        ves VARCHAR(10) DEFAULT 'A',
+        brl VARCHAR(10) DEFAULT 'A',
+        mxn VARCHAR(10) DEFAULT 'A',
+        pyg VARCHAR(10) DEFAULT 'A',
+        usd VARCHAR(10) DEFAULT 'A',
+        ecu VARCHAR(10) DEFAULT 'A',
+        eur VARCHAR(10) DEFAULT 'A',
+        cad VARCHAR(10) DEFAULT 'A',
+        dop VARCHAR(10) DEFAULT 'A',
+        crc VARCHAR(10) DEFAULT 'A',
+        pan VARCHAR(10) DEFAULT 'A',
+        usdt VARCHAR(10) DEFAULT 'A',
+        cartelera_paises JSONB DEFAULT '[]'::jsonb,
+        ajustes JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS cola_fb (
+        id SERIAL PRIMARY KEY,
+        hash_largo VARCHAR(255) UNIQUE,
+        hash_corto VARCHAR(50),
+        timestamp BIGINT,
+        nombre_socio_1 VARCHAR(100),
+        nombre_socio_2 VARCHAR(100),
+        url_imagen TEXT,
+        conteo INT DEFAULT 1,
+        estado VARCHAR(50) DEFAULT 'PENDIENTE',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS comprobantes_fb (
+        id SERIAL PRIMARY KEY,
+        hash_largo VARCHAR(255) UNIQUE,
+        monto NUMERIC(18,2),
+        moneda VARCHAR(20),
+        banco VARCHAR(100),
+        referencia VARCHAR(100),
+        titular VARCHAR(150),
+        procesado_ia BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS mercado_tasas (
         id SERIAL PRIMARY KEY,
         id_tasa VARCHAR(20) NOT NULL,
@@ -200,31 +276,7 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
     `);
 
-    await pool.query(`
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cop VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS clp VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ves VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ars VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS mxn VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS brl VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pyg VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS dop VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS crc VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS eur VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cad VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ecu VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pan VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usdt VARCHAR(10);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS talla VARCHAR(10) DEFAULT 'M';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS recordar_activo BOOLEAN DEFAULT FALSE;
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
-    `);
-
+    // SIEMBRA INICIAL DE SOCIOS
     for (const [socioKey, config] of Object.entries(SEED_SOCIOS_CONFIG)) {
       const check = await pool.query(
         `SELECT id_grupo FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`,
@@ -284,8 +336,9 @@ async function initDB() {
         );
       }
     }
-    console.log('✅ Base de datos sembrada.');
+    console.log('✅ Base de datos verificada y sembrada.');
 
+    // RECREACIÓN DE LA VISTA AUDITADA
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -309,7 +362,7 @@ async function initDB() {
         c.hash_largo,
         c.hash_corto,
         c.timestamp AS timestamp_comprobante,
-        to_timestamp(c.timestamp) AS fecha_hora_comprobante,
+        to_timestamp(CASE WHEN c.timestamp > 10000000000 THEN c.timestamp/1000 ELSE c.timestamp END) AS fecha_hora_comprobante,
         COALESCE(f.monto, 0) AS monto,
         COALESCE(UPPER(f.moneda), 'USDT') AS moneda,
         f.banco,
@@ -345,9 +398,10 @@ async function initDB() {
        AND mt.moneda = UPPER(f.moneda)
       LEFT JOIN mercado_tasas mt_primer
         ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
-       AND mt_primer.moneda = UPPER(f.moneda);
+       AND mt_primer.moneda = UPPER(f.moneda)
+      WHERE COALESCE(c.estado, '') != 'DESCARTADO';
     `);
-    console.log('✅ Vista v_comprobantes_auditados sincronizada con LEFT JOIN.');
+    console.log('✅ Vista v_comprobantes_auditados activa.');
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -516,7 +570,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES SEGUROS
+// HANDLER COMPROBANTES Y REPORTES CON CASTEO NUMÉRICO ULTRA-SEGURO
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -557,7 +611,12 @@ const getComprobantesHandler = async (req, res) => {
           mt_s1.tasa_base,
           CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_1,
-        COALESCE((n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_1,
+
+        CASE 
+          WHEN (n1.ajustes->>(t.tipo_op || '-' || v.moneda)) ~ '^[0-9]+(\.[0-9]+)?$' 
+          THEN (n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric 
+          ELSE 1.0 
+        END AS factor_1,
 
         CASE 
           WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
@@ -569,7 +628,12 @@ const getComprobantesHandler = async (req, res) => {
           mt_s2.tasa_base,
           CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_2,
-        COALESCE((n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_2
+
+        CASE 
+          WHEN (n2.ajustes->>(t.tipo_op || '-' || v.moneda)) ~ '^[0-9]+(\.[0-9]+)?$' 
+          THEN (n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric 
+          ELSE 1.0 
+        END AS factor_2
 
       FROM v_comprobantes_auditados v
       LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
@@ -661,7 +725,6 @@ const getComprobantesHandler = async (req, res) => {
 
     const { rows } = await pool.query(query, values);
 
-    // Mismo cálculo original exacto sin romper nada
     const rowsProcesadas = rows.map(row => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
@@ -913,7 +976,6 @@ app.post('/api/socios/config', async (req, res) => {
   }
 });
 
-// ENDPOINT PARA ENVIAR REPORTE A N8N CON VISTA PREVIA CONFIRMADA
 app.post('/api/reportes/enviar-n8n', async (req, res) => {
   try {
     const { socio, rol, saldo_anterior, nuevo_saldo, moneda_socio, operaciones, remoteJid } = req.body;
@@ -922,7 +984,6 @@ app.post('/api/reportes/enviar-n8n', async (req, res) => {
       return res.status(400).json({ success: false, message: 'El nombre del socio es requerido.' });
     }
 
-    // AQUI INYECTAR EN N8N (Puedes enviar un Webhook directo o meterlo a notificaciones_tasas)
     await pool.query(
       `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
       [`REPORTE_${socio}_${Date.now()}`]
