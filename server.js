@@ -14,15 +14,14 @@ const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgre
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || DEFAULT_DB_URL,
-  ssl: false,
+  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('postgres-db') ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });
 
-pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
+pool.on('error', (err) => console.error('⚠️ Error crítico en el Pool de PostgreSQL:', err.message));
 
-// FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
 const FACTORES_BASE_MERCADO = {
   "P-USDT": 1.0,   "D-USDT": 1.0,
   "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
@@ -197,86 +196,65 @@ const SEED_SOCIOS_CONFIG = {
 
 async function initDB() {
   try {
-    // CREACIÓN GARANTIZADA DE TODAS LAS TABLAS DEL SISTEMA
+    // 1. GARANTIZAR LA EXISTENCIA DE TODAS LAS TABLAS DEL SISTEMA
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS nombres_fb (
-        id SERIAL PRIMARY KEY,
-        id_grupo VARCHAR(100),
-        nombre VARCHAR(100) UNIQUE,
-        roles VARCHAR(50) DEFAULT 'SOCIO',
-        moneda_socio VARCHAR(20) DEFAULT 'USDT',
-        talla VARCHAR(10) DEFAULT 'M',
-        whatsapp VARCHAR(100),
-        activo BOOLEAN DEFAULT TRUE,
-        recordar_activo BOOLEAN DEFAULT FALSE,
-        pen VARCHAR(10) DEFAULT 'A',
-        cop VARCHAR(10) DEFAULT 'A',
-        clp VARCHAR(10) DEFAULT 'A',
-        ars VARCHAR(10) DEFAULT 'A',
-        ves VARCHAR(10) DEFAULT 'A',
-        brl VARCHAR(10) DEFAULT 'A',
-        mxn VARCHAR(10) DEFAULT 'A',
-        pyg VARCHAR(10) DEFAULT 'A',
-        usd VARCHAR(10) DEFAULT 'A',
-        ecu VARCHAR(10) DEFAULT 'A',
-        eur VARCHAR(10) DEFAULT 'A',
-        cad VARCHAR(10) DEFAULT 'A',
-        dop VARCHAR(10) DEFAULT 'A',
-        crc VARCHAR(10) DEFAULT 'A',
-        pan VARCHAR(10) DEFAULT 'A',
-        usdt VARCHAR(10) DEFAULT 'A',
-        cartelera_paises JSONB DEFAULT '[]'::jsonb,
-        ajustes JSONB DEFAULT '{}'::jsonb,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS cola_fb (
-        id SERIAL PRIMARY KEY,
-        hash_largo VARCHAR(255) UNIQUE,
-        hash_corto VARCHAR(50),
-        timestamp BIGINT,
-        nombre_socio_1 VARCHAR(100),
-        nombre_socio_2 VARCHAR(100),
-        url_imagen TEXT,
-        conteo INT DEFAULT 1,
-        estado VARCHAR(50) DEFAULT 'PENDIENTE',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS comprobantes_fb (
-        id SERIAL PRIMARY KEY,
-        hash_largo VARCHAR(255) UNIQUE,
-        monto NUMERIC(18,2),
-        moneda VARCHAR(20),
-        banco VARCHAR(100),
-        referencia VARCHAR(100),
-        titular VARCHAR(150),
-        procesado_ia BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS mercado_tasas (
-        id SERIAL PRIMARY KEY,
-        id_tasa VARCHAR(20) NOT NULL,
-        moneda VARCHAR(10) NOT NULL,
-        tasa_base NUMERIC(18, 6) NOT NULL,
-        timestamp BIGINT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS notificaciones_tasas (
-        id SERIAL PRIMARY KEY,
-        id_tasa VARCHAR(50) NOT NULL,
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_id_tasa ON mercado_tasas(id_tasa);
-      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_moneda_ts ON mercado_tasas(moneda, timestamp DESC);
-      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_ts ON mercado_tasas (timestamp ASC);
-      CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
+      CREATE TABLE IF NOT EXISTS nombres_fb (id SERIAL PRIMARY KEY, nombre VARCHAR(100) UNIQUE);
+      CREATE TABLE IF NOT EXISTS cola_fb (id SERIAL PRIMARY KEY, hash_largo VARCHAR(255) UNIQUE);
+      CREATE TABLE IF NOT EXISTS comprobantes_fb (id SERIAL PRIMARY KEY, hash_largo VARCHAR(255) UNIQUE);
+      CREATE TABLE IF NOT EXISTS mercado_tasas (id SERIAL PRIMARY KEY, id_tasa VARCHAR(20), moneda VARCHAR(10), tasa_base NUMERIC(18,6), timestamp BIGINT);
+      CREATE TABLE IF NOT EXISTS notificaciones_tasas (id SERIAL PRIMARY KEY, id_tasa VARCHAR(50), creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
     `);
 
-    // SIEMBRA INICIAL DE SOCIOS
+    // 2. MIGRACIÓN FORZADA (Añade absolutamente todas las columnas si la base de datos es antigua)
+    await pool.query(`
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS id_grupo VARCHAR(100);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS roles VARCHAR(50) DEFAULT 'SOCIO';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS moneda_socio VARCHAR(20) DEFAULT 'USDT';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS talla VARCHAR(10) DEFAULT 'M';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(100);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS recordar_activo BOOLEAN DEFAULT FALSE;
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cop VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS clp VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ars VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ves VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS brl VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS mxn VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pyg VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ecu VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS eur VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cad VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS dop VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS crc VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pan VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usdt VARCHAR(10) DEFAULT 'A';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS hash_corto VARCHAR(50);
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS timestamp BIGINT;
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS nombre_socio_1 VARCHAR(100);
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS nombre_socio_2 VARCHAR(100);
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS url_imagen TEXT;
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS conteo INT DEFAULT 1;
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS estado VARCHAR(50) DEFAULT 'PENDIENTE';
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS monto NUMERIC(18,2);
+      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS moneda VARCHAR(20);
+      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS banco VARCHAR(100);
+      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS referencia VARCHAR(100);
+      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS titular VARCHAR(150);
+      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS procesado_ia BOOLEAN DEFAULT FALSE;
+      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+      ALTER TABLE mercado_tasas ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+    `);
+
+    // 3. SIEMBRA INICIAL DE SOCIOS
     for (const [socioKey, config] of Object.entries(SEED_SOCIOS_CONFIG)) {
       const check = await pool.query(
         `SELECT id_grupo FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`,
@@ -325,7 +303,7 @@ async function initDB() {
             pen, cop, clp, ars, ves, brl, mxn, pyg, usd, ecu, eur, usdt,
             cartelera_paises, ajustes
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb)
-          ON CONFLICT DO NOTHING;`,
+          ON CONFLICT (nombre) DO NOTHING;`,
           [
             config.id_grupo, config.nombre, config.roles, config.moneda_socio, config.talla, config.whatsapp,
             config.activo ?? true,
@@ -338,7 +316,7 @@ async function initDB() {
     }
     console.log('✅ Base de datos verificada y sembrada.');
 
-    // RECREACIÓN DE LA VISTA AUDITADA
+    // 4. RECREACIÓN DE LA VISTA AUDITADA
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -493,8 +471,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
     if (!codigoTasa) {
       const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
       if (lastRes.rows.length > 0) {
-        const lastLot = lastRes.rows[0].id_tasa;
-        const match = lastLot.match(/\d+/);
+        const match = lastRes.rows[0].id_tasa.match(/\d+/);
         const num = match ? parseInt(match[0], 10) + 1 : 1;
         codigoTasa = `T${String(num).padStart(3, '0')}`;
       } else {
@@ -613,7 +590,7 @@ const getComprobantesHandler = async (req, res) => {
         ) AS tasa_base_socio_1,
 
         CASE 
-          WHEN (n1.ajustes->>(t.tipo_op || '-' || v.moneda)) ~ '^[0-9]+(\.[0-9]+)?$' 
+          WHEN (n1.ajustes->>(t.tipo_op || '-' || v.moneda)) ~ '^[0-9]+(\\.[0-9]+)?$' 
           THEN (n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric 
           ELSE 1.0 
         END AS factor_1,
@@ -630,7 +607,7 @@ const getComprobantesHandler = async (req, res) => {
         ) AS tasa_base_socio_2,
 
         CASE 
-          WHEN (n2.ajustes->>(t.tipo_op || '-' || v.moneda)) ~ '^[0-9]+(\.[0-9]+)?$' 
+          WHEN (n2.ajustes->>(t.tipo_op || '-' || v.moneda)) ~ '^[0-9]+(\\.[0-9]+)?$' 
           THEN (n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric 
           ELSE 1.0 
         END AS factor_2
@@ -991,7 +968,7 @@ app.post('/api/reportes/enviar-n8n', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Reporte de ${socio} enviado exitosamente a n8n para generación de imagen y envío por Evolution API.`
+      message: `Reporte de ${socio} enviado exitosamente a n8n para generación de imagen.`
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
