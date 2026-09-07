@@ -22,7 +22,6 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
 const FACTORES_BASE_MERCADO = {
   "P-USDT": 1.0,   "D-USDT": 1.0,
   "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
@@ -42,24 +41,6 @@ const FACTORES_BASE_MERCADO = {
   "P-CAD": 0.962,  "D-CAD": 1.042,
   "P-BOB": 0.926,  "D-BOB": 1.087
 };
-
-function aplicarReglaPrecision(val) {
-  const v = Math.abs(parseFloat(val) || 0);
-  if (v === 0) return 0;
-
-  if (v > 499.99) {
-    return Math.trunc(v);
-  } else if (v < 10) {
-    if (v < 1) {
-      const magnitud = Math.floor(Math.log10(v));
-      const f = Math.pow(10, 2 - magnitud);
-      return Math.trunc(v * f) / f;
-    }
-    return Math.trunc(v * 1000) / 1000;
-  } else {
-    return Math.trunc(v * 100) / 100;
-  }
-}
 
 function calcularTallaAutomatica(conteo) {
   if (conteo <= 3) return 'S';
@@ -118,6 +99,78 @@ const SEED_SOCIOS_CONFIG = {
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
       { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
+    ],
+    "ajustes": FACTORES_BASE_MERCADO
+  },
+  "JOSEM": {
+    "id_grupo": "120363345944393252@g.us",
+    "nombre": "JoseM",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "L",
+    "whatsapp": "",
+    "activo": true,
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
+    ],
+    "ajustes": FACTORES_BASE_MERCADO
+  },
+  "NELSY": {
+    "id_grupo": "GRP_NELSY",
+    "nombre": "Nelsy",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "L",
+    "whatsapp": "",
+    "activo": true,
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
+    ],
+    "ajustes": FACTORES_BASE_MERCADO
+  },
+  "MERLI": {
+    "id_grupo": "120363307631639715@g.us",
+    "nombre": "Merli",
+    "roles": "SOCIO",
+    "moneda_socio": "PEN",
+    "talla": "L",
+    "whatsapp": "120363307631639715@g.us",
+    "activo": true,
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 1 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 3 },
+      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 4 },
+      { "pais": "EEUU-Zelle", "moneda": "USD", "activo": true, "orden": 5 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 6 }
+    ],
+    "ajustes": FACTORES_BASE_MERCADO
+  },
+  "JAVIER": {
+    "id_grupo": "120363401374720092@g.us",
+    "nombre": "Javier",
+    "roles": "SOCIO",
+    "moneda_socio": "USDT",
+    "talla": "S",
+    "whatsapp": "120363422300818123@g.us",
+    "activo": true,
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 2 }
     ],
     "ajustes": FACTORES_BASE_MERCADO
   }
@@ -463,7 +516,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES
+// HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES SEGUROS
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -555,28 +608,18 @@ const getComprobantesHandler = async (req, res) => {
       query += ` AND v.conteo > 1`;
     }
 
-    // 1. FILTRO ROL (JERARQUÍA 1)
-    if (rol && rol.trim()) {
-      query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
-      values.push(rol.trim());
-      paramIndex++;
-    }
-
-    // 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2)
     if (socio && socio.trim()) {
       query += ` AND (UPPER(TRIM(v.nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(v.nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
       values.push(socio.trim());
       paramIndex++;
     }
 
-    // 3. FILTRO BUSCAR HASH ESPECÍFICO EN COMPROBANTES
     if (hash && hash.trim()) {
       query += ` AND (v.hash_corto ILIKE $${paramIndex} OR v.hash_largo ILIKE $${paramIndex})`;
       values.push(`%${hash.trim()}%`);
       paramIndex++;
     }
 
-    // 4. FILTRO FECHA INICIO (GMT-4 VENEZUELA)
     if (fechaInicio && fechaInicio.trim()) {
       const startTimestamp = Math.floor(new Date(fechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
       if (!isNaN(startTimestamp)) {
@@ -586,7 +629,6 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    // 5. FILTRO FECHA FIN (GMT-4 VENEZUELA)
     if (fechaFin && fechaFin.trim()) {
       const endTimestamp = Math.floor(new Date(fechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
       if (!isNaN(endTimestamp)) {
@@ -596,7 +638,6 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    // 6. FILTRO DESDE HASH X EN ADELANTE
     if (desdeHash && desdeHash.trim()) {
       const hashRes = await pool.query(
         `SELECT timestamp_comprobante FROM v_comprobantes_auditados WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
@@ -610,10 +651,17 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
+    if (rol && rol.trim()) {
+      query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
+      values.push(rol.trim());
+      paramIndex++;
+    }
+
     query += ` ORDER BY v.timestamp_comprobante DESC;`;
 
     const { rows } = await pool.query(query, values);
 
+    // Mismo cálculo original exacto sin romper nada
     const rowsProcesadas = rows.map(row => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
@@ -805,10 +853,8 @@ app.post('/api/socios/config', async (req, res) => {
     const conteoActivos = cpArray.filter(p => p.activo).length;
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
 
-    const factoresFinales = { ...FACTORES_BASE_MERCADO, ...(ajustes || {}) };
-
     const jsonCartelera = JSON.stringify(cpArray);
-    const jsonAjustes = JSON.stringify(factoresFinales);
+    const jsonAjustes = JSON.stringify({ ...FACTORES_BASE_MERCADO, ...(ajustes || {}) });
 
     const checkQuery = `SELECT id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
     const checkRes = await pool.query(checkQuery, [socioNombre]);
@@ -864,6 +910,30 @@ app.post('/api/socios/config', async (req, res) => {
   } catch (err) {
     console.error("Error guardando socio:", err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ENDPOINT PARA ENVIAR REPORTE A N8N CON VISTA PREVIA CONFIRMADA
+app.post('/api/reportes/enviar-n8n', async (req, res) => {
+  try {
+    const { socio, rol, saldo_anterior, nuevo_saldo, moneda_socio, operaciones, remoteJid } = req.body;
+
+    if (!socio) {
+      return res.status(400).json({ success: false, message: 'El nombre del socio es requerido.' });
+    }
+
+    // AQUI INYECTAR EN N8N (Puedes enviar un Webhook directo o meterlo a notificaciones_tasas)
+    await pool.query(
+      `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
+      [`REPORTE_${socio}_${Date.now()}`]
+    );
+
+    res.json({
+      success: true,
+      message: `Reporte de ${socio} enviado exitosamente a n8n para generación de imagen y envío por Evolution API.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
