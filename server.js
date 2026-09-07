@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
+// FACTORES BASE DE MERCADO MATRIZ COMPLETA
 const FACTORES_BASE_MERCADO = {
   "P-USDT": 1.0,   "D-USDT": 1.0,
   "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
@@ -312,13 +312,13 @@ app.get('/health', (req, res) => res.status(200).send('OK'));
 
 app.get('/api/test-db', async (req, res) => {
   try {
-    const testQuery = await pool.query('SELECT NOW();');
+    const testQuery = await pool.query("SELECT NOW() AT TIME ZONE 'America/Caracas' AS ahora_ve;");
     const countMaster = await pool.query(
       'SELECT COUNT(*) FROM comprobantes_fb f INNER JOIN cola_fb c ON f.hash_largo = c.hash_largo WHERE c.conteo > 1;'
     );
     res.json({
       status: 'OK',
-      hora_servidor: testQuery.rows[0].now,
+      hora_servidor_ve: testQuery.rows[0].ahora_ve,
       registros_tabla_maestra: parseInt(countMaster.rows[0].count)
     });
   } catch (err) {
@@ -415,7 +415,6 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// REENVIAR LOTE EXISTENTE
 app.post('/api/tasas/reenviar', async (req, res) => {
   try {
     const { id_tasa } = req.body;
@@ -437,7 +436,6 @@ app.post('/api/tasas/reenviar', async (req, res) => {
   }
 });
 
-// DESACTIVAR TODOS LOS SOCIOS (EXCEPTO SI SE MANTIENE EL CONTROL)
 app.patch('/api/socios/desactivar-todos', async (req, res) => {
   try {
     await pool.query(`UPDATE nombres_fb SET activo = FALSE WHERE UPPER(TRIM(nombre)) != 'GENERAL';`);
@@ -447,7 +445,6 @@ app.patch('/api/socios/desactivar-todos', async (req, res) => {
   }
 });
 
-// GUARDAR PLANTILLA DE VIGENTES
 app.post('/api/socios/guardar-vigentes', async (req, res) => {
   try {
     await pool.query(`UPDATE nombres_fb SET recordar_activo = activo;`);
@@ -457,7 +454,6 @@ app.post('/api/socios/guardar-vigentes', async (req, res) => {
   }
 });
 
-// RESTAURAR PLANTILLA DE VIGENTES
 app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   try {
     await pool.query(`UPDATE nombres_fb SET activo = COALESCE(recordar_activo, FALSE);`);
@@ -467,9 +463,10 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
+// GET COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES: NOMBRE, FECHA INI, FECHA FIN, DESDE HASH, ROL
 const getComprobantesHandler = async (req, res) => {
   try {
-    const { socio, fechaInicio, hash, soloDuplicados } = req.query;
+    const { socio, fechaInicio, fechaFin, desdeHash, rol, soloDuplicados } = req.query;
 
     let query = `
       SELECT 
@@ -501,6 +498,7 @@ const getComprobantesHandler = async (req, res) => {
           WHEN UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
           ELSE UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT')))
         END AS moneda_socio_1,
+        n1.roles AS rol_socio_1,
         
         COALESCE(
           mt_s1.tasa_base,
@@ -512,6 +510,7 @@ const getComprobantesHandler = async (req, res) => {
           WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
           ELSE UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT')))
         END AS moneda_socio_2,
+        n2.roles AS rol_socio_2,
 
         COALESCE(
           mt_s2.tasa_base,
@@ -556,22 +555,47 @@ const getComprobantesHandler = async (req, res) => {
       query += ` AND v.conteo > 1`;
     }
 
+    // 1. FILTRO NOMBRE (SOCIO / GRUPO / ASESOR)
     if (socio && socio.trim()) {
       query += ` AND (UPPER(TRIM(v.nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(v.nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
       values.push(socio.trim());
       paramIndex++;
     }
 
+    // 2. FILTRO FECHA INICIO (GMT-4 VENEZUELA)
     if (fechaInicio) {
-      const startTimestamp = Math.floor(new Date(fechaInicio).getTime() / 1000);
+      const startTimestamp = Math.floor(new Date(fechaInicio + 'T00:00:00-04:00').getTime() / 1000);
       query += ` AND v.timestamp_comprobante >= $${paramIndex}`;
       values.push(startTimestamp);
       paramIndex++;
     }
 
-    if (hash) {
-      query += ` AND v.hash_corto = $${paramIndex}`;
-      values.push(hash);
+    // 3. FILTRO FECHA FIN (GMT-4 VENEZUELA)
+    if (fechaFin) {
+      const endTimestamp = Math.floor(new Date(fechaFin + 'T23:59:59-04:00').getTime() / 1000);
+      query += ` AND v.timestamp_comprobante <= $${paramIndex}`;
+      values.push(endTimestamp);
+      paramIndex++;
+    }
+
+    // 4. FILTRO DESDE HASH X EN ADELANTE
+    if (desdeHash && desdeHash.trim()) {
+      const hashRes = await pool.query(
+        `SELECT timestamp_comprobante FROM v_comprobantes_auditados WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
+        [desdeHash.trim()]
+      );
+      if (hashRes.rows.length > 0) {
+        const hashTs = hashRes.rows[0].timestamp_comprobante;
+        query += ` AND v.timestamp_comprobante >= $${paramIndex}`;
+        values.push(hashTs);
+        paramIndex++;
+      }
+    }
+
+    // 5. FILTRO ROL
+    if (rol && rol.trim()) {
+      query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
+      values.push(rol.trim());
       paramIndex++;
     }
 
@@ -630,6 +654,7 @@ const getComprobantesHandler = async (req, res) => {
 
 app.get('/api/comprobantes', getComprobantesHandler);
 app.get('/api/cola', getComprobantesHandler);
+app.get('/api/reportes', getComprobantesHandler);
 
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
@@ -708,7 +733,7 @@ app.get('/api/socios', async (req, res) => {
         UNION
         SELECT nombre_socio_2 AS nombre FROM cola_fb WHERE nombre_socio_2 IS NOT NULL AND nombre_socio_2 != ''
         UNION
-        SELECT nombre FROM nombres_fb WHERE roles = 'SOCIO' OR roles = 'MATRIZ_GENERAL'
+        SELECT nombre FROM nombres_fb WHERE roles IN ('SOCIO', 'MATRIZ_GENERAL', 'ASESOR', 'GRUPO', 'COMPRAS')
       ) s ORDER BY nombre ASC;
     `;
     const { rows } = await pool.query(query);
