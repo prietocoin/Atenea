@@ -169,6 +169,13 @@ async function initDB() {
         timestamp BIGINT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS notificaciones_tasas (
+        id SERIAL PRIMARY KEY,
+        id_tasa VARCHAR(50) NOT NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE INDEX IF NOT EXISTS idx_mercado_tasas_id_tasa ON mercado_tasas(id_tasa);
       CREATE INDEX IF NOT EXISTS idx_mercado_tasas_moneda_ts ON mercado_tasas(moneda, timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_mercado_tasas_ts ON mercado_tasas (timestamp ASC);
@@ -429,6 +436,12 @@ app.post('/api/tasas/publicar', async (req, res) => {
         );
       }
     }
+
+    // DISPARO ÚNICO PARA N8N
+    await pool.query(
+      `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
+      [codigoTasa]
+    );
 
     res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
   } catch (err) {
@@ -718,7 +731,7 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
   }
 });
 
-// GUARDAR / ACTUALIZAR CONFIGURACIÓN DE SOCIO (ACTUALIZA DIRECTAMENTE POR NOMBRE)
+// GUARDAR / ACTUALIZAR CONFIGURACIÓN DE SOCIO
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
@@ -739,14 +752,12 @@ app.post('/api/socios/config', async (req, res) => {
     const jsonCartelera = JSON.stringify(cpArray);
     const jsonAjustes = JSON.stringify(ajustes || {});
 
-    // Buscar si el socio ya existe por Nombre
     const checkQuery = `SELECT id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
     const checkRes = await pool.query(checkQuery, [socioNombre]);
 
     let rows;
 
     if (checkRes.rows.length > 0) {
-      // SOCIO EXISTENTE: Actualizar directamente filtrando por nombre
       const updateQuery = `
         UPDATE nombres_fb SET
           roles = $1,
@@ -771,7 +782,6 @@ app.post('/api/socios/config', async (req, res) => {
       ]);
       rows = updateRes.rows;
     } else {
-      // NUEVO SOCIO: Insertar nueva fila
       const idGrupo = whatsapp && whatsapp.trim() ? whatsapp.trim() : ('GRP_' + socioNombre.toUpperCase().replace(/\s+/g, '_'));
       const insertQuery = `
         INSERT INTO nombres_fb (
