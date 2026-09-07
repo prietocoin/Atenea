@@ -77,7 +77,7 @@
     <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 p-3 md:p-6 overflow-x-hidden flex flex-col">
       
-      <!-- VISTA COMPROBANTES -->
+      <!-- 1. VISTA COMPROBANTES -->
       <template x-if="vistaActiva === 'comprobantes'">
         <div class="space-y-4 flex-1 flex flex-col">
           
@@ -93,7 +93,7 @@
             </div>
           </div>
 
-          <!-- FILTROS -->
+          <!-- FILTROS COMPROBANTES -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
             <select x-model="filtroSocio" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 outline-none">
               <option value="">Todos los Socios</option>
@@ -109,7 +109,7 @@
             </label>
           </div>
 
-          <!-- 📱 VISTA MÓVIL COMPROBANTES -->
+          <!-- 📱 MÓVIL COMPROBANTES -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
             <template x-for="item in comprobantes" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
@@ -220,7 +220,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO COMPROBANTES RESTAURADA 100% CON VISTAS COMPLETAS -->
+          <!-- 💻 ESCRITORIO COMPROBANTES -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -270,7 +270,7 @@
                             <span class="text-[9px] font-bold text-slate-400" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
                           </template>
                           <template x-if="item.tasa_base || item.tasa_mercado_aplicada">
-                            <span class="text-[8px] font-mono text-slate-500 mt-0.5" x-text="'Base: ' + (item.tasa_base || item.tasa_mercado_aplicada)"></span>
+                            <span class="text-[8px] font-mono text-slate-500 mt-0.5" x-text="'Base: ' + formatTasa(item.tasa_base || item.tasa_mercado_aplicada)"></span>
                           </template>
                         </div>
                       </td>
@@ -342,7 +342,7 @@
         </div>
       </template>
 
-      <!-- VISTA TASAS CON GUÍA DE MERCADO Y BORRADOR RESTAURADA 100% -->
+      <!-- 2. VISTA TASAS -->
       <template x-if="vistaActiva === 'tasas'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -353,7 +353,7 @@
             </div>
           </div>
 
-          <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN (TABLA MERCADO) -->
+          <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN -->
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-3 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <div class="flex items-center gap-2">
@@ -374,14 +374,14 @@
                 <template x-for="(valor, moneda) in ultimasTasasMercado" :key="moneda">
                   <div class="bg-[#1a1d33] p-2 rounded-xl border border-slate-700/50 flex flex-col justify-between">
                     <span class="text-[9px] font-extrabold text-purple-400 uppercase" x-text="moneda"></span>
-                    <span class="text-xs text-emerald-300 font-mono font-extrabold mt-0.5" x-text="formatMonto(valor)"></span>
+                    <span class="text-xs text-emerald-300 font-mono font-extrabold mt-0.5" x-text="formatTasa(valor)"></span>
                   </div>
                 </template>
               </div>
             </template>
           </div>
 
-          <!-- BLOQUE 2: BORRADOR Y CAPTURA HOO PREVIO A PRODUCCIÓN -->
+          <!-- BLOQUE 2: BORRADOR PREVIO -->
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Borrador Capturado (Paso previo a Publicar)</p>
@@ -413,11 +413,10 @@
               </div>
             </template>
           </div>
-
         </div>
       </template>
 
-      <!-- VISTA REPORTES CON SALDO ANTERIOR, NUEVO SALDO, VISTA PREVIA Y FILTROS SECUENCIALES -->
+      <!-- 3. VISTA REPORTES -->
       <template x-if="vistaActiva === 'reportes'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -485,7 +484,6 @@
               <label class="block text-[9px] font-bold text-cyan-400 uppercase mb-1">Saldo Anterior</label>
               <input type="number" step="any" x-model.number="saldoAnteriorManual" placeholder="0.00" class="w-full bg-[#1a1d33] border border-cyan-500/50 text-xs text-cyan-300 font-mono font-bold rounded-lg px-2.5 py-1.5 outline-none">
             </div>
-
           </div>
 
           <!-- CARDS DE MÉTRICAS CON SALDO ANTERIOR Y NUEVO SALDO -->
@@ -541,8 +539,7 @@
 
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="c.lote_tasa_asignado || 'N/A'"></span>
-                        <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + (c.tasa_base || c.tasa_mercado_aplicada || '0')"></span>
-                        <!-- AQUI SE MUESTRA LA TASA EXACTA DEL SOCIO -->
+                        <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + formatTasa(c.tasa_base || c.tasa_mercado_aplicada)"></span>
                         <span class="text-[9px] font-mono font-bold text-emerald-300 block mt-0.5" x-text="'Tasa Socio: ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
                       </td>
 
@@ -558,7 +555,7 @@
         </div>
       </template>
 
-      <!-- VISTA DIRECTORIO DE SOCIOS -->
+      <!-- 4. VISTA DIRECTORIO DE SOCIOS -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -631,7 +628,9 @@
         </div>
       </template>
 
-      <!-- MODAL VISTA PREVIA Y CONFIRMACIÓN DE ENVÍO DE REPORTE POR EVOLUTION / N8N -->
+      <!-- MODALES GLOBALES -->
+
+      <!-- MODAL VISTA PREVIA Y CONFIRMACIÓN DE ENVÍO -->
       <div x-show="modalPreviewReporteAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#e8f5e9] border border-emerald-600 text-slate-900 rounded-2xl w-full max-w-xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col font-sans" @click.away="modalPreviewReporteAbierto = false">
           
@@ -643,7 +642,6 @@
             <button @click="modalPreviewReporteAbierto = false" class="text-slate-600 hover:text-slate-900 text-base font-bold">✕</button>
           </div>
 
-          <!-- PLANTILLA GRÁFICA DE REPORTE IDÉNTICA A LA IMAGEN -->
           <div class="bg-[#f1f8e9] p-4 rounded-xl border border-emerald-200/80 overflow-y-auto flex-1 space-y-3 shadow-inner">
             <div class="flex justify-between items-center text-xs font-bold text-slate-700 border-b border-slate-300 pb-2">
               <span>Saldo anterior</span>
@@ -675,9 +673,8 @@
             </div>
           </div>
 
-          <!-- ACCIONES DEL MODAL -->
           <div class="flex items-center justify-between pt-2 border-t border-emerald-800/20 shrink-0">
-            <span class="text-[10px] text-slate-600">Se generará la imagen y se enviará por **Evolution API**.</span>
+            <span class="text-[10px] text-slate-600">Se enviará el reporte por **Evolution API**.</span>
             <div class="flex gap-2">
               <button @click="modalPreviewReporteAbierto = false" class="px-4 py-2 bg-slate-300 text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-400">Cancelar</button>
               <button @click="confirmarYEnviarReporteEvolution()" :disabled="enviandoReporte" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1.5">
@@ -686,11 +683,10 @@
               </button>
             </div>
           </div>
-
         </div>
       </div>
 
-      <!-- MODAL AUDITORÍA DE COMPROBANTE CON TIPO OPERATIVO RESTAURADO -->
+      <!-- MODAL AUDITORÍA DE COMPROBANTE -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -822,9 +818,7 @@
             </div>
           </div>
 
-          <!-- PANTALLA 1: REGLAS Y FACTORES (APLICA TRUNCADO OFICIAL) -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
-            
             <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-800/60">
               <span class="text-xs font-bold text-slate-300" x-text="socioConfigEdit.nombre === 'GENERAL' ? ('Par Binomio Remesa desde ' + paisMaestroGeneral) : 'Reglas por País'"></span>
               <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla Auto: ' + calcularTallaDinamica(contarPaisesActivosEdit())"></span>
@@ -839,7 +833,6 @@
                       <input type="checkbox" x-model="p.activo" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600">
                       <span class="font-black text-xs text-white" x-text="p.flag + ' ' + p.nombrePais"></span>
                     </label>
-
                     <div class="flex items-center gap-1.5">
                       <span class="text-[8px] font-bold text-slate-500 uppercase">Regla:</span>
                       <select x-model="socioConfigEdit[p.code.toLowerCase()]" class="bg-[#131525] border border-slate-700 text-[10px] font-black text-purple-300 rounded px-1.5 py-0.5 outline-none focus:border-purple-500">
@@ -852,19 +845,16 @@
                     </div>
                   </div>
 
-                  <!-- MODO GENERAL: PAR BINOMIO ÚNICO "REMESA" -->
+                  <!-- MODO GENERAL: BINOMIO -->
                   <template x-if="socioConfigEdit.nombre === 'GENERAL'">
                     <div class="bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30 flex flex-col justify-between space-y-2">
                       <div class="flex items-center justify-between border-b border-amber-500/20 pb-1">
                         <span class="text-amber-400 font-black text-[10px]" x-text="'BINOMIO ' + paisMaestroGeneral + ' ➔ ' + p.code"></span>
                         <span class="text-[8px] text-amber-300 font-sans uppercase">Tasa Resultado:</span>
                       </div>
-                      
                       <div class="text-center py-1.5 bg-[#131525] rounded border border-amber-500/30">
-                        <!-- AQUI SE APLICA truncarTasaOficial -->
                         <span class="font-black text-amber-300 text-base tracking-tight" x-text="formatTasa(calcularTasaSocio(p.code, obtenerFactorRemesaGeneral(p.code)))"></span>
                       </div>
-
                       <div class="flex items-center justify-between gap-2 pt-1">
                         <span class="text-[9px] text-slate-400 font-sans uppercase shrink-0">Factor Remesa:</span>
                         <input type="number" step="any" :value="obtenerFactorRemesaGeneral(p.code)" @input="guardarFactorRemesaGeneral(p.code, $event.target.value)" placeholder="1.0" class="w-full bg-[#131525] border border-slate-700 rounded px-2 py-1 text-amber-300 font-bold outline-none focus:border-amber-500 text-right font-mono text-xs">
@@ -872,17 +862,15 @@
                     </div>
                   </template>
 
-                  <!-- MODO SOCIO INDIVIDUAL: PAGO Y DEPÓSITO -->
+                  <!-- MODO SOCIO INDIVIDUAL -->
                   <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
                     <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
-                      
                       <div class="bg-amber-950/40 p-2 rounded-lg border border-amber-500/30 flex flex-col justify-between">
                         <div class="flex items-center justify-between border-b border-amber-500/20 pb-1 mb-1">
                           <span class="text-amber-400 font-black text-[9px]">PAGO</span>
                           <span class="text-[7px] text-amber-300 font-sans uppercase">Tasa Calc:</span>
                         </div>
                         <div class="text-center py-1 bg-[#131525] rounded border border-amber-500/30 mb-1.5">
-                          <!-- AQUI SE APLICA truncarTasaOficial -->
                           <span class="font-extrabold text-amber-300 text-sm tracking-tight" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['P-' + p.code]))"></span>
                         </div>
                         <div class="flex items-center justify-between gap-1">
@@ -897,7 +885,6 @@
                           <span class="text-[7px] text-cyan-300 font-sans uppercase">Tasa Calc:</span>
                         </div>
                         <div class="text-center py-1 bg-[#131525] rounded border border-cyan-500/30 mb-1.5">
-                          <!-- AQUI SE APLICA truncarTasaOficial -->
                           <span class="font-extrabold text-cyan-300 text-sm tracking-tight" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['D-' + p.code]))"></span>
                         </div>
                         <div class="flex items-center justify-between gap-1">
@@ -905,7 +892,6 @@
                           <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" placeholder="f_D" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-cyan-300 font-bold outline-none text-right">
                         </div>
                       </div>
-
                     </div>
                   </template>
 
@@ -1033,7 +1019,6 @@
         tabConfigActive: 'reglas',
         guardandoConfig: false,
         paisMaestroGeneral: 'PEN',
-
         saldoAnteriorManual: 0.00,
 
         nuevoPaisNombreInput: '',
@@ -1058,6 +1043,20 @@
           "VES":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.85, "VES": 1.0, "PYG": 0.85, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85}
         },
 
+        socioConfigEdit: {
+          nombre: '',
+          roles: 'SOCIO',
+          moneda_socio: 'USDT',
+          talla: 'M',
+          whatsapp: '',
+          activo: true,
+          pen: 'A', cop: 'A', clp: 'A', ars: 'A', ves: 'A', brl: 'A', mxn: 'A', pyg: 'A',
+          dop: 'A', crc: 'A', eur: 'A', cad: 'A', usd: 'A', ecu: 'A', pan: 'A', usdt: 'A',
+          ajustes: {}
+        },
+
+        carteleraPaisesEdit: [],
+
         listaPaisesBase: [
           { nombrePais: 'Argentina', code: 'ARS', flag: '🇦🇷' },
           { nombrePais: 'Venezuela', code: 'VES', flag: '🇻🇪' },
@@ -1075,6 +1074,11 @@
           { nombrePais: 'EEUU-Zelle', code: 'USD', flag: '🇺🇸' },
           { nombrePais: 'Panama', code: 'PAN', flag: '🇵🇦' },
           { nombrePais: 'Canada', code: 'CAD', flag: '🇨🇦' }
+        ],
+
+        listaMonedas: [
+          'ARS', 'VES', 'PEN', 'COP', 'CLP', 'USD', 'USDT', 'EUR', 'BRL', 'MXN',
+          'ECU', 'DOP', 'BOB', 'CRC', 'CAD', 'PYG', 'PYUSD'
         ],
 
         async init() {
@@ -1226,9 +1230,20 @@
         },
 
         abrirConfigGeneral() {
-          this.socioConfigEdit.nombre = 'GENERAL';
           this.paisMaestroGeneral = 'PEN';
-          this.cargarSocioParaEditar();
+          this.socioConfigEdit.nombre = 'GENERAL';
+          
+          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === 'GENERAL');
+          
+          if (reg) {
+            this.cargarSocioParaEditar();
+          } else {
+            this.prepararNuevoSocio();
+            this.socioConfigEdit.nombre = 'GENERAL';
+            this.socioConfigEdit.roles = 'MATRIZ_GENERAL';
+            this.socioConfigEdit.activo = false;
+          }
+          
           this.tabConfigActive = 'reglas';
           this.modalConfigSocioAbierto = true;
         },
@@ -1556,7 +1571,7 @@
           }
         },
 
-        // EXACTA FUNCIÓN DE TRUNCADO MATEMÁTICO DEL MOTOR N8N APLICADA EN REPORTES
+        // EXACTA FUNCIÓN DE TRUNCADO MATEMÁTICO DE N8N APLICADA AL REPORTE
         truncarTasaOficial(valor) {
           const num = Math.abs(parseFloat(valor) || 0);
           if (num === 0) return '0';
