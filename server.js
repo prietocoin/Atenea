@@ -22,7 +22,27 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// Función de Truncado según Regla de Precisión
+// FACTORES BASE DE MERCADO POSITIVOS (MATRIZ AUTÓNOMA)
+const FACTORES_BASE_MERCADO = {
+  "P-USDT": 1.0,   "D-USDT": 1.0,
+  "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
+  "P-PEN": 0.976,  "D-PEN": 1.026,
+  "P-COP": 0.976,  "D-COP": 1.030,
+  "P-CLP": 0.962,  "D-CLP": 1.042,
+  "P-ARS": 0.962,  "D-ARS": 1.042,
+  "P-VES": 0.976,  "D-VES": 1.026,
+  "P-BRL": 0.952,  "D-BRL": 1.053,
+  "P-MXN": 0.943,  "D-MXN": 1.064,
+  "P-PYG": 0.962,  "D-PYG": 1.042,
+  "P-EUR": 0.926,  "D-EUR": 1.087,
+  "P-USD": 0.930,  "D-USD": 1.087,
+  "P-ECU": 0.940,  "D-ECU": 1.064,
+  "P-DOP": 0.943,  "D-DOP": 1.064,
+  "P-CRC": 0.943,  "D-CRC": 1.064,
+  "P-CAD": 0.962,  "D-CAD": 1.042,
+  "P-BOB": 0.926,  "D-BOB": 1.087
+};
+
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -41,14 +61,12 @@ function aplicarReglaPrecision(val) {
   }
 }
 
-// Cálculo automático de talla: S <= 3, M <= 6, L > 6
 function calcularTallaAutomatica(conteo) {
   if (conteo <= 3) return 'S';
   if (conteo <= 6) return 'M';
   return 'L';
 }
 
-// Matriz y Configuración Semilla de los Socios
 const SEED_SOCIOS_CONFIG = {
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
@@ -58,14 +76,14 @@ const SEED_SOCIOS_CONFIG = {
     "talla": "M",
     "whatsapp": "120363323877732465@g.us",
     "activo": true,
-    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "P", "usdt": "A",
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 1 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 3 },
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 4 }
     ],
-    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "D-ECU": 1.064, "P-BRL": 0.9709, "D-BRL": -1.0309, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": 0.962, "D-EUR": -1.042, "P-BOB": -0.9259, "D-BOB": 1.087 }
+    "ajustes": FACTORES_BASE_MERCADO
   },
   "CHASAN": {
     "id_grupo": "120363339357414946@g.us",
@@ -75,14 +93,14 @@ const SEED_SOCIOS_CONFIG = {
     "talla": "M",
     "whatsapp": "120363339357414946@g.us",
     "activo": true,
-    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
       { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
     ],
-    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.96, "D-ECU": 1.042, "P-MXN": 0.97, "D-MXN": -1.03, "P-BRL": -0.952, "D-BRL": 1.053, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+    "ajustes": FACTORES_BASE_MERCADO
   },
   "JOSEM": {
     "id_grupo": "120363345944393252@g.us",
@@ -92,7 +110,7 @@ const SEED_SOCIOS_CONFIG = {
     "talla": "L",
     "whatsapp": "",
     "activo": true,
-    "pen": "D", "cop": "D", "clp": "P", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
@@ -101,7 +119,7 @@ const SEED_SOCIOS_CONFIG = {
       { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
       { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
     ],
-    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": 0.98, "D-CLP": -1.02, "P-ARS": -0.962, "D-ARS": 1.042, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": -0.976, "D-VES": 1.026, "P-PYG": -0.962, "D-PYG": 1.042, "P-EUR": -0.9259, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.9259, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+    "ajustes": FACTORES_BASE_MERCADO
   },
   "NELSY": {
     "id_grupo": "GRP_NELSY",
@@ -111,7 +129,7 @@ const SEED_SOCIOS_CONFIG = {
     "talla": "L",
     "whatsapp": "",
     "activo": true,
-    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
@@ -120,7 +138,7 @@ const SEED_SOCIOS_CONFIG = {
       { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
       { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
     ],
-    "ajustes": { "P-USDT": 1.0, "D-USDT": 1.0, "P-PYUSD": -0.8, "D-PYUSD": 1.2, "P-PEN": -0.976, "D-PEN": 1.026, "P-COP": -0.976, "D-COP": 1.03, "P-CLP": -0.962, "D-CLP": 1.042, "P-ARS": 0.98, "D-ARS": -1.02, "P-USD": -0.93, "D-USD": 1.087, "P-ECU": -0.94, "D-ECU": 1.064, "P-MXN": -0.943, "D-MXN": 1.064, "P-BRL": -0.952, "D-BRL": 1.053, "P-VES": 0.99, "P-PYG": -0.97, "D-PYG": 1.03, "P-EUR": -0.926, "D-EUR": 1.087, "P-DOP": -0.943, "D-DOP": 1.064, "P-BOB": -0.926, "D-BOB": 1.087, "P-CRC": -0.943, "D-CRC": 1.064, "P-CAD": -0.962, "D-CAD": 1.042 }
+    "ajustes": FACTORES_BASE_MERCADO
   },
   "MERLI": {
     "id_grupo": "120363307631639715@g.us",
@@ -130,7 +148,7 @@ const SEED_SOCIOS_CONFIG = {
     "talla": "L",
     "whatsapp": "120363307631639715@g.us",
     "activo": true,
-    "pen": "A", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "D",
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 1 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
@@ -139,7 +157,7 @@ const SEED_SOCIOS_CONFIG = {
       { "pais": "EEUU-Zelle", "moneda": "USD", "activo": true, "orden": 5 },
       { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 6 }
     ],
-    "ajustes": { "P-USDT": -0.9259, "D-USDT": 1.087, "P-PEN": -0.967, "D-PEN": 1.047, "P-COP": -0.967, "D-COP": 1.047, "P-CLP": -0.967, "D-CLP": 1.047, "P-ARS": -0.967, "D-ARS": 1.047, "P-VES": -0.967, "D-VES": 1.047 }
+    "ajustes": FACTORES_BASE_MERCADO
   },
   "JAVIER": {
     "id_grupo": "120363401374720092@g.us",
@@ -149,12 +167,12 @@ const SEED_SOCIOS_CONFIG = {
     "talla": "S",
     "whatsapp": "120363422300818123@g.us",
     "activo": true,
-    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 2 }
     ],
-    "ajustes": { "P-PEN": -0.976, "D-PEN": 1.026, "P-ARS": -0.962, "D-ARS": 1.042, "D-ECU": 1.064 }
+    "ajustes": FACTORES_BASE_MERCADO
   }
 };
 
@@ -202,6 +220,7 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS talla VARCHAR(10) DEFAULT 'M';
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS recordar_activo BOOLEAN DEFAULT FALSE;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
@@ -267,7 +286,6 @@ async function initDB() {
     }
     console.log('✅ Base de datos sembrada.');
 
-    // RECREACIÓN DE LA VISTA CON LEFT JOIN PARA QUE NUNCA QUEDE EN BLANCO
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -417,7 +435,6 @@ app.post('/api/tasas/publicar', async (req, res) => {
       return res.status(400).json({ success: false, message: 'No se enviaron tasas para publicar.' });
     }
 
-    // CÁLCULO DINÁMICO DEL CÓDIGO DE TASA
     let codigoTasa = id_tasa;
     if (!codigoTasa) {
       const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
@@ -431,7 +448,6 @@ app.post('/api/tasas/publicar', async (req, res) => {
       }
     }
 
-    // Inserción masiva del lote en mercado_tasas
     for (const [moneda, valor] of Object.entries(tasas)) {
       if (valor && !isNaN(valor)) {
         await pool.query(
@@ -441,7 +457,6 @@ app.post('/api/tasas/publicar', async (req, res) => {
       }
     }
 
-    // NOTIFICACIÓN ÚNICA PARA DISPARAR N8N DERECHO CON SU ID DE TASA DINÁMICO
     await pool.query(
       `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
       [codigoTasa]
@@ -453,7 +468,58 @@ app.post('/api/tasas/publicar', async (req, res) => {
   }
 });
 
-// GET COMPROBANTES CON BÚSQUEDA INSENSIBLE A MAYÚSCULAS
+// REENVIAR LOTE EXISTENTE
+app.post('/api/tasas/reenviar', async (req, res) => {
+  try {
+    const { id_tasa } = req.body;
+    let codigoTasa = id_tasa;
+
+    if (!codigoTasa) {
+      const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
+      if (lastRes.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'No hay tasas registradas para reenviar.' });
+      }
+      codigoTasa = lastRes.rows[0].id_tasa;
+    }
+
+    await pool.query(`INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`, [codigoTasa]);
+
+    res.json({ success: true, id_tasa: codigoTasa, message: `Reenvío activado para la tasa ${codigoTasa}` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DESACTIVAR TODOS LOS SOCIOS
+app.patch('/api/socios/desactivar-todos', async (req, res) => {
+  try {
+    await pool.query(`UPDATE nombres_fb SET activo = FALSE;`);
+    res.json({ success: true, message: 'Todos los socios desactivados correctamente.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GUARDAR PLANTILLA DE VIGENTES
+app.post('/api/socios/guardar-vigentes', async (req, res) => {
+  try {
+    await pool.query(`UPDATE nombres_fb SET recordar_activo = activo;`);
+    res.json({ success: true, message: 'Plantilla de socios activos memorizada correctamente.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// RESTAURAR PLANTILLA DE VIGENTES
+app.post('/api/socios/restaurar-vigentes', async (req, res) => {
+  try {
+    await pool.query(`UPDATE nombres_fb SET activo = COALESCE(recordar_activo, FALSE);`);
+    res.json({ success: true, message: 'Socios vigentes restaurados correctamente.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, hash, soloDuplicados } = req.query;
@@ -570,7 +636,6 @@ const getComprobantesHandler = async (req, res) => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
 
-      // SOCIO 1
       let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
       if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
@@ -583,7 +648,6 @@ const getComprobantesHandler = async (req, res) => {
       const m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
 
-      // SOCIO 2
       let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
       if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
       const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
@@ -669,7 +733,6 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   }
 });
 
-// CAMBIAR ESTADO ACTIVO / INACTIVO
 app.patch('/api/socios/:nombre/estado', async (req, res) => {
   try {
     const { nombre } = req.params;
@@ -690,7 +753,6 @@ app.patch('/api/socios/:nombre/estado', async (req, res) => {
   }
 });
 
-// SOCIOS Y DIRECTORIO
 app.get('/api/socios', async (req, res) => {
   try {
     const query = `
@@ -735,7 +797,7 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
   }
 });
 
-// GUARDAR / ACTUALIZAR CONFIGURACIÓN DE SOCIO
+// CREACIÓN/EDICIÓN AUTÓNOMA DE SOCIO CON FACTORES BASE POSITIVOS
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
@@ -749,12 +811,23 @@ app.post('/api/socios/config', async (req, res) => {
     }
 
     const socioNombre = nombre.trim();
-    const cpArray = cartelera_paises || [];
+    const cpArray = (cartelera_paises && cartelera_paises.length > 0) 
+      ? cartelera_paises 
+      : [
+          { pais: 'Peru', moneda: 'PEN', activo: true, orden: 1 },
+          { pais: 'Chile', moneda: 'CLP', activo: true, orden: 2 },
+          { pais: 'Colombia', moneda: 'COP', activo: true, orden: 3 },
+          { pais: 'Argentina', moneda: 'ARS', activo: true, orden: 4 }
+        ];
+
     const conteoActivos = cpArray.filter(p => p.activo).length;
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
 
+    // Integrar factores por defecto para que NUNCA queden en blanco
+    const factoresFinales = { ...FACTORES_BASE_MERCADO, ...(ajustes || {}) };
+
     const jsonCartelera = JSON.stringify(cpArray);
-    const jsonAjustes = JSON.stringify(ajustes || {});
+    const jsonAjustes = JSON.stringify(factoresFinales);
 
     const checkQuery = `SELECT id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
     const checkRes = await pool.query(checkQuery, [socioNombre]);
@@ -780,8 +853,8 @@ app.post('/api/socios/config', async (req, res) => {
         roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, 
         whatsapp || checkRes.rows[0].whatsapp || '',
         activo ?? true,
-        pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
-        dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
+        pen || 'A', cop || 'A', clp || 'A', ars || 'A', ves || 'A', brl || 'A', mxn || 'A', pyg || 'A',
+        dop || 'A', crc || 'A', eur || 'A', cad || 'A', usd || 'A', ecu || 'A', pan || 'A', usdt || 'A',
         jsonCartelera, jsonAjustes, socioNombre
       ]);
       rows = updateRes.rows;
@@ -799,8 +872,8 @@ app.post('/api/socios/config', async (req, res) => {
       const insertRes = await pool.query(insertQuery, [
         idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
         activo ?? true,
-        pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
-        dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'P', ecu || 'D', pan || 'D', usdt || 'A',
+        pen || 'A', cop || 'A', clp || 'A', ars || 'A', ves || 'A', brl || 'A', mxn || 'A', pyg || 'A',
+        dop || 'A', crc || 'A', eur || 'A', cad || 'A', usd || 'A', ecu || 'A', pan || 'A', usdt || 'A',
         jsonCartelera, jsonAjustes
       ]);
       rows = insertRes.rows;
