@@ -64,7 +64,6 @@
               Directorio (nombres_fb)
             </button>
 
-            <!-- ACCESO DIRECTO A LA MATRIZ GENERAL -->
             <button @click="abrirConfigGeneral()" :class="modalConfigSocioAbierto && socioConfigEdit.nombre === 'GENERAL' ? 'bg-amber-500/30 text-amber-300 border border-amber-500/60 shadow-lg' : 'text-slate-400 hover:bg-amber-500/10 hover:text-amber-300'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all border border-transparent">
               <span class="text-amber-400">🌐</span>
               Matriz General (Remesas)
@@ -332,7 +331,7 @@
         </div>
       </template>
 
-      <!-- VISTA TASAS -->
+      <!-- VISTA TASAS CON GUÍA DE MERCADO Y BORRADOR EN PARALELO -->
       <template x-if="vistaActiva === 'tasas'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -343,13 +342,48 @@
             </div>
           </div>
 
-          <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+          <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN (TABLA MERCADO) -->
+          <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-3 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasas Capturadas (Paso previo a Producción)</p>
-              <template x-if="ultimoLoteId || codigoTasaActual">
-                <span class="px-2 py-0.5 bg-emerald-900/40 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/30 rounded" x-text="'Lote Actual: ' + (codigoTasaActual || ultimoLoteId)"></span>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <p class="text-xs font-bold text-slate-300 uppercase tracking-wider">Tasas Activas en Producción (Tabla Mercado)</p>
+              </div>
+              <template x-if="ultimoLoteId">
+                <span class="px-2.5 py-0.5 bg-emerald-950/80 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/40 rounded-lg shadow-sm" x-text="'Lote Activo: ' + ultimoLoteId"></span>
               </template>
             </div>
+
+            <template x-if="Object.keys(ultimasTasasMercado).length === 0">
+              <div class="text-center py-4 text-slate-500 text-xs font-medium">No hay tasas registradas en producción.</div>
+            </template>
+
+            <template x-if="Object.keys(ultimasTasasMercado).length > 0">
+              <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                <template x-for="(valor, moneda) in ultimasTasasMercado" :key="moneda">
+                  <div class="bg-[#1a1d33] p-2 rounded-xl border border-slate-700/50 flex flex-col justify-between">
+                    <span class="text-[9px] font-extrabold text-purple-400 uppercase" x-text="moneda"></span>
+                    <span class="text-xs text-emerald-300 font-mono font-extrabold mt-0.5" x-text="formatMonto(valor)"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+
+          <!-- BLOQUE 2: BORRADOR Y CAPTURA HOO PREVIO A PRODUCCIÓN -->
+          <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Borrador Capturado (Paso previo a Publicar)</p>
+              <template x-if="codigoTasaActual">
+                <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs font-mono font-bold border border-purple-500/30 rounded" x-text="'Lote a Publicar: ' + codigoTasaActual"></span>
+              </template>
+            </div>
+
+            <template x-if="Object.keys(tasasBaul).length === 0">
+              <div class="text-center py-8 text-slate-500 text-xs font-medium">
+                Haz clic en <strong class="text-purple-400">"Conectar Hoo API"</strong> para capturar un borrador de tasas.
+              </div>
+            </template>
 
             <template x-if="Object.keys(tasasBaul).length > 0">
               <div class="space-y-4">
@@ -368,6 +402,7 @@
               </div>
             </template>
           </div>
+
         </div>
       </template>
 
@@ -992,7 +1027,7 @@
           await this.cargarReportes();
         },
 
-        // LISTA DE HASHES FILTRADA DINÁMICAMENTE POR ROL, NOMBRE Y RANGO DE FECHAS
+        // LISTA DE HASHES FILTRADA DINÁMICAMENTE SEGÚN ROL, NOMBRE Y RANGO DE FECHAS
         get listaHashesDisponibles() {
           let items = this.comprobantes;
 
@@ -1033,7 +1068,7 @@
           return Array.from(hashes).sort();
         },
 
-        // CÁLCULO DE LA MONEDA Y MONTO SOCIO PARA EL REPORTE
+        // CÁLCULO DE LA MONEDA Y MONTO BASE NATIVO DEL SOCIO PARA EL REPORTE
         get monedaBaseSocioReporte() {
           if (!this.filtroReporteNombre) return 'USDT';
           const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
