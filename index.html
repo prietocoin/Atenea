@@ -26,7 +26,7 @@
 
   <div class="flex flex-col md:flex-row min-h-screen">
     
-    <!-- BARRA LATERAL NAV CON NAVEGACIÓN LIMPIA SIN DOBLE SELECCIÓN -->
+    <!-- BARRA LATERAL NAV -->
     <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
       <div>
         <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
@@ -64,7 +64,7 @@
               Directorio (nombres_fb)
             </button>
 
-            <!-- ACCESO A MATRIZ GENERAL CON SELECCIÓN ÚNICA SIN GLOW PERMANENTE -->
+            <!-- ACCESO DIRECTO A LA MATRIZ GENERAL -->
             <button @click="abrirConfigGeneral()" :class="modalConfigSocioAbierto && socioConfigEdit.nombre === 'GENERAL' ? 'bg-amber-500/30 text-amber-300 border border-amber-500/60 shadow-lg' : 'text-slate-400 hover:bg-amber-500/10 hover:text-amber-300'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all border border-transparent">
               <span class="text-amber-400">🌐</span>
               Matriz General (Remesas)
@@ -92,6 +92,7 @@
             </div>
           </div>
 
+          <!-- FILTROS COMPROBANTES -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
             <select x-model="filtroSocio" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
               <option value="">Todos los Socios</option>
@@ -370,7 +371,7 @@
         </div>
       </template>
 
-      <!-- VISTA REPORTES CON JERARQUÍA DE FILTROS REFORMADA Y HASHES DESPLEGABLES -->
+      <!-- VISTA REPORTES CON TASA SOCIO Y HASHES FILTRADOS DINÁMICAMENTE -->
       <template x-if="vistaActiva === 'reportes'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -422,7 +423,7 @@
               <input type="date" x-model="filtroReporteFechaFin" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500" />
             </div>
 
-            <!-- 5. SELECTOR DE HASHES DISPONIBLES EN LUGAR DE TEXTO LIBRE -->
+            <!-- 5. SELECTOR DE HASHES FILTRADOS SEGÚN EL SOCIO Y FECHA -->
             <div>
               <label class="block text-[9px] font-bold text-amber-400 uppercase mb-1">5. Desde Hash X en Adelante</label>
               <select x-model="filtroReporteDesdeHash" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-mono font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-amber-500">
@@ -451,7 +452,7 @@
             </div>
           </div>
 
-          <!-- TABLA DE MOVIMIENTOS CON MONEDA Y MONTO BASE NATIVO DEL SOCIO -->
+          <!-- TABLA DE MOVIMIENTOS CON TASA Y MONEDA SOCIO DEBIDAMENTE MOSTRADAS -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="p-3 border-b border-slate-800 bg-[#171a2e] flex items-center justify-between">
               <span class="text-xs font-bold text-slate-300 uppercase">Detalle de Operaciones Filtradas</span>
@@ -481,10 +482,14 @@
                           <span class="text-[9px] text-slate-400" x-text="'Banco: ' + (c.banco || '-') + ' | Moneda: ' + c.moneda"></span>
                         </div>
                       </td>
+
+                      <!-- COLUMNA LOTE / TASAS CON MOSTRADO DE TASA DE LA MONEDA DEL SOCIO -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="c.lote_tasa_asignado || 'N/A'"></span>
                         <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + (c.tasa_base || c.tasa_mercado_aplicada || '0')"></span>
+                        <span class="text-[9px] font-mono font-bold text-emerald-300 block mt-0.5" x-text="'Tasa Socio: ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
                       </td>
+
                       <td class="px-3 py-2 align-middle text-right font-bold text-slate-300 whitespace-nowrap" x-text="formatMonto(c.monto) + ' ' + c.moneda"></td>
                       <td class="px-3 py-2 align-middle text-right font-black text-emerald-400 whitespace-nowrap" x-text="formatMonto(obtenerMontoSocioCalculado(c)) + ' ' + obtenerMonedaSocioCalculada(c)"></td>
                       <td class="px-3 py-2 align-middle text-right font-bold text-slate-400 whitespace-nowrap" x-text="'$' + formatMonto(c.monto_usd_equivalente)"></td>
@@ -912,11 +917,11 @@
         nuevoPaisNombreInput: '',
         nuevoPaisMonedaInput: '',
 
+        filtroReporteRol: '',
         filtroReporteNombre: '',
         filtroReporteFechaInicio: '',
         filtroReporteFechaFin: '',
         filtroReporteDesdeHash: '',
-        filtroReporteRol: '',
         comprobantesReporte: [],
 
         matrizFactorRemesaT363: {
@@ -987,15 +992,48 @@
           await this.cargarReportes();
         },
 
+        // LISTA DE HASHES FILTRADA DINÁMICAMENTE POR ROL, NOMBRE Y RANGO DE FECHAS
         get listaHashesDisponibles() {
+          let items = this.comprobantes;
+
+          if (this.filtroReporteRol) {
+            const rolNorm = this.filtroReporteRol.trim().toUpperCase();
+            items = items.filter(c => 
+              (c.rol_socio_1 && c.rol_socio_1.trim().toUpperCase() === rolNorm) ||
+              (c.rol_socio_2 && c.rol_socio_2.trim().toUpperCase() === rolNorm)
+            );
+          }
+
+          if (this.filtroReporteNombre) {
+            const nombreNorm = this.filtroReporteNombre.trim().toUpperCase();
+            items = items.filter(c => 
+              (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === nombreNorm) ||
+              (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === nombreNorm)
+            );
+          }
+
+          if (this.filtroReporteFechaInicio) {
+            const startTs = Math.floor(new Date(this.filtroReporteFechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
+            if (!isNaN(startTs)) {
+              items = items.filter(c => c.timestamp >= startTs);
+            }
+          }
+
+          if (this.filtroReporteFechaFin) {
+            const endTs = Math.floor(new Date(this.filtroReporteFechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
+            if (!isNaN(endTs)) {
+              items = items.filter(c => c.timestamp <= endTs);
+            }
+          }
+
           const hashes = new Set();
-          this.comprobantes.forEach(c => {
+          items.forEach(c => {
             if (c.hash_corto) hashes.add(c.hash_corto);
           });
           return Array.from(hashes).sort();
         },
 
-        // CÁLCULO DE MONEDA Y MONTO BASE NATIVO DEL SOCIO PARA EL REPORTE
+        // CÁLCULO DE LA MONEDA Y MONTO SOCIO PARA EL REPORTE
         get monedaBaseSocioReporte() {
           if (!this.filtroReporteNombre) return 'USDT';
           const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
@@ -1030,6 +1068,20 @@
             }
           }
           return c.m1_socio !== undefined ? c.m1_socio : c.monto;
+        },
+
+        // OBTENER TASA APLICADA AL SOCIO EN EL COMPROBANTE
+        obtenerTasaSocioCalculada(c) {
+          if (this.filtroReporteNombre) {
+            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+            if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
+              return c.tasa_1 || c.tasa_base || 1.0;
+            }
+            if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
+              return c.tasa_2 || c.tasa_base || 1.0;
+            }
+          }
+          return c.tasa_1 || c.tasa_base || 1.0;
         },
 
         get totalMontoSocioReporte() {
