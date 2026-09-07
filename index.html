@@ -91,7 +91,6 @@
             </div>
           </div>
 
-          <!-- FILTROS COMPROBANTES -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
             <select x-model="filtroSocio" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
               <option value="">Todos los Socios</option>
@@ -105,108 +104,6 @@
               <input type="checkbox" x-model="soloDuplicados" @change="cargarComprobantes()" class="rounded bg-slate-800 border-slate-600 text-purple-600">
               <span>Duplicados (>1)</span>
             </label>
-          </div>
-
-          <!-- 📱 VISTA MÓVIL COMPROBANTES -->
-          <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
-            <template x-for="item in comprobantes" :key="item.hash_largo">
-              <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
-                <div class="w-[30%] shrink-0 flex flex-col justify-start">
-                  <div class="relative aspect-square w-full">
-                    <img :src="item.url_imagen" class="w-full h-full object-cover rounded-lg border border-slate-700/50 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='https://via.placeholder.com/100?text=IMG'">
-                    <a :href="item.url_imagen" target="_blank" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-lg text-white backdrop-blur-sm">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    </a>
-                  </div>
-                </div>
-
-                <div class="w-[70%] flex flex-col justify-between min-w-0 gap-1">
-                  <div class="flex items-center justify-between gap-1">
-                    <div class="flex items-center gap-1 truncate">
-                      <span class="px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 font-mono text-[9px] font-bold border border-purple-500/20 truncate" x-text="item.hash_corto"></span>
-                      <span class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-bold" x-text="'x' + item.conteo"></span>
-                      <template x-if="item.procesado_ia">
-                        <span class="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-bold">✓ IA</span>
-                      </template>
-                    </div>
-
-                    <div class="flex items-center gap-1 shrink-0">
-                      <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-                        <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase shadow-sm">
-                          <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
-                        </button>
-                      </template>
-                      <template x-if="item.lote_tasa_asignado">
-                        <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
-                      </template>
-                      <button @click="eliminarComprobante(item.hash_largo)" title="Eliminar" class="text-rose-400 hover:text-rose-300 p-0.5 ml-0.5 active:scale-90 transition-transform">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                      </button>
-                      <button @click="abrirModal(item)" title="Editar" class="text-purple-400 hover:text-purple-300 p-0.5 active:scale-90 transition-transform">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="flex items-baseline gap-1 my-0.5">
-                    <span class="font-black text-emerald-400 text-sm leading-none" x-text="formatMonto(item.monto)"></span>
-                    <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
-                  </div>
-
-                  <div class="flex flex-col gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800/80 my-0.5 text-[9px]">
-                    <div class="flex items-center justify-between gap-1">
-                      <span class="font-bold text-purple-300 truncate min-w-0" x-text="item.nombre_socio_1 || '-'"></span>
-                      <div class="flex items-center gap-1.5 shrink-0 font-mono">
-                        <template x-if="item.m1_socio !== undefined">
-                          <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
-                        </template>
-                        <div class="shrink-0 w-[56px] text-center px-0.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300 font-mono text-[8px] font-bold truncate" x-text="'T1:' + (formatTasa(item.tasa_1) || '-')"></div>
-                      </div>
-                    </div>
-
-                    <template x-if="item.nombre_socio_2">
-                      <div class="flex items-center justify-between gap-1 border-t border-slate-800/60 pt-0.5">
-                        <span class="font-bold text-pink-300 truncate min-w-0" x-text="item.nombre_socio_2"></span>
-                        <div class="flex items-center gap-1.5 shrink-0 font-mono">
-                          <template x-if="item.m2_socio !== undefined">
-                            <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
-                          </template>
-                          <div class="shrink-0 w-[56px] text-center px-0.5 py-0.5 rounded bg-pink-950/80 border border-pink-500/30 text-pink-300 font-mono text-[8px] font-bold truncate" x-text="'T2:' + (formatTasa(item.tasa_2) || '-')"></div>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-
-                  <div class="flex items-end justify-between border-t border-slate-800/60 pt-1 gap-1">
-                    <div class="flex flex-col text-[8px] text-slate-400 truncate min-w-0 flex-1">
-                      <span class="font-bold text-slate-200 uppercase truncate" x-text="obtenerPrimeraPalabra(item.titular)"></span>
-                      <span class="text-slate-400 uppercase truncate" x-text="item.banco || '-'"></span>
-                      <span class="font-mono text-slate-500 truncate" x-text="'Ref: ' + (item.referencia || '-')"></span>
-                    </div>
-
-                    <div class="flex flex-col items-end shrink-0 text-[8px] font-mono leading-tight">
-                      <template x-if="item.monto_usd_equivalente">
-                        <div class="flex items-center gap-1">
-                          <span class="font-bold text-slate-400 text-[7px] uppercase">ME0</span>
-                          <span class="text-emerald-300 font-bold flex items-center gap-0.5">
-                            <span>🪙</span>
-                            <span x-text="formatMonto(item.monto_usd_equivalente)"></span>
-                          </span>
-                        </div>
-                      </template>
-                      <div class="flex items-center gap-1 mt-0.5">
-                        <span class="font-bold text-purple-400 text-[7px] uppercase">ME1</span>
-                        <span class="text-emerald-300 font-bold flex items-center gap-0.5">
-                          <span>🪙</span>
-                          <span x-text="formatMonto(item.m1_usdt)"></span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </template>
           </div>
 
           <!-- 💻 VISTA ESCRITORIO COMPROBANTES -->
@@ -258,9 +155,6 @@
                           <template x-if="item.monto_usd_equivalente">
                             <span class="text-[9px] font-bold text-slate-400" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
                           </template>
-                          <template x-if="item.tasa_base || item.tasa_mercado_aplicada">
-                            <span class="text-[8px] font-mono text-slate-500 mt-0.5" x-text="'Base: ' + (item.tasa_base || item.tasa_mercado_aplicada)"></span>
-                          </template>
                         </div>
                       </td>
 
@@ -295,28 +189,8 @@
                               <template x-if="item.m1_socio !== undefined">
                                 <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: ' + formatMonto(item.m1_socio) + ' ' + item.moneda_socio_1"></span>
                               </template>
-                              <template x-if="item.m1_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_1)">
-                                <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m1_usdt) + ' USD)'"></span>
-                              </template>
                             </div>
                           </div>
-
-                          <template x-if="item.nombre_socio_2">
-                            <div class="flex flex-col border-t border-slate-800/60 pt-1">
-                              <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
-                              <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
-                                <template x-if="item.tasa_2">
-                                  <span class="text-pink-400 font-bold" x-text="'T2: ' + formatTasa(item.tasa_2) + ' ' + (item.moneda !== item.moneda_socio_2 ? item.moneda + '/' + item.moneda_socio_2 : '')"></span>
-                                </template>
-                                <template x-if="item.m2_socio !== undefined">
-                                  <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: ' + formatMonto(item.m2_socio) + ' ' + item.moneda_socio_2"></span>
-                                </template>
-                                <template x-if="item.m2_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_2)">
-                                  <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m2_usdt) + ' USD)'"></span>
-                                </template>
-                              </div>
-                            </div>
-                          </template>
                         </div>
                       </td>
 
@@ -331,7 +205,7 @@
         </div>
       </template>
 
-      <!-- VISTA TASAS CON GUÍA DE MERCADO Y BORRADOR EN PARALELO -->
+      <!-- VISTA TASAS -->
       <template x-if="vistaActiva === 'tasas'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -342,48 +216,13 @@
             </div>
           </div>
 
-          <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN (TABLA MERCADO) -->
-          <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-3 shadow-xl">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <p class="text-xs font-bold text-slate-300 uppercase tracking-wider">Tasas Activas en Producción (Tabla Mercado)</p>
-              </div>
-              <template x-if="ultimoLoteId">
-                <span class="px-2.5 py-0.5 bg-emerald-950/80 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/40 rounded-lg shadow-sm" x-text="'Lote Activo: ' + ultimoLoteId"></span>
-              </template>
-            </div>
-
-            <template x-if="Object.keys(ultimasTasasMercado).length === 0">
-              <div class="text-center py-4 text-slate-500 text-xs font-medium">No hay tasas registradas en producción.</div>
-            </template>
-
-            <template x-if="Object.keys(ultimasTasasMercado).length > 0">
-              <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                <template x-for="(valor, moneda) in ultimasTasasMercado" :key="moneda">
-                  <div class="bg-[#1a1d33] p-2 rounded-xl border border-slate-700/50 flex flex-col justify-between">
-                    <span class="text-[9px] font-extrabold text-purple-400 uppercase" x-text="moneda"></span>
-                    <span class="text-xs text-emerald-300 font-mono font-extrabold mt-0.5" x-text="formatMonto(valor)"></span>
-                  </div>
-                </template>
-              </div>
-            </template>
-          </div>
-
-          <!-- BLOQUE 2: BORRADOR Y CAPTURA HOO PREVIO A PRODUCCIÓN -->
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Borrador Capturado (Paso previo a Publicar)</p>
-              <template x-if="codigoTasaActual">
-                <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs font-mono font-bold border border-purple-500/30 rounded" x-text="'Lote a Publicar: ' + codigoTasaActual"></span>
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasas Capturadas (Paso previo a Producción)</p>
+              <template x-if="ultimoLoteId || codigoTasaActual">
+                <span class="px-2 py-0.5 bg-emerald-900/40 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/30 rounded" x-text="'Lote Actual: ' + (codigoTasaActual || ultimoLoteId)"></span>
               </template>
             </div>
-
-            <template x-if="Object.keys(tasasBaul).length === 0">
-              <div class="text-center py-8 text-slate-500 text-xs font-medium">
-                Haz clic en <strong class="text-purple-400">"Conectar Hoo API"</strong> para capturar un borrador de tasas.
-              </div>
-            </template>
 
             <template x-if="Object.keys(tasasBaul).length > 0">
               <div class="space-y-4">
@@ -402,11 +241,10 @@
               </div>
             </template>
           </div>
-
         </div>
       </template>
 
-      <!-- VISTA REPORTES CON TASA SOCIO Y HASHES FILTRADOS DINÁMICAMENTE -->
+      <!-- VISTA REPORTES CON SALDO ANTERIOR, NUEVO SALDO Y BOTÓN DE VISTA PREVIA GRAFICA -->
       <template x-if="vistaActiva === 'reportes'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -414,18 +252,25 @@
               <h2 class="text-lg font-bold text-white tracking-wide">Resumen de Operaciones & Reportes</h2>
               <p class="text-xs text-slate-400">Filtrado ordenado jerárquicamente por Rol, Nombre, Rango de Fechas (GMT-4 VET) y Hash.</p>
             </div>
-            <button @click="cargarReportes()" class="px-4 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 shadow-md">
-              🔍 Aplicar Filtros de Reporte
-            </button>
+            <div class="flex items-center gap-2">
+              <button @click="cargarReportes()" class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 shadow-md">
+                🔍 Aplicar Filtros
+              </button>
+
+              <!-- BOTÓN DE VISTA PREVIA Y ENVÍO A EVOLUTION / N8N -->
+              <button @click="abrirVistaPreviaReporte()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 active:scale-95">
+                <span>👁️ Vista Previa & Generar Reporte</span>
+              </button>
+            </div>
           </div>
 
-          <!-- BARRA DE FILTROS EN ORDEN DE JERARQUÍA EXACTO -->
-          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5 bg-[#131525] p-3 rounded-2xl border border-slate-800 shadow-xl">
+          <!-- BARRA DE FILTROS EN ORDEN DE JERARQUÍA + SALDO ANTERIOR MANUAL -->
+          <div class="grid grid-cols-1 sm:grid-cols-6 gap-2.5 bg-[#131525] p-3 rounded-2xl border border-slate-800 shadow-xl">
             
-            <!-- 1. FILTRO ROL (JERARQUÍA 1) -->
+            <!-- 1. FILTRO ROL -->
             <div>
-              <label class="block text-[9px] font-bold text-emerald-400 uppercase mb-1">1. Rol (Separación Aritmética)</label>
-              <select x-model="filtroReporteRol" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-emerald-500/50 text-xs text-emerald-300 font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
+              <label class="block text-[9px] font-bold text-emerald-400 uppercase mb-1">1. Rol</label>
+              <select x-model="filtroReporteRol" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-emerald-500/50 text-xs text-emerald-300 font-bold rounded-lg px-2.5 py-1.5 outline-none">
                 <option value="">Todos los Roles</option>
                 <option value="SOCIO">SOCIO</option>
                 <option value="ASESOR">ASESOR</option>
@@ -435,10 +280,10 @@
               </select>
             </div>
 
-            <!-- 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2) -->
+            <!-- 2. FILTRO NOMBRE / SOCIO -->
             <div>
-              <label class="block text-[9px] font-bold text-purple-400 uppercase mb-1">2. Nombre (Socio/Grupo/Asesor)</label>
-              <select x-model="filtroReporteNombre" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
+              <label class="block text-[9px] font-bold text-purple-400 uppercase mb-1">2. Nombre</label>
+              <select x-model="filtroReporteNombre" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none">
                 <option value="">Todos los Nombres</option>
                 <template x-for="s in socios" :key="s">
                   <option :value="s" x-text="s"></option>
@@ -446,22 +291,22 @@
               </select>
             </div>
 
-            <!-- 3. FECHA INICIO (GMT-4 VET) -->
+            <!-- 3. FECHA INICIO -->
             <div>
-              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">3. Fecha Inicio (GMT-4 VET)</label>
-              <input type="date" x-model="filtroReporteFechaInicio" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500" />
+              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">3. Fecha Inicio (VET)</label>
+              <input type="date" x-model="filtroReporteFechaInicio" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none" />
             </div>
 
-            <!-- 4. FECHA FIN (GMT-4 VET) -->
+            <!-- 4. FECHA FIN -->
             <div>
-              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">4. Fecha Fin (GMT-4 VET)</label>
-              <input type="date" x-model="filtroReporteFechaFin" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500" />
+              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">4. Fecha Fin (VET)</label>
+              <input type="date" x-model="filtroReporteFechaFin" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none" />
             </div>
 
-            <!-- 5. SELECTOR DE HASHES FILTRADOS SEGÚN EL SOCIO Y FECHA -->
+            <!-- 5. DESDE HASH X EN ADELANTE -->
             <div>
-              <label class="block text-[9px] font-bold text-amber-400 uppercase mb-1">5. Desde Hash X en Adelante</label>
-              <select x-model="filtroReporteDesdeHash" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-mono font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-amber-500">
+              <label class="block text-[9px] font-bold text-amber-400 uppercase mb-1">5. Desde Hash X</label>
+              <select x-model="filtroReporteDesdeHash" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-mono font-bold rounded-lg px-2.5 py-1.5 outline-none">
                 <option value="">Seleccionar Hash...</option>
                 <template x-for="h in listaHashesDisponibles" :key="h">
                   <option :value="h" x-text="h"></option>
@@ -469,25 +314,35 @@
               </select>
             </div>
 
+            <!-- Campo: SALDO ANTERIOR MANUAL/MULTI-PÁGINA -->
+            <div>
+              <label class="block text-[9px] font-bold text-cyan-400 uppercase mb-1">Saldo Anterior</label>
+              <input type="number" step="any" x-model.number="saldoAnteriorManual" placeholder="0.00" class="w-full bg-[#1a1d33] border border-cyan-500/50 text-xs text-cyan-300 font-mono font-bold rounded-lg px-2.5 py-1.5 outline-none">
+            </div>
+
           </div>
 
-          <!-- CARDS DE MÉTRICAS CON MONEDA BASE NATIVA DEL SOCIO -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- CARDS DE MÉTRICAS CON SALDO ANTERIOR Y NUEVO SALDO (MONTO FINAL) -->
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
               <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Sujeto / Entidad Auditada</p>
               <p class="text-base font-black text-white mt-1" x-text="filtroReporteNombre || 'Todas las entidades'"></p>
             </div>
             <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comprobantes Filtrados</p>
-              <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantesReporte.length + ' operados'"></p>
+              <p class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">Saldo Anterior</p>
+              <p class="text-base font-black text-cyan-300 mt-1" x-text="formatMonto(saldoAnteriorManual) + ' ' + monedaBaseSocioReporte"></p>
             </div>
             <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
-              <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Monto Acumulado (Moneda Socio)</p>
-              <p class="text-base font-black text-emerald-400 mt-1" x-text="formatMonto(totalMontoSocioReporte) + ' ' + monedaBaseSocioReporte"></p>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Suma Movimientos</p>
+              <p class="text-base font-black text-purple-300 mt-1" x-text="formatMonto(totalMontoSocioReporte) + ' ' + monedaBaseSocioReporte"></p>
+            </div>
+            <div class="bg-[#131525] p-4 rounded-xl border border-emerald-500/30 shadow-lg bg-emerald-950/20">
+              <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Nuevo Saldo (Monto Final)</p>
+              <p class="text-base font-black text-emerald-400 mt-1" x-text="formatMonto(nuevoSaldoCalculado) + ' ' + monedaBaseSocioReporte"></p>
             </div>
           </div>
 
-          <!-- TABLA DE MOVIMIENTOS CON TASA Y MONEDA SOCIO DEBIDAMENTE MOSTRADAS -->
+          <!-- TABLA DE MOVIMIENTOS REPORTE -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="p-3 border-b border-slate-800 bg-[#171a2e] flex items-center justify-between">
               <span class="text-xs font-bold text-slate-300 uppercase">Detalle de Operaciones Filtradas</span>
@@ -518,7 +373,6 @@
                         </div>
                       </td>
 
-                      <!-- COLUMNA LOTE / TASAS CON MOSTRADO DE TASA DE LA MONEDA DEL SOCIO -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="c.lote_tasa_asignado || 'N/A'"></span>
                         <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + (c.tasa_base || c.tasa_mercado_aplicada || '0')"></span>
@@ -610,7 +464,66 @@
         </div>
       </template>
 
-      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE CON SELECTOR DE TIPO OPERATIVO RESTAURADO -->
+      <!-- MODAL VISTA PREVIA Y CONFIRMACIÓN DE ENVÍO DE REPORTE POR EVOLUTION / N8N -->
+      <div x-show="modalPreviewReporteAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-[#e8f5e9] border border-emerald-600 text-slate-900 rounded-2xl w-full max-w-xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col font-sans" @click.away="modalPreviewReporteAbierto = false">
+          
+          <div class="flex items-center justify-between border-b border-emerald-800/20 pb-3 shrink-0">
+            <div>
+              <h3 class="font-black text-emerald-950 text-xl tracking-tight" x-text="'Reporte de ' + (filtroReporteNombre || 'SOCIO')"></h3>
+              <p class="text-xs text-emerald-800 font-semibold">Fundablock - Vista Previa de Imagen de Saldo</p>
+            </div>
+            <button @click="modalPreviewReporteAbierto = false" class="text-slate-600 hover:text-slate-900 text-base font-bold">✕</button>
+          </div>
+
+          <!-- PLANTILLA GRAFICA DE REPORTE IDÉNTICA A LA IMAGEN -->
+          <div class="bg-[#f1f8e9] p-4 rounded-xl border border-emerald-200/80 overflow-y-auto flex-1 space-y-3 shadow-inner">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-700 border-b border-slate-300 pb-2">
+              <span>Saldo anterior</span>
+              <span class="font-mono text-sm font-extrabold text-slate-900" x-text="formatMonto(saldoAnteriorManual)"></span>
+            </div>
+
+            <div class="space-y-2 text-[11px]">
+              <div class="grid grid-cols-12 font-bold text-slate-500 uppercase text-[9px] pb-1 border-b border-slate-300">
+                <span class="col-span-2">Fecha</span>
+                <span class="col-span-7">Descripción</span>
+                <span class="col-span-3 text-right">Saldos</span>
+              </div>
+
+              <template x-for="c in comprobantesReporte" :key="c.hash_largo">
+                <div class="grid grid-cols-12 items-center py-1 border-b border-slate-200/60 text-slate-800 font-medium">
+                  <span class="col-span-2 text-[10px] text-slate-500" x-text="formatFechaCortaVE(c.timestamp)"></span>
+                  <div class="col-span-7 pr-1">
+                    <p class="font-bold text-slate-900 leading-tight" x-text="'[' + c.hash_corto + '] Monto: ' + formatMonto(c.monto) + ', Titular: ' + (c.titular || '-')"></p>
+                    <p class="text-[9px] text-slate-600" x-text="'Banco: ' + (c.banco || '-') + ', Moneda: ' + c.moneda + ', Tasa: ' + formatTasa(obtenerTasaSocioCalculada(c))"></p>
+                  </div>
+                  <span class="col-span-3 text-right font-mono font-bold text-rose-600" x-text="'-' + formatMonto(obtenerMontoSocioCalculado(c))"></span>
+                </div>
+              </template>
+            </div>
+
+            <div class="flex justify-between items-center bg-[#d8ebd2] p-3 rounded-lg border border-emerald-400 mt-4">
+              <span class="font-bold text-emerald-950 text-sm">Nuevo saldo</span>
+              <span class="font-mono font-black text-xl text-rose-700" x-text="formatMonto(nuevoSaldoCalculado) + ' ' + monedaBaseSocioReporte"></span>
+            </div>
+          </div>
+
+          <!-- ACCIONES DEL MODAL -->
+          <div class="flex items-center justify-between pt-2 border-t border-emerald-800/20 shrink-0">
+            <span class="text-[10px] text-slate-600">Se generará la imagen y se enviará por **Evolution API**.</span>
+            <div class="flex gap-2">
+              <button @click="modalPreviewReporteAbierto = false" class="px-4 py-2 bg-slate-300 text-slate-800 rounded-xl text-xs font-bold hover:bg-slate-400">Cancelar</button>
+              <button @click="confirmarYEnviarReporteEvolution()" :disabled="enviandoReporte" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1.5">
+                <span x-show="!enviandoReporte">🚀 Confirmar y Enviar por WhatsApp</span>
+                <span x-show="enviandoReporte">Enviando a n8n...</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MODAL AUDITORÍA DE COMPROBANTE -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -650,7 +563,6 @@
                 </div>
               </div>
 
-              <!-- SELECTOR DE TIPO OPERATIVO EN AUDITORÍA DE COMPROBANTE -->
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[9px] font-bold text-amber-400 uppercase mb-0.5">Tipo Operación (D/P/A/C)</label>
@@ -691,7 +603,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL DE SOCIO / MATRIZ GENERAL -->
+      <!-- MODAL CONFIGURACIÓN INTEGRAL -->
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-4 sm:p-5 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
@@ -706,7 +618,6 @@
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- SELECTORES DE PERFIL Y PAÍS MAESTRO -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1 flex flex-col sm:flex-row items-center gap-2">
               <div class="w-full sm:w-1/2">
@@ -718,7 +629,6 @@
                 </select>
               </div>
 
-              <!-- PAÍS MAESTRO DINÁMICO CUANDO SE EDITA GENERAL -->
               <template x-if="socioConfigEdit.nombre === 'GENERAL'">
                 <div class="w-full sm:w-1/2">
                   <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
@@ -744,7 +654,6 @@
             </div>
           </div>
 
-          <!-- PANTALLA 1: REGLAS DE MATRIZ Y REMESAS -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
             
             <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-800/60">
@@ -767,7 +676,6 @@
                     </div>
                   </div>
 
-                  <!-- MODO GENERAL: PAR BINOMIO ÚNICO "REMESA" -->
                   <template x-if="socioConfigEdit.nombre === 'GENERAL'">
                     <div class="bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30 flex flex-col justify-between space-y-2">
                       <div class="flex items-center justify-between border-b border-amber-500/20 pb-1">
@@ -786,11 +694,8 @@
                     </div>
                   </template>
 
-                  <!-- MODO SOCIO INDIVIDUAL: PAGO Y DEPÓSITO -->
                   <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
                     <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
-                      
-                      <!-- PAGO -->
                       <div class="bg-amber-950/40 p-2 rounded-lg border border-amber-500/30 flex flex-col justify-between">
                         <div class="flex items-center justify-between border-b border-amber-500/20 pb-1 mb-1">
                           <span class="text-amber-400 font-black text-[9px]">PAGO</span>
@@ -805,7 +710,6 @@
                         </div>
                       </div>
 
-                      <!-- DEPÓSITO -->
                       <div class="bg-cyan-950/40 p-2 rounded-lg border border-cyan-500/30 flex flex-col justify-between">
                         <div class="flex items-center justify-between border-b border-cyan-500/20 pb-1 mb-1">
                           <span class="text-cyan-400 font-black text-[9px]">DEPÓSITO</span>
@@ -819,7 +723,6 @@
                           <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" placeholder="f_D" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-cyan-300 font-bold outline-none text-right">
                         </div>
                       </div>
-
                     </div>
                   </template>
 
@@ -829,7 +732,6 @@
 
           </div>
 
-          <!-- PANTALLA EXCLUSIVA: ➕ AÑADIR PAÍS A LA MATRIZ -->
           <div x-show="tabConfigActive === 'addpais'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
             <div class="bg-[#1a1d33] p-4 rounded-xl border border-purple-500/30 space-y-3">
               <h4 class="font-bold text-white text-sm flex items-center gap-2">
@@ -857,7 +759,6 @@
             </div>
           </div>
 
-          <!-- PANTALLA 2: PERFIL -->
           <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -945,9 +846,13 @@
         itemEdicion: null,
 
         modalConfigSocioAbierto: false,
+        modalPreviewReporteAbierto: false,
+        enviandoReporte: false,
         tabConfigActive: 'reglas',
         guardandoConfig: false,
         paisMaestroGeneral: 'PEN',
+
+        saldoAnteriorManual: 0.00,
 
         nuevoPaisNombreInput: '',
         nuevoPaisMonedaInput: '',
@@ -1027,7 +932,6 @@
           await this.cargarReportes();
         },
 
-        // LISTA DE HASHES FILTRADA DINÁMICAMENTE SEGÚN ROL, NOMBRE Y RANGO DE FECHAS
         get listaHashesDisponibles() {
           let items = this.comprobantes;
 
@@ -1068,7 +972,6 @@
           return Array.from(hashes).sort();
         },
 
-        // CÁLCULO DE LA MONEDA Y MONTO BASE NATIVO DEL SOCIO PARA EL REPORTE
         get monedaBaseSocioReporte() {
           if (!this.filtroReporteNombre) return 'USDT';
           const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
@@ -1105,7 +1008,6 @@
           return c.m1_socio !== undefined ? c.m1_socio : c.monto;
         },
 
-        // OBTENER TASA APLICADA AL SOCIO EN EL COMPROBANTE
         obtenerTasaSocioCalculada(c) {
           if (this.filtroReporteNombre) {
             const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
@@ -1121,6 +1023,62 @@
 
         get totalMontoSocioReporte() {
           return this.comprobantesReporte.reduce((acc, c) => acc + (parseFloat(this.obtenerMontoSocioCalculado(c)) || 0), 0);
+        },
+
+        // CÁLCULO DEL NUEVO SALDO / MONTO FINAL (SALDO ANTERIOR + MOVIMIENTOS)
+        get nuevoSaldoCalculado() {
+          const anterior = parseFloat(this.saldoAnteriorManual) || 0;
+          return anterior - this.totalMontoSocioReporte;
+        },
+
+        abrirVistaPreviaReporte() {
+          if (this.comprobantesReporte.length === 0) {
+            alert('No hay comprobantes para generar el reporte con los filtros actuales.');
+            return;
+          }
+          this.modalPreviewReporteAbierto = true;
+        },
+
+        async confirmarYEnviarReporteEvolution() {
+          this.enviandoReporte = true;
+          try {
+            const payload = {
+              socio: this.filtroReporteNombre || 'SOCIO',
+              rol: this.filtroReporteRol || 'SOCIO',
+              saldo_anterior: parseFloat(this.saldoAnteriorManual) || 0,
+              nuevo_saldo: this.nuevoSaldoCalculado,
+              moneda_socio: this.monedaBaseSocioReporte,
+              operaciones: this.comprobantesReporte.map(c => ({
+                fecha: this.formatFechaCortaVE(c.timestamp),
+                hash: c.hash_corto,
+                monto_origen: c.monto,
+                moneda_origen: c.moneda,
+                titular: c.titular,
+                banco: c.banco,
+                tasa: this.obtenerTasaSocioCalculada(c),
+                monto_socio: this.obtenerMontoSocioCalculado(c)
+              }))
+            };
+
+            const res = await fetch('/api/reportes/enviar-n8n', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+              alert(data.message);
+              this.modalPreviewReporteAbierto = false;
+            } else {
+              alert('Error enviando reporte a n8n: ' + (data.error || data.message));
+            }
+          } catch (err) {
+            console.error("Error enviando reporte:", err);
+            alert("Error al conectar con el servidor.");
+          } finally {
+            this.enviandoReporte = false;
+          }
         },
 
         abrirConfigGeneral() {
@@ -1658,6 +1616,15 @@
             timeZone: 'America/Caracas', 
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
+          });
+        },
+
+        formatFechaCortaVE(ts) {
+          if (!ts) return '-';
+          const date = new Date(ts * 1000);
+          return date.toLocaleDateString('es-VE', { 
+            timeZone: 'America/Caracas', 
+            day: 'numeric', month: 'short'
           });
         },
 
