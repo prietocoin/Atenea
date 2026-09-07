@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// FACTORES BASE DE MERCADO POSITIVOS (MATRIZ AUTÓNOMA)
+// FACTORES BASE DE MERCADO POSITIVOS
 const FACTORES_BASE_MERCADO = {
   "P-USDT": 1.0,   "D-USDT": 1.0,
   "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
@@ -68,6 +68,25 @@ function calcularTallaAutomatica(conteo) {
 }
 
 const SEED_SOCIOS_CONFIG = {
+  "GENERAL": {
+    "id_grupo": "GRP_GENERAL",
+    "nombre": "GENERAL",
+    "roles": "MATRIZ_GENERAL",
+    "moneda_socio": "USDT",
+    "talla": "L",
+    "whatsapp": "120363421142957552@g.us",
+    "activo": false, // Apagado por defecto para que no salga en cada envio
+    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "cartelera_paises": [
+      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 1 },
+      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 2 },
+      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 3 },
+      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 4 },
+      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 5 },
+      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 6 }
+    ],
+    "ajustes": FACTORES_BASE_MERCADO
+  },
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
     "nombre": "Omar",
@@ -99,78 +118,6 @@ const SEED_SOCIOS_CONFIG = {
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
       { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "JOSEM": {
-    "id_grupo": "120363345944393252@g.us",
-    "nombre": "JoseM",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "L",
-    "whatsapp": "",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "NELSY": {
-    "id_grupo": "GRP_NELSY",
-    "nombre": "Nelsy",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "L",
-    "whatsapp": "",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "MERLI": {
-    "id_grupo": "120363307631639715@g.us",
-    "nombre": "Merli",
-    "roles": "SOCIO",
-    "moneda_socio": "PEN",
-    "talla": "L",
-    "whatsapp": "120363307631639715@g.us",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 1 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 3 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 4 },
-      { "pais": "EEUU-Zelle", "moneda": "USD", "activo": true, "orden": 5 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 6 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "JAVIER": {
-    "id_grupo": "120363401374720092@g.us",
-    "nombre": "Javier",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "S",
-    "whatsapp": "120363422300818123@g.us",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 2 }
     ],
     "ajustes": FACTORES_BASE_MERCADO
   }
@@ -490,10 +437,10 @@ app.post('/api/tasas/reenviar', async (req, res) => {
   }
 });
 
-// DESACTIVAR TODOS LOS SOCIOS
+// DESACTIVAR TODOS LOS SOCIOS (EXCEPTO SI SE MANTIENE EL CONTROL)
 app.patch('/api/socios/desactivar-todos', async (req, res) => {
   try {
-    await pool.query(`UPDATE nombres_fb SET activo = FALSE;`);
+    await pool.query(`UPDATE nombres_fb SET activo = FALSE WHERE UPPER(TRIM(nombre)) != 'GENERAL';`);
     res.json({ success: true, message: 'Todos los socios desactivados correctamente.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -761,7 +708,7 @@ app.get('/api/socios', async (req, res) => {
         UNION
         SELECT nombre_socio_2 AS nombre FROM cola_fb WHERE nombre_socio_2 IS NOT NULL AND nombre_socio_2 != ''
         UNION
-        SELECT nombre FROM nombres_fb WHERE roles = 'SOCIO'
+        SELECT nombre FROM nombres_fb WHERE roles = 'SOCIO' OR roles = 'MATRIZ_GENERAL'
       ) s ORDER BY nombre ASC;
     `;
     const { rows } = await pool.query(query);
@@ -797,7 +744,6 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
   }
 });
 
-// CREACIÓN/EDICIÓN AUTÓNOMA DE SOCIO CON FACTORES BASE POSITIVOS
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
@@ -823,7 +769,6 @@ app.post('/api/socios/config', async (req, res) => {
     const conteoActivos = cpArray.filter(p => p.activo).length;
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
 
-    // Integrar factores por defecto para que NUNCA queden en blanco
     const factoresFinales = { ...FACTORES_BASE_MERCADO, ...(ajustes || {}) };
 
     const jsonCartelera = JSON.stringify(cpArray);
