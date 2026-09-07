@@ -339,21 +339,29 @@
       <!-- VISTA: MÓDULO 2 (BAÚL DE TASAS EN VIVO) -->
       <template x-if="vistaActiva === 'tasas'">
         <div class="space-y-4">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h2 class="text-lg font-bold text-white tracking-wide">Baúl & Cartelera de Tasas</h2>
-            <button 
-              @click="consultarApiHoo()" 
-              :disabled="cargandoTasas"
-              class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 active:scale-95 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-              <span x-show="!cargandoTasas">🔄 Conectar Hoo API</span>
-              <span x-show="cargandoTasas" class="flex items-center gap-2">
-                <svg class="animate-spin h-3.5 w-3.5 text-purple-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Consultando API...
-              </span>
-            </button>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button 
+                @click="reenviarTasas()" 
+                class="px-3.5 py-2 bg-amber-600/30 text-amber-300 border border-amber-500/50 rounded-xl text-xs font-bold hover:bg-amber-600/50 active:scale-95 transition-all flex items-center gap-2 shadow-lg">
+                🔄 Reenviar Tasa Actual
+              </button>
+
+              <button 
+                @click="consultarApiHoo()" 
+                :disabled="cargandoTasas"
+                class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 active:scale-95 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                <span x-show="!cargandoTasas">⚡ Conectar Hoo API</span>
+                <span x-show="cargandoTasas" class="flex items-center gap-2">
+                  <svg class="animate-spin h-3.5 w-3.5 text-purple-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Consultando API...
+                </span>
+              </button>
+            </div>
           </div>
 
           <template x-if="mensajeTasas">
@@ -377,8 +385,8 @@
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasas Capturadas (Paso previo a Producción)</p>
-              <template x-if="codigoTasaActual">
-                <span class="px-2 py-0.5 bg-emerald-900/40 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/30 rounded" x-text="'Lote: ' + codigoTasaActual"></span>
+              <template x-if="ultimoLoteId || codigoTasaActual">
+                <span class="px-2 py-0.5 bg-emerald-900/40 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/30 rounded" x-text="'Lote Actual: ' + (codigoTasaActual || ultimoLoteId)"></span>
               </template>
             </div>
 
@@ -507,7 +515,7 @@
         </div>
       </template>
 
-      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO CON ESTADO ACTIVO/INACTIVO) -->
+      <!-- VISTA: MÓDULO 4 (DIRECTORIO REFORMADO CON BOTONES MASIVOS) -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -515,15 +523,28 @@
               <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Reglas (nombres_fb)</h2>
               <p class="text-xs text-slate-400">Directorio centralizado con perfil y configuración integral.</p>
             </div>
-            <div class="flex items-center gap-2">
-              <button @click="prepararNuevoSocio()" class="px-3.5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold transition-all shadow-lg flex items-center gap-1.5 active:scale-95">
+            
+            <div class="flex items-center gap-2 flex-wrap">
+              <button @click="apagarTodosSocios()" class="px-3 py-1.5 rounded-xl bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 border border-rose-500/30 text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
+                <span>🔴 Apagar Todos</span>
+              </button>
+
+              <button @click="guardarVigentes()" class="px-3 py-1.5 rounded-xl bg-purple-900/40 text-purple-300 hover:bg-purple-600/40 border border-purple-500/30 text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
+                <span>📌 Guardar Vigentes</span>
+              </button>
+
+              <button @click="restaurarVigentes()" class="px-3 py-1.5 rounded-xl bg-emerald-900/40 text-emerald-300 hover:bg-emerald-600/40 border border-emerald-500/30 text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
+                <span>📑 Restaurar Vigentes</span>
+              </button>
+
+              <button @click="prepararNuevoSocio()" class="px-3 py-1.5 rounded-xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold transition-all shadow-lg flex items-center gap-1 active:scale-95">
                 <span>➕ Nuevo Socio</span>
               </button>
-              <button @click="cargarDirectorio()" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:scale-95">🔄 Actualizar</button>
+
+              <button @click="cargarDirectorio()" class="p-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:scale-95">🔄</button>
             </div>
           </div>
 
-          <!-- TABLA LIMPIA Y REFORMADA DEL DIRECTORIO -->
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
               <table class="w-full text-xs text-left border-collapse">
@@ -539,7 +560,6 @@
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors" :class="d.activo === false ? 'opacity-50' : ''">
                       
-                      <!-- INFORMACIÓN DEL SOCIO -->
                       <td class="px-3 py-3 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1">
                           <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
@@ -551,10 +571,8 @@
                         </div>
                       </td>
 
-                      <!-- WHATSAPP / ID GRUPO -->
                       <td class="px-3 py-3 align-middle font-mono text-[10px] text-slate-400 whitespace-nowrap" x-text="d.whatsapp || d.id_grupo || '-'"></td>
 
-                      <!-- SWITCH INTERRUPTOR ESTADO -->
                       <td class="px-3 py-3 align-middle text-center whitespace-nowrap">
                         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                           <div class="relative inline-flex items-center">
@@ -565,7 +583,6 @@
                         </label>
                       </td>
 
-                      <!-- ACCIONES -->
                       <td class="px-3 py-3 align-middle text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
                           <button @click="abrirModalConfig(d.nombre)" class="px-2.5 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
@@ -732,9 +749,9 @@
                     <div class="flex items-center gap-1.5">
                       <span class="text-[8px] font-bold text-slate-500 uppercase">Regla:</span>
                       <select x-model="socioConfigEdit[p.code.toLowerCase()]" class="bg-[#131525] border border-slate-700 text-[10px] font-black text-purple-300 rounded px-1.5 py-0.5 outline-none focus:border-purple-500">
+                        <option value="A">A</option>
                         <option value="D">D</option>
                         <option value="P">P</option>
-                        <option value="A">A</option>
                         <option value="C">C</option>
                       </select>
                       <span class="px-1.5 py-0.5 bg-slate-800 text-purple-300 font-mono text-[9px] font-extrabold rounded" x-text="p.code"></span>
@@ -812,7 +829,6 @@
               </div>
             </div>
 
-            <!-- INTERRUPTOR DENTRO DEL PERFIL -->
             <div class="p-3 bg-[#1a1d33] rounded-xl border border-slate-700 flex items-center justify-between">
               <div>
                 <span class="block text-xs font-bold text-white">Estado de Publicación Automática</span>
@@ -827,7 +843,6 @@
               </label>
             </div>
 
-            <!-- TALLA CALCULADA AUTOMÁTICAMENTE -->
             <div class="p-3 bg-[#1a1d33] rounded-xl border border-purple-500/30 flex items-center justify-between">
               <div>
                 <span class="block text-xs font-bold text-purple-300">Talla de Cartelera Automática</span>
@@ -836,7 +851,6 @@
               <span class="px-3 py-1 bg-purple-900/50 text-purple-200 font-mono font-black text-sm rounded-lg border border-purple-500/40" x-text="calcularTallaDinamica(contarPaisesActivosEdit())"></span>
             </div>
 
-            <!-- GESTIÓN DE PERFIL -->
             <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
               <button @click="prepararNuevoSocio()" class="px-3.5 py-2 bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
                 <span>➕ Crear Nuevo Perfil</span>
@@ -849,7 +863,6 @@
 
           </div>
 
-          <!-- PIE DE MODAL -->
           <div class="flex items-center justify-between pt-2 border-t border-slate-800 shrink-0">
             <span class="text-[10px] text-slate-500">Socio en edición: <strong class="text-white" x-text="socioConfigEdit.nombre || 'Nuevo Socio'"></strong></span>
             <div class="flex gap-2">
@@ -883,7 +896,6 @@
         modalAbierto: false,
         itemEdicion: null,
 
-        // MODAL CONFIGURACIÓN SOCIO
         modalConfigSocioAbierto: false,
         tabConfigActive: 'reglas',
         guardandoConfig: false,
@@ -895,8 +907,8 @@
           talla: 'M',
           whatsapp: '',
           activo: true,
-          pen: 'D', cop: 'D', clp: 'D', ars: 'D', ves: 'D', brl: 'D', mxn: 'D', pyg: 'D',
-          dop: 'D', crc: 'D', eur: 'D', cad: 'D', usd: 'P', ecu: 'D', pan: 'D', usdt: 'A',
+          pen: 'A', cop: 'A', clp: 'A', ars: 'A', ves: 'A', brl: 'A', mxn: 'A', pyg: 'A',
+          dop: 'A', crc: 'A', eur: 'A', cad: 'A', usd: 'A', ecu: 'A', pan: 'A', usdt: 'A',
           ajustes: {}
         },
 
@@ -943,6 +955,53 @@
           await this.cargarComprobantes();
         },
 
+        async reenviarTasas(idTasa = null) {
+          try {
+            const res = await fetch('/api/tasas/reenviar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id_tasa: idTasa || this.codigoTasaActual || this.ultimoLoteId })
+            });
+            const data = await res.json();
+            alert(data.message || 'Reenvío solicitado');
+          } catch (err) {
+            console.error("Error reenviando tasas:", err);
+          }
+        },
+
+        async apagarTodosSocios() {
+          if (!confirm('¿Deseas apagar la publicación para TODOS los socios?')) return;
+          try {
+            const res = await fetch('/api/socios/desactivar-todos', { method: 'PATCH' });
+            if (res.ok) {
+              await this.cargarDirectorio();
+            }
+          } catch (err) {
+            console.error("Error apagar todos:", err);
+          }
+        },
+
+        async guardarVigentes() {
+          try {
+            const res = await fetch('/api/socios/guardar-vigentes', { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+          } catch (err) {
+            console.error("Error guardando vigentes:", err);
+          }
+        },
+
+        async restaurarVigentes() {
+          try {
+            const res = await fetch('/api/socios/restaurar-vigentes', { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            await this.cargarDirectorio();
+          } catch (err) {
+            console.error("Error restaurando vigentes:", err);
+          }
+        },
+
         async toggleEstadoSocio(nombre, nuevoEstado) {
           try {
             const res = await fetch(`/api/socios/${encodeURIComponent(nombre)}/estado`, {
@@ -980,7 +1039,6 @@
           return cp.filter(item => item.activo).length;
         },
 
-        // Talla según umbrales de Google Slides: S (<=3), M (<=6), L (>6)
         calcularTallaDinamica(conteo) {
           if (conteo <= 3) return 'S';
           if (conteo <= 6) return 'M';
@@ -1028,6 +1086,26 @@
         },
 
         prepararNuevoSocio() {
+          const factoresDefault = {
+            "P-USDT": 1.0,   "D-USDT": 1.0,
+            "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
+            "P-PEN": 0.976,  "D-PEN": 1.026,
+            "P-COP": 0.976,  "D-COP": 1.030,
+            "P-CLP": 0.962,  "D-CLP": 1.042,
+            "P-ARS": 0.962,  "D-ARS": 1.042,
+            "P-VES": 0.976,  "D-VES": 1.026,
+            "P-BRL": 0.952,  "D-BRL": 1.053,
+            "P-MXN": 0.943,  "D-MXN": 1.064,
+            "P-PYG": 0.962,  "D-PYG": 1.042,
+            "P-EUR": 0.926,  "D-EUR": 1.087,
+            "P-USD": 0.930,  "D-USD": 1.087,
+            "P-ECU": 0.940,  "D-ECU": 1.064,
+            "P-DOP": 0.943,  "D-DOP": 1.064,
+            "P-CRC": 0.943,  "D-CRC": 1.064,
+            "P-CAD": 0.962,  "D-CAD": 1.042,
+            "P-BOB": 0.926,  "D-BOB": 1.087
+          };
+
           this.socioConfigEdit = {
             nombre: 'NUEVO_SOCIO',
             roles: 'SOCIO',
@@ -1035,9 +1113,9 @@
             talla: 'M',
             whatsapp: '',
             activo: true,
-            pen: 'D', cop: 'D', clp: 'D', ars: 'D', ves: 'D', brl: 'D', mxn: 'D', pyg: 'D',
-            dop: 'D', crc: 'D', eur: 'D', cad: 'D', usd: 'P', ecu: 'D', pan: 'D', usdt: 'A',
-            ajustes: {}
+            pen: 'A', cop: 'A', clp: 'A', ars: 'A', ves: 'A', brl: 'A', mxn: 'A', pyg: 'A',
+            dop: 'A', crc: 'A', eur: 'A', cad: 'A', usd: 'A', ecu: 'A', pan: 'A', usdt: 'A',
+            ajustes: factoresDefault
           };
 
           this.carteleraPaisesEdit = this.listaPaisesBase.map(pb => ({
@@ -1138,7 +1216,7 @@
             this.socioConfigEdit.activo = reg.activo !== false;
 
             ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'].forEach(m => {
-              this.socioConfigEdit[m] = reg[m] || 'D';
+              this.socioConfigEdit[m] = reg[m] || 'A';
             });
 
             this.socioConfigEdit.ajustes = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
