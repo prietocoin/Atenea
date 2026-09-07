@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// FACTORES BASE DE MERCADO POSITIVOS
+// FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
 const FACTORES_BASE_MERCADO = {
   "P-USDT": 1.0,   "D-USDT": 1.0,
   "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
@@ -75,7 +75,7 @@ const SEED_SOCIOS_CONFIG = {
     "moneda_socio": "USDT",
     "talla": "L",
     "whatsapp": "120363421142957552@g.us",
-    "activo": false, // Apagado por defecto para que no salga en cada envio
+    "activo": false,
     "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 1 },
