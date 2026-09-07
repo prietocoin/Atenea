@@ -693,7 +693,7 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL UNIFICADA -->
+      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL CON PAÍS MAESTRO FILTRO PARA GENERAL -->
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
           
@@ -701,7 +701,7 @@
             <div class="flex items-center gap-3">
               <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
               <div>
-                <h3 class="font-bold text-white text-base">Configuración Integral del Socio</h3>
+                <h3 class="font-bold text-white text-base" x-text="socioConfigEdit.nombre === 'GENERAL' ? 'Tablero Matriz General' : 'Configuración Integral del Socio'"></h3>
                 <p class="text-xs text-slate-400">Gestiona reglas, factores, tasas resultantes y el perfil en 2 subpantallas simples.</p>
               </div>
             </div>
@@ -709,13 +709,27 @@
           </div>
 
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex-1">
-              <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Socio en Edición</label>
-              <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
-                <template x-for="s in socios" :key="s">
-                  <option :value="s" x-text="s"></option>
-                </template>
-              </select>
+            <div class="flex-1 flex items-center gap-2">
+              <div class="flex-1">
+                <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
+                <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
+                  <template x-for="s in socios" :key="s">
+                    <option :value="s" x-text="s"></option>
+                  </template>
+                </select>
+              </div>
+
+              <!-- FILTRO ADICIONAL DE PAÍS MAESTRO CUANDO SE EDITA EL PERFIL GENERAL -->
+              <template x-if="socioConfigEdit.nombre === 'GENERAL'">
+                <div class="flex-1">
+                  <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
+                  <select x-model="paisMaestroGeneral" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-amber-500">
+                    <template x-for="p in listaPaisesBase" :key="p.code">
+                      <option :value="p.code" x-text="p.flag + ' ' + p.nombrePais + ' (' + p.code + ')'"></option>
+                    </template>
+                  </select>
+                </div>
+              </template>
             </div>
 
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800">
@@ -732,7 +746,7 @@
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
             
             <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-800/60">
-              <span class="text-xs font-bold text-slate-300">Reglas por País, Factores y Tasa Resultante en Vivo</span>
+              <span class="text-xs font-bold text-slate-300" x-text="socioConfigEdit.nombre === 'GENERAL' ? ('Matriz de Factores frente a ' + paisMaestroGeneral) : 'Reglas por País, Factores y Tasa Resultante en Vivo'"></span>
               <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla Auto: ' + calcularTallaDinamica(contarPaisesActivosEdit()) + ' [' + contarPaisesActivosEdit() + ' Países Tildados]'"></span>
             </div>
 
@@ -800,6 +814,7 @@
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rol</label>
                 <select x-model="socioConfigEdit.roles" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none focus:border-purple-500">
                   <option value="SOCIO">SOCIO</option>
+                  <option value="MATRIZ_GENERAL">MATRIZ_GENERAL</option>
                   <option value="GRUPO">GRUPO</option>
                   <option value="COMPRAS">COMPRAS</option>
                 </select>
@@ -832,7 +847,7 @@
             <div class="p-3 bg-[#1a1d33] rounded-xl border border-slate-700 flex items-center justify-between">
               <div>
                 <span class="block text-xs font-bold text-white">Estado de Publicación Automática</span>
-                <span class="text-[10px] text-slate-400">Si está inactivo, n8n ignorará este perfil al publicar las tasas.</span>
+                <span class="text-[10px] text-slate-400">Si está inactivo, n8n no generará las carteleras de este perfil al publicar las tasas.</span>
               </div>
               <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                 <div class="relative inline-flex items-center">
@@ -899,6 +914,7 @@
         modalConfigSocioAbierto: false,
         tabConfigActive: 'reglas',
         guardandoConfig: false,
+        paisMaestroGeneral: 'ARS',
 
         socioConfigEdit: {
           nombre: '',
@@ -970,7 +986,7 @@
         },
 
         async apagarTodosSocios() {
-          if (!confirm('¿Deseas apagar la publicación para TODOS los socios?')) return;
+          if (!confirm('¿Deseas apagar la publicación para TODOS los socios (excepto la general)?')) return;
           try {
             const res = await fetch('/api/socios/desactivar-todos', { method: 'PATCH' });
             if (res.ok) {
@@ -1049,29 +1065,14 @@
           return this.carteleraPaisesEdit.filter(p => p.activo).length;
         },
 
-        obtenerPaisesActivosEdit() {
-          return this.carteleraPaisesEdit.filter(p => p.activo);
-        },
-
-        obtenerPaisesActivosSocio(socioObj) {
-          if (!socioObj) return [];
-          const cp = typeof socioObj.cartelera_paises === 'string' ? JSON.parse(socioObj.cartelera_paises) : (socioObj.cartelera_paises || []);
-          const activos = cp.filter(item => item.activo);
-          
-          return activos.map(p => {
-            const pb = this.listaPaisesBase.find(b => b.code === p.moneda || b.nombrePais === p.pais) || {};
-            return {
-              pais: p.pais || pb.nombrePais,
-              code: p.moneda || pb.code,
-              flag: pb.flag || '🏳️'
-            };
-          });
-        },
-
         calcularTasaSocio(monedaCode, factor) {
           if (!factor) return 0;
           const f = Math.abs(parseFloat(factor) || 0);
-          const monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
+          
+          let monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
+          if (this.socioConfigEdit.nombre === 'GENERAL') {
+            monedaBaseSocio = this.paisMaestroGeneral;
+          }
 
           const tasaBaseDestino = parseFloat(this.ultimasTasasMercado[monedaCode.toUpperCase()] || 1.0);
 
@@ -1210,7 +1211,7 @@
           const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
 
           if (reg) {
-            this.socioConfigEdit.roles = reg.roles || 'SOCIO';
+            this.socioConfigEdit.roles = reg.roles || (socioNorm === 'GENERAL' ? 'MATRIZ_GENERAL' : 'SOCIO');
             this.socioConfigEdit.moneda_socio = (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio) || 'USDT';
             this.socioConfigEdit.whatsapp = reg.whatsapp || '';
             this.socioConfigEdit.activo = reg.activo !== false;
