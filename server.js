@@ -463,7 +463,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES SEGUROS
+// HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -555,21 +555,28 @@ const getComprobantesHandler = async (req, res) => {
       query += ` AND v.conteo > 1`;
     }
 
-    // 1. FILTRO SOCIO / NOMBRE
+    // 1. FILTRO ROL (JERARQUÍA 1)
+    if (rol && rol.trim()) {
+      query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
+      values.push(rol.trim());
+      paramIndex++;
+    }
+
+    // 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2)
     if (socio && socio.trim()) {
       query += ` AND (UPPER(TRIM(v.nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(v.nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
       values.push(socio.trim());
       paramIndex++;
     }
 
-    // 2. FILTRO BUSCAR HASH EN COMPROBANTES
+    // 3. FILTRO BUSCAR HASH ESPECÍFICO EN COMPROBANTES
     if (hash && hash.trim()) {
       query += ` AND (v.hash_corto ILIKE $${paramIndex} OR v.hash_largo ILIKE $${paramIndex})`;
       values.push(`%${hash.trim()}%`);
       paramIndex++;
     }
 
-    // 3. FILTRO FECHA INICIO (GMT-4 VENEZUELA)
+    // 4. FILTRO FECHA INICIO (GMT-4 VENEZUELA)
     if (fechaInicio && fechaInicio.trim()) {
       const startTimestamp = Math.floor(new Date(fechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
       if (!isNaN(startTimestamp)) {
@@ -579,7 +586,7 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    // 4. FILTRO FECHA FIN (GMT-4 VENEZUELA)
+    // 5. FILTRO FECHA FIN (GMT-4 VENEZUELA)
     if (fechaFin && fechaFin.trim()) {
       const endTimestamp = Math.floor(new Date(fechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
       if (!isNaN(endTimestamp)) {
@@ -589,7 +596,7 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    // 5. FILTRO DESDE HASH X EN ADELANTE
+    // 6. FILTRO DESDE HASH X EN ADELANTE
     if (desdeHash && desdeHash.trim()) {
       const hashRes = await pool.query(
         `SELECT timestamp_comprobante FROM v_comprobantes_auditados WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
@@ -601,13 +608,6 @@ const getComprobantesHandler = async (req, res) => {
         values.push(hashTs);
         paramIndex++;
       }
-    }
-
-    // 6. FILTRO ROL
-    if (rol && rol.trim()) {
-      query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
-      values.push(rol.trim());
-      paramIndex++;
     }
 
     query += ` ORDER BY v.timestamp_comprobante DESC;`;
