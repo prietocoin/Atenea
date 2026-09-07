@@ -417,17 +417,21 @@ app.post('/api/tasas/publicar', async (req, res) => {
       return res.status(400).json({ success: false, message: 'No se enviaron tasas para publicar.' });
     }
 
+    // CÁLCULO DINÁMICO DEL CÓDIGO DE TASA
     let codigoTasa = id_tasa;
     if (!codigoTasa) {
       const lastRes = await pool.query("SELECT id_tasa FROM mercado_tasas ORDER BY id DESC LIMIT 1;");
       if (lastRes.rows.length > 0) {
-        const num = parseInt(lastRes.rows[0].id_tasa.replace('T', '')) + 1;
+        const lastLot = lastRes.rows[0].id_tasa;
+        const match = lastLot.match(/\d+/);
+        const num = match ? parseInt(match[0], 10) + 1 : 1;
         codigoTasa = `T${String(num).padStart(3, '0')}`;
       } else {
-        codigoTasa = 'T359';
+        codigoTasa = 'T360';
       }
     }
 
+    // Inserción masiva del lote en mercado_tasas
     for (const [moneda, valor] of Object.entries(tasas)) {
       if (valor && !isNaN(valor)) {
         await pool.query(
@@ -437,7 +441,7 @@ app.post('/api/tasas/publicar', async (req, res) => {
       }
     }
 
-    // DISPARO ÚNICO PARA N8N
+    // NOTIFICACIÓN ÚNICA PARA DISPARAR N8N DERECHO CON SU ID DE TASA DINÁMICO
     await pool.query(
       `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
       [codigoTasa]
