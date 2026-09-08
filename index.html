@@ -500,13 +500,13 @@
             <!-- MOVIMIENTO FILTRADO EN EL PERÍODO -->
             <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
               <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Movimiento Filtrado</p>
-              <p class="text-base font-black text-emerald-400 mt-1" x-text="formatMonto(totalMontoSocioReporte) + ' ' + monedaBaseSocioReporte"></p>
+              <p class="text-base font-black mt-1" :class="totalMontoSocioReporte < 0 ? 'text-rose-400' : 'text-emerald-400'" x-text="formatMonto(totalMontoSocioReporte) + ' ' + monedaBaseSocioReporte"></p>
             </div>
 
             <!-- SALDO ACTUAL (TOTAL CÁLCULO EN VIVO) -->
-            <div class="bg-[#131525] p-3 rounded-xl border border-emerald-500/50 bg-emerald-950/20 shadow-lg">
-              <p class="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Saldo Actual (Total)</p>
-              <p class="text-base font-black text-emerald-300 mt-1" x-text="formatMonto(nuevoSaldoReporte) + ' ' + monedaBaseSocioReporte"></p>
+            <div class="bg-[#131525] p-3 rounded-xl border bg-emerald-950/20 shadow-lg" :class="nuevoSaldoReporte < 0 ? 'border-rose-500/50' : 'border-emerald-500/50'">
+              <p class="text-[10px] font-bold uppercase tracking-widest" :class="nuevoSaldoReporte < 0 ? 'text-rose-300' : 'text-emerald-300'">Saldo Actual (Total)</p>
+              <p class="text-base font-black mt-1" :class="nuevoSaldoReporte < 0 ? 'text-rose-400' : 'text-emerald-300'" x-text="formatMonto(nuevoSaldoReporte) + ' ' + monedaBaseSocioReporte"></p>
             </div>
           </div>
 
@@ -1150,39 +1150,84 @@
           return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
         },
 
-        // EXTRACCIÓN DE FACTOR Y TIPO DE OPERACIÓN DESDE LA CONFIGURACIÓN DEL SOCIO
-        obtenerFactorYTipo(c) {
+        // UNIFICADOR CENTRAL: DETERMINA MONTO, TASA Y TIPO (P/D) SEGÚN LA TASA APLICADA Y EL PERFIL
+        obtenerInformacionSocioOperacion(c) {
           const socioNorm = (this.filtroReporteNombre || '').trim().toUpperCase();
-          let factor = 1.0;
-          let tipoOp = (c.tipo_op || c.tipo_manual || 'D').toUpperCase();
+          let esSocio1 = true;
+          let tasaAplicada = c.tasa_1 || c.tasa_base || 1.0;
+          let montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
+          let factorAplicado = c.factor_1 !== undefined && c.factor_1 !== null ? parseFloat(c.factor_1) : 1.0;
+          let monedaSocio = c.moneda_socio_1 || c.moneda || 'USDT';
 
           if (socioNorm) {
-            if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-              factor = c.factor_1 !== undefined && c.factor_1 !== null ? parseFloat(c.factor_1) : 1.0;
-              tipoOp = (this.getCodigoOperativo(c.nombre_socio_1, c.moneda) || c.tipo_op || 'D').toUpperCase();
-            } else if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-              factor = c.factor_2 !== undefined && c.factor_2 !== null ? parseFloat(c.factor_2) : 1.0;
-              tipoOp = (this.getCodigoOperativo(c.nombre_socio_2, c.moneda) || c.tipo_op || 'D').toUpperCase();
+            if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
+              esSocio1 = false;
+              tasaAplicada = c.tasa_2 || c.tasa_base || 1.0;
+              montoBase = c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
+              factorAplicado = c.factor_2 !== undefined && c.factor_2 !== null ? parseFloat(c.factor_2) : 1.0;
+              monedaSocio = c.moneda_socio_2 || c.moneda || 'USDT';
             }
           }
 
+          let tipoOp = (esSocio1 ? (c.tipo_op || c.tipo_manual) : null) || 'D';
+          let esPago = false;
+
+          // Si el factor registrado en la transacción es negativo
+          if (factorAplicado < 0) {
+            esPago = true;
+            tipoOp = 'P';
+          }
+
+          // Cruce con la configuración teórica del perfil del socio en directorio
           const regSocio = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-          if (regSocio && regSocio.ajustes) {
-            const ajustes = typeof regSocio.ajustes === 'string' ? JSON.parse(regSocio.ajustes) : regSocio.ajustes;
-            const claveAjuste = `${tipoOp}-${(c.moneda || '').toUpperCase()}`;
-            if (ajustes && ajustes[claveAjuste] !== undefined && ajustes[claveAjuste] !== '') {
-              factor = parseFloat(ajustes[claveAjuste]);
+          if (regSocio) {
+            const ajustes = typeof regSocio.ajustes === 'string' ? JSON.parse(regSocio.ajustes) : (regSocio.ajustes || {});
+            const monedaOrig = (c.moneda || '').toUpperCase();
+            
+            const factorP = parseFloat(ajustes[`P-${monedaOrig}`]);
+            const factorD = parseFloat(ajustes[`D-${monedaOrig}`]);
+
+            const tasaTeoricaP = Math.abs(this.calcularTasaSocio(monedaOrig, factorP));
+            const tasaTeoricaD = Math.abs(this.calcularTasaSocio(monedaOrig, factorD));
+            const tasaReal = Math.abs(parseFloat(tasaAplicada) || 0);
+
+            if (!isNaN(factorP) && factorP < 0) {
+              if (Math.abs(tasaReal - tasaTeoricaP) <= Math.abs(tasaReal - tasaTeoricaD)) {
+                esPago = true;
+                tipoOp = 'P';
+              }
+            } else if (!isNaN(factorD) && factorD < 0) {
+              if (Math.abs(tasaReal - tasaTeoricaD) < Math.abs(tasaReal - tasaTeoricaP)) {
+                esPago = true;
+                tipoOp = 'P';
+              }
             }
           }
 
-          return { factor, tipoOp };
+          // Si es PAGO: fuerza el signo negativo
+          if (tipoOp === 'P' || esPago) {
+            montoBase = -Math.abs(montoBase);
+            tipoOp = 'P';
+          } else {
+            montoBase = Math.abs(montoBase);
+            if (tipoOp !== 'A' && tipoOp !== 'C') {
+              tipoOp = 'D';
+            }
+          }
+
+          return {
+            montoCalculado: montoBase,
+            tasaCalculada: tasaAplicada,
+            tipoOp: tipoOp,
+            monedaSocio: monedaSocio,
+            hashCorto: c.hash_corto || 'OP'
+          };
         },
 
         // Helper para obtener [TIPO-HASH] (Ej: [P-7a110fc] o [D-8fde7bf])
         obtenerEtiquetaHash(c) {
-          const hash = c.hash_corto || 'OP';
-          const { tipoOp } = this.obtenerFactorYTipo(c);
-          return `[${tipoOp}-${hash}]`;
+          const info = this.obtenerInformacionSocioOperacion(c);
+          return `[${info.tipoOp}-${info.hashCorto}]`;
         },
 
         async enviarReporteWhatsApp() {
@@ -1285,56 +1330,18 @@
         },
 
         obtenerMonedaSocioCalculada(c) {
-          if (this.filtroReporteNombre) {
-            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-            if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-              return c.moneda_socio_1 || 'USDT';
-            }
-            if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-              return c.moneda_socio_2 || 'USDT';
-            }
-          }
-          return c.moneda_socio_1 || 'USDT';
+          const info = this.obtenerInformacionSocioOperacion(c);
+          return info.monedaSocio;
         },
 
-        // EVALUACIÓN DE MONTO CON SIGNO ALGEBRAICO SEGÚN FACTOR Y TIPO DE OPERACIÓN
         obtenerMontoSocioCalculado(c) {
-          const socioNorm = (this.filtroReporteNombre || '').trim().toUpperCase();
-          let montoBase = 0;
-
-          if (socioNorm) {
-            if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-              montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
-            } else if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-              montoBase = c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
-            } else {
-              montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
-            }
-          } else {
-            montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
-          }
-
-          const { factor, tipoOp } = this.obtenerFactorYTipo(c);
-
-          // Si el factor configurado es negativo o es un Pago ('P'): el monto pasa a ser negativo
-          if (factor < 0 || tipoOp === 'P') {
-            return -Math.abs(montoBase);
-          } else {
-            return Math.abs(montoBase);
-          }
+          const info = this.obtenerInformacionSocioOperacion(c);
+          return info.montoCalculado;
         },
 
         obtenerTasaSocioCalculada(c) {
-          if (this.filtroReporteNombre) {
-            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-            if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-              return c.tasa_1 || c.tasa_base || 1.0;
-            }
-            if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-              return c.tasa_2 || c.tasa_base || 1.0;
-            }
-          }
-          return c.tasa_1 || c.tasa_base || 1.0;
+          const info = this.obtenerInformacionSocioOperacion(c);
+          return info.tasaCalculada;
         },
 
         get totalMontoSocioReporte() {
@@ -1407,7 +1414,7 @@
             if (res.ok) {
               const data = await res.json();
               if (this.filtroReporteNombre) {
-                // Filtra descartando las operaciones 1x (conteo <= 1 sin socio_2) y montos de $0.00
+                // Filtra descartando las operaciones 1x (conteo <= 1 sin socio_2) y comprobantes de monto 0
                 this.comprobantesReporte = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
               } else {
                 this.comprobantesReporte = data.filter(c => parseFloat(c.monto || 0) !== 0);
@@ -1510,6 +1517,7 @@
           return this.carteleraPaisesEdit.filter(p => p.activo).length;
         },
 
+        // MANTENIMIENTO DEL SIGNO EN EL FACTOR
         calcularTasaSocio(monedaCode, factor) {
           if (factor === undefined || factor === null || factor === '') return 0;
           const f = parseFloat(factor) || 0;
