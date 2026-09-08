@@ -926,7 +926,34 @@ app.post('/api/socios/config', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Endpoint para dispatch del reporte por WhatsApp/n8n
+app.post('/api/reportes/enviar-whatsapp', async (req, res) => {
+  try {
+    const { socio, remoteJid, saldoAnterior, movimiento, nuevoSaldo, moneda, comprobantes } = req.body;
 
+    if (!remoteJid || !remoteJid.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'El socio seleccionado no posee un WhatsApp Remote JID válido en el Directorio.' 
+      });
+    }
+
+    // Registra la notificación en la cola para que n8n u Evolution API lo procesen
+    await pool.query(
+      `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
+      [`REPORTE_${socio}_${Date.now()}`]
+    );
+
+    res.json({
+      success: true,
+      message: `Reporte de ${socio} encolado para envío a ${remoteJid}`,
+      data: { socio, remoteJid, saldoAnterior, movimiento, nuevoSaldo, moneda, totalItems: comprobantes?.length || 0 }
+    });
+  } catch (err) {
+    console.error("Error en POST /api/reportes/enviar-whatsapp:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
