@@ -1856,22 +1856,51 @@
           }
         },
 
+        // REGLA UNIVERSAL DE TRUNCADO ESTRICTO DE MONTO
         formatMonto(val) {
-          if (val === null || val === undefined || isNaN(val)) return '0.00';
-          return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          if (val === null || val === undefined || isNaN(val) || val === '') return '0';
+          const num = parseFloat(val);
+          if (num === 0) return '0';
+
+          const signoStr = num < 0 ? '-' : '';
+          const v = Math.abs(num);
+          const vRound = Math.round(v * 1e8) / 1e8;
+
+          if (vRound > 499.99) {
+            const resNum = Math.trunc(vRound);
+            return signoStr + resNum.toLocaleString('en-US');
+          } else if (vRound > 0.99) {
+            const resNum = Math.trunc(vRound * 100) / 100;
+            return signoStr + resNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          } else {
+            const magnitud = Math.floor(Math.log10(vRound));
+            const factor = Math.pow(10, 2 - magnitud);
+            const resNum = Math.trunc(vRound * factor) / factor;
+            return signoStr + resNum.toString();
+          }
         },
 
+        // REGLA UNIVERSAL DE TRUNCADO ESTRICTO DE TASA
         formatTasa(val) {
-          if (val === null || val === undefined || isNaN(val)) return '-';
+          if (val === null || val === undefined || isNaN(val) || val === '') return '-';
           const num = parseFloat(val);
           if (isNaN(num) || num === 0) return num === 0 ? '0' : '-';
-          const esNeg = num < 0;
-          const absNum = Math.abs(num);
-          let puntoCorte = (absNum >= 100) ? 0 : (absNum >= 1) ? 2 : (-Math.floor(Math.log10(absNum)) + 2);
-          const mult = Math.pow(10, puntoCorte);
-          const truncado = Math.trunc(Math.round(absNum * mult * 1e9) / 1e9) / mult;
-          const res = (puntoCorte === 0) ? Math.trunc(truncado).toString() : truncado.toFixed(puntoCorte).replace(/\.?0+$/, "");
-          return esNeg ? `-${res}` : res;
+
+          const signoStr = num < 0 ? '-' : '';
+          const v = Math.abs(num);
+          const vRound = Math.round(v * 1e8) / 1e8;
+
+          if (vRound > 499.99) {
+            return signoStr + Math.trunc(vRound).toLocaleString('en-US');
+          } else if (vRound > 0.99) {
+            const resNum = Math.trunc(vRound * 100) / 100;
+            return signoStr + resNum.toFixed(2).replace(/\.?0+$/, "");
+          } else {
+            const magnitud = Math.floor(Math.log10(vRound));
+            const factor = Math.pow(10, 2 - magnitud);
+            const resNum = Math.trunc(vRound * factor) / factor;
+            return signoStr + resNum.toString();
+          }
         },
 
         formatFecha(ts) {
