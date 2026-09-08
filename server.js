@@ -347,7 +347,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER CENTRALIZADO: TIPO DICTADO POR SOCIO 1 Y HEREDADO POR SOCIO 2
+// HANDLER CENTRALIZADO: RESPETO STRICTO DEL SIGNO DEL FACTOR DE NOMBRES_FB
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -514,10 +514,10 @@ const getComprobantesHandler = async (req, res) => {
       let tipoOp1 = (row.tipo_op || 'D').trim().toUpperCase();
       if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
 
-      // --- 2. SOCIO 2 HEREDA EXACTAMENTE EL MISMO TIPO DE OPERACIÓN DEL SOCIO 1 ---
+      // --- 2. SOCIO 2 HEREDA EXACTAMENTE EL MISMO TIPO DE OPERACIÓN ---
       let tipoOp2 = tipoOp1;
 
-      // --- 3. LECTURA DE FACTORES DE AJUSTES EN AMBOS PERFILES ---
+      // --- 3. LECTURA DE FACTORES DE AJUSTES SIN INVERTIR O FORZAR SIGNOS ---
       const aj1 = typeof row.ajustes_socio_1 === 'string' ? JSON.parse(row.ajustes_socio_1) : (row.ajustes_socio_1 || {});
       const aj2 = typeof row.ajustes_socio_2 === 'string' ? JSON.parse(row.ajustes_socio_2) : (row.ajustes_socio_2 || {});
 
@@ -527,45 +527,37 @@ const getComprobantesHandler = async (req, res) => {
       const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
       const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
 
-      // --- 4. CÁLCULO ARITMÉTICO Y SIGNO SOCIO 1 ---
+      // --- 4. CÁLCULO SOCIO 1 (PRESERVA EL SIGNO DEL FACTOR REAL) ---
       let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
       if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
 
       const tasaCrossBase1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
-      const tasa1Raw = tasaCrossBase1 * Math.abs(factor1);
-      let tasa1 = aplicarReglaPrecision(tasa1Raw);
-      let m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
+      const tasa1Raw = tasaCrossBase1 * factor1; // ¡Factor con su signo nativo!
       
-      if (tipoOp1 === 'P' || factor1 < 0) {
-        m1Socio = -Math.abs(m1Socio);
-        tasa1 = -Math.abs(tasa1);
-      } else {
-        m1Socio = Math.abs(m1Socio);
-        tasa1 = Math.abs(tasa1);
-      }
+      let tasa1Abs = aplicarReglaPrecision(Math.abs(tasa1Raw));
+      let tasa1 = tasa1Raw < 0 ? -tasa1Abs : tasa1Abs;
+      let m1Socio = tasa1Abs > 0 ? parseFloat((monto / tasa1Abs).toFixed(2)) : 0;
+      if (tasa1 < 0) m1Socio = -m1Socio;
+
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
 
-      // --- 5. CÁLCULO ARITMÉTICO Y SIGNO SOCIO 2 (TIPO HEREDADO) ---
+      // --- 5. CÁLCULO SOCIO 2 (PRESERVA EL SIGNO DEL FACTOR REAL) ---
       let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
       if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
       const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
 
       const tasaCrossBase2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
-      const tasa2Raw = tasaCrossBase2 * Math.abs(factor2);
-      let tasa2 = aplicarReglaPrecision(tasa2Raw);
-      let m2Socio = tasa2 > 0 ? parseFloat((monto / tasa2).toFixed(2)) : 0;
+      const tasa2Raw = tasaCrossBase2 * factor2; // ¡Factor con su signo nativo!
 
-      if (tipoOp2 === 'P' || factor2 < 0) {
-        m2Socio = -Math.abs(m2Socio);
-        tasa2 = -Math.abs(tasa2);
-      } else {
-        m2Socio = Math.abs(m2Socio);
-        tasa2 = Math.abs(tasa2);
-      }
+      let tasa2Abs = aplicarReglaPrecision(Math.abs(tasa2Raw));
+      let tasa2 = tasa2Raw < 0 ? -tasa2Abs : tasa2Abs;
+      let m2Socio = tasa2Abs > 0 ? parseFloat((monto / tasa2Abs).toFixed(2)) : 0;
+      if (tasa2 < 0) m2Socio = -m2Socio;
+
       const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
 
-      // DETERMINACIÓN FÍSICA PARA EL SOCIO CONSULTADO EN EL REPORTE
+      // DETERMINACIÓN FÍSICA PARA EL SOCIO EN EL FILTRO REPORTE
       let montoSocioFinal = m1Socio;
       let tasaSocioFinal = tasa1;
       let monedaSocioFinal = monedaSocio1;
@@ -586,7 +578,7 @@ const getComprobantesHandler = async (req, res) => {
 
       return {
         ...row,
-        tipo_op: tipoOp1, // Insignia oficial en Comprobantes (dictada por Socio 1)
+        tipo_op: tipoOp1, // Insignia en Comprobantes (dictada por Socio 1)
         tasa_1: tasa1,
         moneda_socio_1: monedaSocio1,
         m1_socio: m1Socio,
@@ -597,7 +589,7 @@ const getComprobantesHandler = async (req, res) => {
         m2_socio: m2Socio,
         m2_usdt: m2Usdt,
 
-        // PROPIEDADES CENTRALIZADAS PARA LA SPA Y N8N
+        // VALORES FISICOS CENTRALIZADOS
         monto_socio_final: montoSocioFinal,
         tasa_socio_final: tasaSocioFinal,
         moneda_socio_final: monedaSocioFinal,
