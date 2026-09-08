@@ -568,7 +568,8 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-                  <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
+                  <!-- EXCLUIR GENERAL DE LA TABLA VISIBLE DEL DIRECTORIO -->
+                  <template x-for="d in directorio.filter(item => item.nombre && item.nombre.trim().toUpperCase() !== 'GENERAL')" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors" :class="d.activo === false ? 'opacity-50' : ''">
                       <td class="px-3 py-3 font-bold text-purple-300">
                         <div class="flex flex-col gap-1">
@@ -721,10 +722,10 @@
                 </div>
               </template>
 
-              <!-- PAÍS MAESTRO E INTERRUPTOR ON/OFF PARA MATRIZ GENERAL -->
+              <!-- PAÍS MAESTRO, JID E INTERRUPTOR ON/OFF PARA MATRIZ GENERAL -->
               <template x-if="socioConfigEdit.nombre === 'GENERAL'">
-                <div class="w-full flex items-center justify-between gap-4">
-                  <div class="flex-1">
+                <div class="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <div>
                     <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
                     <select x-model="paisMaestroGeneral" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-amber-500">
                       <template x-for="p in listaPaisesBase" :key="p.code">
@@ -733,8 +734,13 @@
                     </select>
                   </div>
 
+                  <div>
+                    <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">WhatsApp Remote JID / ID Grupo</label>
+                    <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363421142957552@g.us" class="w-full bg-[#131525] border border-slate-700 text-xs text-white font-mono rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500">
+                  </div>
+
                   <!-- INTERRUPTOR DE ENCENDIDO / APAGADO DIRECTO -->
-                  <div class="flex flex-col items-end shrink-0 pt-3">
+                  <div class="flex items-center justify-end pb-1">
                     <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                       <div class="relative inline-flex items-center">
                         <input type="checkbox" x-model="socioConfigEdit.activo" class="sr-only peer">
@@ -1436,7 +1442,6 @@
           
           let reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
 
-          // Cargar GENERAL de forma autónoma aunque esté excluido de la tabla del directorio
           if (!reg && socioNorm === 'GENERAL') {
             reg = {
               nombre: 'GENERAL',
