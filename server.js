@@ -22,27 +22,6 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
-const FACTORES_BASE_MERCADO = {
-  "P-USDT": 1.0,   "D-USDT": 1.0,
-  "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
-  "P-PEN": 0.976,  "D-PEN": 1.026,
-  "P-COP": 0.976,  "D-COP": 1.030,
-  "P-CLP": 0.962,  "D-CLP": 1.042,
-  "P-ARS": 0.962,  "D-ARS": 1.042,
-  "P-VES": 0.976,  "D-VES": 1.026,
-  "P-BRL": 0.952,  "D-BRL": 1.053,
-  "P-MXN": 0.943,  "D-MXN": 1.064,
-  "P-PYG": 0.962,  "D-PYG": 1.042,
-  "P-EUR": 0.926,  "D-EUR": 1.087,
-  "P-USD": 0.930,  "D-USD": 1.087,
-  "P-ECU": 0.940,  "D-ECU": 1.064,
-  "P-DOP": 0.943,  "D-DOP": 1.064,
-  "P-CRC": 0.943,  "D-CRC": 1.064,
-  "P-CAD": 0.962,  "D-CAD": 1.042,
-  "P-BOB": 0.926,  "D-BOB": 1.087
-};
-
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -65,6 +44,227 @@ function calcularTallaAutomatica(conteo) {
   if (conteo <= 3) return 'S';
   if (conteo <= 6) return 'M';
   return 'L';
+}
+
+// PROCEDIMIENTO FÍSICO DE PERSISTENCIA EN TABLA POSTGRESQL
+async function sincronizarComprobantesAuditadosFisico() {
+  try {
+    const rawQuery = `
+      WITH primer_lote AS (
+        SELECT id_tasa, timestamp
+        FROM mercado_tasas
+        ORDER BY timestamp ASC
+        LIMIT 1
+      ),
+      lotes_rangos AS (
+        SELECT 
+          id_tasa,
+          timestamp AS t_inicio,
+          LEAD(timestamp) OVER (ORDER BY timestamp ASC) AS t_fin
+        FROM (
+          SELECT DISTINCT id_tasa, timestamp 
+          FROM mercado_tasas
+        ) lotes
+      )
+      SELECT 
+        c.hash_largo,
+        c.hash_corto,
+        c.timestamp AS timestamp_comprobante,
+        to_timestamp(c.timestamp) AS fecha_hora_comprobante,
+        COALESCE(f.monto, 0) AS monto,
+        COALESCE(UPPER(f.moneda), 'USDT') AS moneda,
+        f.banco,
+        f.titular,
+        f.referencia,
+        COALESCE(f.procesado_ia, FALSE) AS procesado_ia,
+        c.nombre_socio_1,
+        c.nombre_socio_2,
+        c.url_imagen,
+        COALESCE(c.conteo, 1) AS conteo,
+        COALESCE(lr.id_tasa, (SELECT id_tasa FROM primer_lote), 'T360') AS lote_tasa_asignado,
+        
+        COALESCE(
+          mt.tasa_base, 
+          mt_primer.tasa_base,
+          CASE WHEN UPPER(COALESCE(f.moneda, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
+        ) AS tasa_mercado_aplicada,
+        
+        CASE 
+          WHEN UPPER(COALESCE(f.moneda, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN ROUND(COALESCE(f.monto, 0)::numeric, 2)
+          WHEN COALESCE(mt.tasa_base, mt_primer.tasa_base) > 0 
+            THEN ROUND((COALESCE(f.monto, 0) / COALESCE(mt.tasa_base, mt_primer.tasa_base))::numeric, 2)
+          ELSE NULL
+        END AS monto_usd_equivalente,
+
+        CASE 
+          WHEN UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
+          ELSE UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT')))
+        END AS moneda_socio_1,
+        n1.roles AS rol_socio_1,
+        n1.ajustes AS ajustes_socio_1,
+        COALESCE(
+          mt_s1.tasa_base,
+          CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
+        ) AS tasa_base_socio_1,
+
+        CASE 
+          WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
+          ELSE UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT')))
+        END AS moneda_socio_2,
+        n2.roles AS rol_socio_2,
+        n2.ajustes AS ajustes_socio_2,
+        COALESCE(
+          mt_s2.tasa_base,
+          CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
+        ) AS tasa_base_socio_2,
+
+        COALESCE(
+          CASE UPPER(TRIM(f.moneda))
+            WHEN 'PEN' THEN n1.pen
+            WHEN 'COP' THEN n1.cop
+            WHEN 'CLP' THEN n1.clp
+            WHEN 'ARS' THEN n1.ars
+            WHEN 'MXN' THEN n1.mxn
+            WHEN 'BRL' THEN n1.brl
+            WHEN 'VES' THEN n1.ves
+            WHEN 'PYG' THEN n1.pyg
+            WHEN 'DOP' THEN n1.dop
+            WHEN 'CRC' THEN n1.crc
+            WHEN 'EUR' THEN n1.eur
+            WHEN 'CAD' THEN n1.cad
+            WHEN 'USD' THEN n1.usd
+            WHEN 'ECU' THEN n1.ecu
+            WHEN 'PAN' THEN n1.pan
+            WHEN 'USDT' THEN n1.usdt
+            ELSE 'D'
+          END,
+          'D'
+        ) AS tipo_op_s1
+
+      FROM cola_fb c
+      LEFT JOIN comprobantes_fb f ON TRIM(LOWER(c.hash_largo)) = TRIM(LOWER(f.hash_largo))
+      LEFT JOIN lotes_rangos lr ON c.timestamp >= lr.t_inicio AND (lr.t_fin IS NULL OR c.timestamp < lr.t_fin)
+      LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(c.nombre_socio_1))
+      LEFT JOIN nombres_fb n2 ON UPPER(TRIM(n2.nombre)) = UPPER(TRIM(c.nombre_socio_2))
+      LEFT JOIN mercado_tasas mt ON mt.id_tasa = lr.id_tasa AND mt.moneda = UPPER(f.moneda)
+      LEFT JOIN mercado_tasas mt_primer ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote) AND mt_primer.moneda = UPPER(f.moneda)
+      LEFT JOIN mercado_tasas mt_s1 ON mt_s1.id_tasa = lr.id_tasa AND mt_s1.moneda = CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n1.moneda_socio, 'USDT')) END
+      LEFT JOIN mercado_tasas mt_s2 ON mt_s2.id_tasa = lr.id_tasa AND mt_s2.moneda = CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n2.moneda_socio, 'USDT')) END
+      WHERE c.estado != 'DESCARTADO';
+    `;
+
+    const { rows } = await pool.query(rawQuery);
+
+    for (const r of rows) {
+      const monto = parseFloat(r.monto) || 0;
+      const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
+      const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
+
+      // Socio 1 dicta imperativamente el tipo
+      let tipoOp1 = (r.tipo_op_s1 || 'D').trim().toUpperCase();
+      if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
+
+      // Socio 2 hereda el mismo tipo de operación
+      let tipoOp2 = tipoOp1;
+
+      const aj1 = typeof r.ajustes_socio_1 === 'string' ? JSON.parse(r.ajustes_socio_1) : (r.ajustes_socio_1 || {});
+      const aj2 = typeof r.ajustes_socio_2 === 'string' ? JSON.parse(r.ajustes_socio_2) : (r.ajustes_socio_2 || {});
+
+      const f1Val = parseFloat(aj1[`${tipoOp1}-${monOrig}`]);
+      const factor1 = !isNaN(f1Val) ? f1Val : 1.0;
+
+      const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
+      const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
+
+      // Socio 1
+      const tasaBaseSocio1 = parseFloat(r.tasa_base_socio_1) || 1.0;
+      const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
+      const tasa1Signed = tasaCross1 * factor1;
+      let tasa1Abs = aplicarReglaPrecision(Math.abs(tasa1Signed));
+      let tasa1 = tasa1Signed < 0 ? -tasa1Abs : tasa1Abs;
+      let m1Socio = tasa1Abs > 0 ? parseFloat((monto / tasa1Abs).toFixed(2)) : 0;
+      if (tasa1 < 0 || tipoOp1 === 'P') {
+        m1Socio = -Math.abs(m1Socio);
+        if (tasa1 > 0) tasa1 = -tasa1;
+      } else {
+        m1Socio = Math.abs(m1Socio);
+      }
+      const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
+
+      // Socio 2 (Hereda tipoOp1)
+      const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
+      const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
+      const tasa2Signed = tasaCross2 * factor2;
+      let tasa2Abs = aplicarReglaPrecision(Math.abs(tasa2Signed));
+      let tasa2 = tasa2Signed < 0 ? -tasa2Abs : tasa2Abs;
+      let m2Socio = tasa2Abs > 0 ? parseFloat((monto / tasa2Abs).toFixed(2)) : 0;
+      if (tasa2 < 0 || tipoOp2 === 'P') {
+        m2Socio = -Math.abs(m2Socio);
+        if (tasa2 > 0) tasa2 = -tasa2;
+      } else {
+        m2Socio = Math.abs(m2Socio);
+      }
+      const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
+
+      await pool.query(`
+        INSERT INTO comprobantes_auditados_fb (
+          hash_largo, hash_corto, timestamp_comprobante, fecha_hora_comprobante,
+          monto, moneda, banco, titular, referencia, procesado_ia,
+          nombre_socio_1, nombre_socio_2, url_imagen, conteo, lote_tasa_asignado,
+          tasa_mercado_aplicada, monto_usd_equivalente,
+          tipo_op_1, moneda_socio_1, tasa_1, m1_socio, m1_usdt, rol_socio_1,
+          tipo_op_2, moneda_socio_2, tasa_2, m2_socio, m2_usdt, rol_socio_2,
+          updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17,
+          $18, $19, $20, $21, $22, $23,
+          $24, $25, $26, $27, $28, $29,
+          NOW()
+        )
+        ON CONFLICT (hash_largo) DO UPDATE SET
+          hash_corto = EXCLUDED.hash_corto,
+          timestamp_comprobante = EXCLUDED.timestamp_comprobante,
+          fecha_hora_comprobante = EXCLUDED.fecha_hora_comprobante,
+          monto = EXCLUDED.monto,
+          moneda = EXCLUDED.moneda,
+          banco = EXCLUDED.banco,
+          titular = EXCLUDED.titular,
+          referencia = EXCLUDED.referencia,
+          procesado_ia = EXCLUDED.procesado_ia,
+          nombre_socio_1 = EXCLUDED.nombre_socio_1,
+          nombre_socio_2 = EXCLUDED.nombre_socio_2,
+          url_imagen = EXCLUDED.url_imagen,
+          conteo = EXCLUDED.conteo,
+          lote_tasa_asignado = EXCLUDED.lote_tasa_asignado,
+          tasa_mercado_aplicada = EXCLUDED.tasa_mercado_aplicada,
+          monto_usd_equivalente = EXCLUDED.monto_usd_equivalente,
+          tipo_op_1 = EXCLUDED.tipo_op_1,
+          moneda_socio_1 = EXCLUDED.moneda_socio_1,
+          tasa_1 = EXCLUDED.tasa_1,
+          m1_socio = EXCLUDED.m1_socio,
+          m1_usdt = EXCLUDED.m1_usdt,
+          rol_socio_1 = EXCLUDED.rol_socio_1,
+          tipo_op_2 = EXCLUDED.tipo_op_2,
+          moneda_socio_2 = EXCLUDED.moneda_socio_2,
+          tasa_2 = EXCLUDED.tasa_2,
+          m2_socio = EXCLUDED.m2_socio,
+          m2_usdt = EXCLUDED.m2_usdt,
+          rol_socio_2 = EXCLUDED.rol_socio_2,
+          updated_at = NOW();
+      `, [
+        r.hash_largo, r.hash_corto, r.timestamp_comprobante, r.fecha_hora_comprobante,
+        monto, r.moneda, r.banco, r.titular, r.referencia, r.procesado_ia,
+        r.nombre_socio_1, r.nombre_socio_2, r.url_imagen, r.conteo, r.lote_tasa_asignado,
+        tasaBaseOrigen, r.monto_usd_equivalente,
+        tipoOp1, r.moneda_socio_1, tasa1, m1Socio, m1Usdt, r.rol_socio_1,
+        tipoOp2, r.moneda_socio_2, tasa2, m2Socio, m2Usdt, r.rol_socio_2
+      ]);
+    }
+    console.log(`✅ Sincronización física completada: ${rows.length} registros persistidos en comprobantes_auditados_fb.`);
+  } catch (err) {
+    console.error('⚠️ Error en sincronización física:', err.message);
+  }
 }
 
 async function initDB() {
@@ -117,68 +317,45 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
 
+    // TABLA FÍSICA PERMANENTE EN LUGAR DE UNA VIEW
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
-      CREATE VIEW v_comprobantes_auditados AS
-      WITH primer_lote AS (
-        SELECT id_tasa, timestamp
-        FROM mercado_tasas
-        ORDER BY timestamp ASC
-        LIMIT 1
-      ),
-      lotes_rangos AS (
-        SELECT 
-          id_tasa,
-          timestamp AS t_inicio,
-          LEAD(timestamp) OVER (ORDER BY timestamp ASC) AS t_fin
-        FROM (
-          SELECT DISTINCT id_tasa, timestamp 
-          FROM mercado_tasas
-        ) lotes
-      )
-      SELECT 
-        c.hash_largo,
-        c.hash_corto,
-        c.timestamp AS timestamp_comprobante,
-        to_timestamp(c.timestamp) AS fecha_hora_comprobante,
-        COALESCE(f.monto, 0) AS monto,
-        COALESCE(UPPER(f.moneda), 'USDT') AS moneda,
-        f.banco,
-        f.titular,
-        f.referencia,
-        COALESCE(f.procesado_ia, FALSE) AS procesado_ia,
-        c.nombre_socio_1,
-        c.nombre_socio_2,
-        c.url_imagen,
-        COALESCE(c.conteo, 1) AS conteo,
-        COALESCE(lr.id_tasa, (SELECT id_tasa FROM primer_lote), 'T360') AS lote_tasa_asignado,
-        
-        COALESCE(
-          mt.tasa_base, 
-          mt_primer.tasa_base,
-          CASE WHEN UPPER(COALESCE(f.moneda, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
-        ) AS tasa_mercado_aplicada,
-        
-        CASE 
-          WHEN UPPER(COALESCE(f.moneda, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN ROUND(COALESCE(f.monto, 0)::numeric, 2)
-          WHEN COALESCE(mt.tasa_base, mt_primer.tasa_base) > 0 
-            THEN ROUND((COALESCE(f.monto, 0) / COALESCE(mt.tasa_base, mt_primer.tasa_base))::numeric, 2)
-          ELSE NULL
-        END AS monto_usd_equivalente
-
-      FROM cola_fb c
-      LEFT JOIN comprobantes_fb f ON TRIM(LOWER(c.hash_largo)) = TRIM(LOWER(f.hash_largo))
-      LEFT JOIN lotes_rangos lr 
-        ON c.timestamp >= lr.t_inicio 
-       AND (lr.t_fin IS NULL OR c.timestamp < lr.t_fin)
-      LEFT JOIN mercado_tasas mt 
-        ON mt.id_tasa = lr.id_tasa 
-       AND mt.moneda = UPPER(f.moneda)
-      LEFT JOIN mercado_tasas mt_primer
-        ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
-       AND mt_primer.moneda = UPPER(f.moneda);
+      
+      CREATE TABLE IF NOT EXISTS comprobantes_auditados_fb (
+        hash_largo VARCHAR(255) PRIMARY KEY,
+        hash_corto VARCHAR(50),
+        timestamp_comprobante BIGINT,
+        fecha_hora_comprobante TIMESTAMP,
+        monto NUMERIC(18, 2),
+        moneda VARCHAR(10),
+        banco VARCHAR(255),
+        titular VARCHAR(255),
+        referencia VARCHAR(255),
+        procesado_ia BOOLEAN DEFAULT FALSE,
+        nombre_socio_1 VARCHAR(100),
+        nombre_socio_2 VARCHAR(100),
+        url_imagen TEXT,
+        conteo INT DEFAULT 1,
+        lote_tasa_asignado VARCHAR(20),
+        tasa_mercado_aplicada NUMERIC(18, 6),
+        monto_usd_equivalente NUMERIC(18, 2),
+        tipo_op_1 VARCHAR(10),
+        moneda_socio_1 VARCHAR(10),
+        tasa_1 NUMERIC(18, 6),
+        m1_socio NUMERIC(18, 2),
+        m1_usdt NUMERIC(18, 2),
+        rol_socio_1 VARCHAR(50),
+        tipo_op_2 VARCHAR(10),
+        moneda_socio_2 VARCHAR(10),
+        tasa_2 NUMERIC(18, 6),
+        m2_socio NUMERIC(18, 2),
+        m2_usdt NUMERIC(18, 2),
+        rol_socio_2 VARCHAR(50),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
-    console.log('✅ Esquema y Vista v_comprobantes_auditados sincronizados en PostgreSQL.');
+    console.log('✅ Tabla física comprobantes_auditados_fb lista.');
+    await sincronizarComprobantesAuditadosFisico();
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -293,6 +470,8 @@ app.post('/api/tasas/publicar', async (req, res) => {
       [codigoTasa]
     );
 
+    await sincronizarComprobantesAuditadosFisico();
+
     res.json({ success: true, id_tasa: codigoTasa, message: `Tasa ${codigoTasa} publicada correctamente` });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -323,6 +502,7 @@ app.post('/api/tasas/reenviar', async (req, res) => {
 app.patch('/api/socios/desactivar-todos', async (req, res) => {
   try {
     await pool.query(`UPDATE nombres_fb SET activo = FALSE WHERE UPPER(TRIM(nombre)) != 'GENERAL';`);
+    await sincronizarComprobantesAuditadosFisico();
     res.json({ success: true, message: 'Todos los socios desactivados correctamente.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -341,13 +521,14 @@ app.post('/api/socios/guardar-vigentes', async (req, res) => {
 app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   try {
     await pool.query(`UPDATE nombres_fb SET activo = COALESCE(recordar_activo, FALSE);`);
+    await sincronizarComprobantesAuditadosFisico();
     res.json({ success: true, message: 'Socios vigentes restaurados correctamente.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// HANDLER CENTRALIZADO: RESPETO STRICTO DEL SIGNO DEL FACTOR DE NOMBRES_FB
+// HANDLER QUE CONSUME DE LA TABLA FÍSICA CONGELADA
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -355,93 +536,36 @@ const getComprobantesHandler = async (req, res) => {
 
     let query = `
       SELECT 
-        v.hash_largo, 
-        v.monto, 
-        v.moneda, 
-        v.banco, 
-        v.referencia, 
-        v.titular, 
-        v.procesado_ia,
-        v.hash_corto, 
-        v.url_imagen, 
-        v.nombre_socio_1, 
-        v.nombre_socio_2, 
-        v.timestamp_comprobante AS timestamp, 
-        v.conteo, 
-        v.lote_tasa_asignado, 
-        
-        COALESCE(
-          v.tasa_mercado_aplicada,
-          CASE WHEN UPPER(v.moneda) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE NULL END
-        ) AS tasa_base,
-        
-        v.monto_usd_equivalente,
-
-        t.tipo_op,
-
-        CASE 
-          WHEN UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
-          ELSE UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT')))
-        END AS moneda_socio_1,
-        n1.roles AS rol_socio_1,
-        n1.ajustes AS ajustes_socio_1,
-        
-        COALESCE(
-          mt_s1.tasa_base,
-          CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
-        ) AS tasa_base_socio_1,
-        (n1.ajustes->>(t.tipo_op || '-' || UPPER(v.moneda)))::numeric AS factor_1_raw,
-
-        CASE 
-          WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
-          ELSE UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT')))
-        END AS moneda_socio_2,
-        n2.roles AS rol_socio_2,
-        n2.ajustes AS ajustes_socio_2,
-
-        COALESCE(
-          mt_s2.tasa_base,
-          CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
-        ) AS tasa_base_socio_2,
-        (n2.ajustes->>(t.tipo_op || '-' || UPPER(v.moneda)))::numeric AS factor_2_raw
-
-      FROM v_comprobantes_auditados v
-      LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
-      LEFT JOIN nombres_fb n2 ON UPPER(TRIM(n2.nombre)) = UPPER(TRIM(v.nombre_socio_2))
-
-      LEFT JOIN mercado_tasas mt_s1
-        ON mt_s1.id_tasa = v.lote_tasa_asignado
-       AND mt_s1.moneda = CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n1.moneda_socio, 'USDT')) END
-
-      LEFT JOIN mercado_tasas mt_s2
-        ON mt_s2.id_tasa = v.lote_tasa_asignado
-       AND mt_s2.moneda = CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n2.moneda_socio, 'USDT')) END
-
-      LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          CASE UPPER(TRIM(v.moneda))
-            WHEN 'PEN' THEN n1.pen
-            WHEN 'COP' THEN n1.cop
-            WHEN 'CLP' THEN n1.clp
-            WHEN 'ARS' THEN n1.ars
-            WHEN 'MXN' THEN n1.mxn
-            WHEN 'BRL' THEN n1.brl
-            WHEN 'VES' THEN n1.ves
-            WHEN 'PYG' THEN n1.pyg
-            WHEN 'DOP' THEN n1.dop
-            WHEN 'CRC' THEN n1.crc
-            WHEN 'EUR' THEN n1.eur
-            WHEN 'CAD' THEN n1.cad
-            WHEN 'USD' THEN n1.usd
-            WHEN 'ECU' THEN n1.ecu
-            WHEN 'PAN' THEN n1.pan
-            WHEN 'USDT' THEN n1.usdt
-            ELSE 'D'
-          END,
-          'D'
-        ) AS tipo_op
-      ) t ON TRUE
-
+        hash_largo, 
+        hash_corto, 
+        timestamp_comprobante AS timestamp, 
+        fecha_hora_comprobante,
+        monto, 
+        moneda, 
+        banco, 
+        titular, 
+        referencia, 
+        procesado_ia,
+        nombre_socio_1, 
+        nombre_socio_2, 
+        url_imagen, 
+        conteo, 
+        lote_tasa_asignado, 
+        tasa_mercado_aplicada AS tasa_base,
+        monto_usd_equivalente,
+        tipo_op_1 AS tipo_op,
+        moneda_socio_1,
+        rol_socio_1,
+        tasa_1,
+        m1_socio,
+        m1_usdt,
+        tipo_op_2,
+        moneda_socio_2,
+        rol_socio_2,
+        tasa_2,
+        m2_socio,
+        m2_usdt
+      FROM comprobantes_auditados_fb
       WHERE 1=1
     `;
 
@@ -449,23 +573,23 @@ const getComprobantesHandler = async (req, res) => {
     let paramIndex = 1;
 
     if (soloDuplicados === 'true') {
-      query += ` AND v.conteo > 1`;
+      query += ` AND conteo > 1`;
     }
 
     if (rol && rol.trim() && rol.trim().toUpperCase() !== 'TODOS') {
-      query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
+      query += ` AND (UPPER(TRIM(rol_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(rol_socio_2)) = UPPER(TRIM($${paramIndex})))`;
       values.push(rol.trim());
       paramIndex++;
     }
 
     if (targetSocio && targetSocio.toUpperCase() !== 'TODOS') {
-      query += ` AND (UPPER(TRIM(v.nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(v.nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
+      query += ` AND (UPPER(TRIM(nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
       values.push(targetSocio);
       paramIndex++;
     }
 
     if (hash && hash.trim()) {
-      query += ` AND (v.hash_corto ILIKE $${paramIndex} OR v.hash_largo ILIKE $${paramIndex})`;
+      query += ` AND (hash_corto ILIKE $${paramIndex} OR hash_largo ILIKE $${paramIndex})`;
       values.push(`%${hash.trim()}%`);
       paramIndex++;
     }
@@ -473,7 +597,7 @@ const getComprobantesHandler = async (req, res) => {
     if (fechaInicio && fechaInicio.trim()) {
       const startTimestamp = Math.floor(new Date(fechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
       if (!isNaN(startTimestamp)) {
-        query += ` AND v.timestamp_comprobante >= $${paramIndex}`;
+        query += ` AND timestamp_comprobante >= $${paramIndex}`;
         values.push(startTimestamp);
         paramIndex++;
       }
@@ -482,7 +606,7 @@ const getComprobantesHandler = async (req, res) => {
     if (fechaFin && fechaFin.trim()) {
       const endTimestamp = Math.floor(new Date(fechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
       if (!isNaN(endTimestamp)) {
-        query += ` AND v.timestamp_comprobante <= $${paramIndex}`;
+        query += ` AND timestamp_comprobante <= $${paramIndex}`;
         values.push(endTimestamp);
         paramIndex++;
       }
@@ -490,86 +614,34 @@ const getComprobantesHandler = async (req, res) => {
 
     if (desdeHash && desdeHash.trim()) {
       const hashRes = await pool.query(
-        `SELECT timestamp_comprobante FROM v_comprobantes_auditados WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
+        `SELECT timestamp_comprobante FROM comprobantes_auditados_fb WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
         [desdeHash.trim()]
       );
       if (hashRes.rows.length > 0) {
         const hashTs = hashRes.rows[0].timestamp_comprobante;
-        query += ` AND v.timestamp_comprobante >= $${paramIndex}`;
+        query += ` AND timestamp_comprobante >= $${paramIndex}`;
         values.push(hashTs);
         paramIndex++;
       }
     }
 
-    query += ` ORDER BY v.timestamp_comprobante DESC;`;
+    query += ` ORDER BY timestamp_comprobante DESC;`;
 
     const { rows } = await pool.query(query, values);
 
     const rowsProcesadas = rows.map(row => {
-      const monto = parseFloat(row.monto) || 0;
-      const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
-      const monOrig = (row.moneda || 'USDT').trim().toUpperCase();
-
-      // --- 1. SOCIO 1 DICTA IMPERATIVAMENTE EL TIPO DE OPERACIÓN ---
-      let tipoOp1 = (row.tipo_op || 'D').trim().toUpperCase();
-      if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
-
-      // --- 2. SOCIO 2 HEREDA EXACTAMENTE EL MISMO TIPO DE OPERACIÓN ---
-      let tipoOp2 = tipoOp1;
-
-      // --- 3. LECTURA DE FACTORES DE AJUSTES SIN INVERTIR O FORZAR SIGNOS ---
-      const aj1 = typeof row.ajustes_socio_1 === 'string' ? JSON.parse(row.ajustes_socio_1) : (row.ajustes_socio_1 || {});
-      const aj2 = typeof row.ajustes_socio_2 === 'string' ? JSON.parse(row.ajustes_socio_2) : (row.ajustes_socio_2 || {});
-
-      const f1Val = parseFloat(aj1[`${tipoOp1}-${monOrig}`]);
-      const factor1 = !isNaN(f1Val) ? f1Val : (row.factor_1_raw !== null && row.factor_1_raw !== undefined ? parseFloat(row.factor_1_raw) : 1.0);
-
-      const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
-      const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
-
-      // --- 4. CÁLCULO SOCIO 1 (PRESERVA EL SIGNO DEL FACTOR REAL) ---
-      let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
-      if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
-      const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
-
-      const tasaCrossBase1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
-      const tasa1Raw = tasaCrossBase1 * factor1; // ¡Factor con su signo nativo!
-      
-      let tasa1Abs = aplicarReglaPrecision(Math.abs(tasa1Raw));
-      let tasa1 = tasa1Raw < 0 ? -tasa1Abs : tasa1Abs;
-      let m1Socio = tasa1Abs > 0 ? parseFloat((monto / tasa1Abs).toFixed(2)) : 0;
-      if (tasa1 < 0) m1Socio = -m1Socio;
-
-      const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
-
-      // --- 5. CÁLCULO SOCIO 2 (PRESERVA EL SIGNO DEL FACTOR REAL) ---
-      let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
-      if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
-      const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
-
-      const tasaCrossBase2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
-      const tasa2Raw = tasaCrossBase2 * factor2; // ¡Factor con su signo nativo!
-
-      let tasa2Abs = aplicarReglaPrecision(Math.abs(tasa2Raw));
-      let tasa2 = tasa2Raw < 0 ? -tasa2Abs : tasa2Abs;
-      let m2Socio = tasa2Abs > 0 ? parseFloat((monto / tasa2Abs).toFixed(2)) : 0;
-      if (tasa2 < 0) m2Socio = -m2Socio;
-
-      const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
-
-      // DETERMINACIÓN FÍSICA PARA EL SOCIO EN EL FILTRO REPORTE
-      let montoSocioFinal = m1Socio;
-      let tasaSocioFinal = tasa1;
-      let monedaSocioFinal = monedaSocio1;
-      let tipoOpSocioFinal = tipoOp1;
+      let montoSocioFinal = parseFloat(row.m1_socio) || 0;
+      let tasaSocioFinal = parseFloat(row.tasa_1) || 0;
+      let monedaSocioFinal = row.moneda_socio_1 || 'USDT';
+      let tipoOpSocioFinal = row.tipo_op || 'D';
 
       if (targetSocio) {
         const targetNorm = targetSocio.trim().toUpperCase();
         if (row.nombre_socio_2 && row.nombre_socio_2.trim().toUpperCase() === targetNorm) {
-          montoSocioFinal = m2Socio;
-          tasaSocioFinal = tasa2;
-          monedaSocioFinal = monedaSocio2;
-          tipoOpSocioFinal = tipoOp2;
+          montoSocioFinal = parseFloat(row.m2_socio) || 0;
+          tasaSocioFinal = parseFloat(row.tasa_2) || 0;
+          monedaSocioFinal = row.moneda_socio_2 || 'USDT';
+          tipoOpSocioFinal = row.tipo_op_2 || 'D';
         }
       }
 
@@ -578,18 +650,6 @@ const getComprobantesHandler = async (req, res) => {
 
       return {
         ...row,
-        tipo_op: tipoOp1, // Insignia en Comprobantes (dictada por Socio 1)
-        tasa_1: tasa1,
-        moneda_socio_1: monedaSocio1,
-        m1_socio: m1Socio,
-        m1_usdt: m1Usdt,
-
-        tasa_2: tasa2,
-        moneda_socio_2: monedaSocio2,
-        m2_socio: m2Socio,
-        m2_usdt: m2Usdt,
-
-        // VALORES FISICOS CENTRALIZADOS
         monto_socio_final: montoSocioFinal,
         tasa_socio_final: tasaSocioFinal,
         moneda_socio_final: monedaSocioFinal,
@@ -610,7 +670,7 @@ app.get('/api/cola', getComprobantesHandler);
 app.get('/api/reportes', getComprobantesHandler);
 app.get('/api/reportes/operaciones', getComprobantesHandler);
 
-// ENDPOINT DINÁMICO DE FILTROS EN CASCADA PARA SPA
+// ENDPOINT DINÁMICO DE FILTROS EN CASCADA
 app.get('/api/reportes/filtros', async (req, res) => {
   try {
     const { rol } = req.query;
@@ -642,7 +702,7 @@ app.get('/api/reportes/filtros', async (req, res) => {
 
     const hashesQuery = `
       SELECT DISTINCT hash_corto AS hash
-      FROM v_comprobantes_auditados
+      FROM comprobantes_auditados_fb
       WHERE hash_corto IS NOT NULL AND hash_corto != ''
       ORDER BY hash_corto ASC
       LIMIT 100;
@@ -693,6 +753,8 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
       );
     }
 
+    await sincronizarComprobantesAuditadosFisico();
+
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -709,6 +771,7 @@ app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
     }
 
     await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
+    await sincronizarComprobantesAuditadosFisico();
     res.json({ success: true, message: 'Comprobante eliminado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -728,6 +791,8 @@ app.patch('/api/socios/:nombre/estado', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Socio no encontrado' });
     }
+
+    await sincronizarComprobantesAuditadosFisico();
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
@@ -775,6 +840,7 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
     );
 
     if (rows.length === 0) return res.status(404).json({ error: 'Socio no encontrado.' });
+    await sincronizarComprobantesAuditadosFisico();
     res.json({ success: true, message: `Socio ${nombre} eliminado correctamente.` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -860,6 +926,8 @@ app.post('/api/socios/config', async (req, res) => {
       ]);
       rows = insertRes.rows;
     }
+
+    await sincronizarComprobantesAuditadosFisico();
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
