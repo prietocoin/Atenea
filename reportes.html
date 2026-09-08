@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resumen de Operaciones & Reportes</title>
+  <style>
+    :root {
+      --bg-color: #0b0e14;
+      --card-bg: #121824;
+      --border-color: #232d3f;
+      --text-color: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent-purple: #6366f1;
+      --green-highlight: #10b981;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin-top: 4px;
+    }
+
+    .btn-apply {
+      background-color: var(--accent-purple);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .filter-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .filter-group label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--green-highlight);
+      text-transform: uppercase;
+    }
+
+    .filter-group select,
+    .filter-group input {
+      background-color: #0b0e14;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #c084fc;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-top: 8px;
+    }
+
+    .stat-value.green {
+      color: var(--green-highlight);
+    }
+
+    .table-container {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+
+    .table-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    th {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .hash {
+      color: #a855f7;
+      font-weight: 600;
+    }
+
+    .badge {
+      background: #1e1b4b;
+      color: #818cf8;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <div>
+        <h1 class="title">Resumen de Operaciones & Reportes</h1>
+        <div class="subtitle">Filtrado ordenado jerárquicamente por Rol, Nombre, Rango de Fechas (GMT-4 VET) y Hash.</div>
+      </div>
+      <button class="btn-apply" onclick="cargarReporte()">🔍 Aplicar Filtros de Reporte</button>
+    </div>
+
+    <div class="filter-card">
+      <div class="filter-group">
+        <label>1. Rol</label>
+        <select id="filtroRol">
+          <option value="SOCIO">SOCIO</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>2. Nombre</label>
+        <select id="filtroNombre">
+          <option value="TODOS">TODOS</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>3. Fecha Inicio</label>
+        <input type="date" id="fechaInicio" />
+      </div>
+      <div class="filter-group">
+        <label>4. Fecha Fin</label>
+        <input type="date" id="fechaFin" />
+      </div>
+      <div class="filter-group">
+        <label>5. Desde Hash</label>
+        <input type="text" id="desdeHash" placeholder="Opcional..." />
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Sujeto / Entidad Auditada</div>
+        <div class="stat-value" id="resEntidad">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Comprobantes Filtrados</div>
+        <div class="stat-value" id="resComprobantes">0 operados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Monto Acumulado (Moneda Socio)</div>
+        <div class="stat-value green" id="resMonto">0.00</div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <strong style="font-size: 0.875rem;">DETALLE DE OPERACIONES FILTRADAS</strong>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Zona Horaria: VET (GMT-4)</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha/Hora (VET)</th>
+            <th>Hash</th>
+            <th>Descripción del Comprobante</th>
+            <th>Lote / Tasas</th>
+            <th>Monto Origen</th>
+            <th>Monto & Moneda Socio</th>
+            <th>Equiv. USD</th>
+          </tr>
+        </thead>
+        <tbody id="tablaCuerpo">
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted);">Aplica los filtros para cargar datos...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    async function cargarReporte() {
+      const rol = document.getElementById('filtroRol').value;
+      const nombre = document.getElementById('filtroNombre').value;
+      const fechaInicio = document.getElementById('fechaInicio').value;
+      const fechaFin = document.getElementById('fechaFin').value;
+      const desdeHash = document.getElementById('desdeHash').value;
+
+      const params = new URLSearchParams({ rol, nombre, fechaInicio, fechaFin, desdeHash });
+
+      try {
+        const res = await fetch(`/api/reportes/operaciones?${params}`);
+        const result = await res.json();
+
+        if (!result.success) return;
+
+        document.getElementById('resEntidad').innerText = nombre;
+        document.getElementById('resComprobantes').innerText = `${result.totales.comprobantes} operados`;
+        document.getElementById('resMonto').innerText = `${result.totales.montoAcumulado}`;
+
+        const tbody = document.getElementById('tablaCuerpo');
+        tbody.innerHTML = '';
+
+        if (result.data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay operaciones registradas.</td></tr>';
+          return;
+        }
+
+        result.data.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${new Date(item.fecha_hora).toLocaleString()}</td>
+            <td class="hash">${item.hash || '-'}</td>
+            <td><strong>${item.descripcion || '-'}</strong><br><small style="color:var(--text-muted);">${item.banco || ''}</small></td>
+            <td><span class="badge">${item.lote || '-'}</span></td>
+            <td>${item.monto_origen || '0'} ${item.moneda_origen || ''}</td>
+            <td style="color:var(--green-highlight); font-weight:700;">${item.monto_socio || '0'} ${item.moneda_socio || ''}</td>
+            <td>$${item.equiv_usd || '0.00'}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error cargando el reporte:', err);
+      }
+    }
+  </script>
+</body>
+</html>
