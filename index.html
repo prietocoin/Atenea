@@ -518,7 +518,6 @@
                         </div>
                       </td>
 
-                      <!-- COLUMNA LOTE / TASAS CON MOSTRADO DE TASA DE LA MONEDA DEL SOCIO -->
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="c.lote_tasa_asignado || 'N/A'"></span>
                         <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + (c.tasa_base || c.tasa_mercado_aplicada || '0')"></span>
@@ -690,64 +689,80 @@
         </div>
       </div>
 
-      <!-- CONTROL DE MATRIZ GENERAL Y SOCIOS -->
-<div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-  <div class="flex-1 flex flex-col sm:flex-row items-center gap-3">
-    
-    <!-- SELECTOR DE PERFIL (SOLO PARA SOCIOS) -->
-    <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
-      <div class="w-full sm:w-1/2">
-        <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
-        <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
-          <template x-for="s in socios" :key="s">
-            <option :value="s" x-text="s"></option>
-          </template>
-        </select>
-      </div>
-    </template>
-
-    <!-- PAÍS MAESTRO E INTERRUPTOR ON/OFF PARA MATRIZ GENERAL -->
-    <template x-if="socioConfigEdit.nombre === 'GENERAL'">
-      <div class="w-full flex items-center justify-between gap-4">
-        <div class="flex-1">
-          <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
-          <select x-model="paisMaestroGeneral" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-amber-500">
-            <template x-for="p in listaPaisesBase" :key="p.code">
-              <option :value="p.code" x-text="p.flag + ' ' + p.nombrePais + ' (' + p.code + ')'"></option>
-            </template>
-          </select>
-        </div>
-
-        <!-- INTERRUPTOR DE ENCENDIDO / APAGADO DIRECTO -->
-        <div class="flex flex-col items-end shrink-0 pt-3">
-          <label class="inline-flex items-center gap-2 cursor-pointer select-none">
-            <div class="relative inline-flex items-center">
-              <input type="checkbox" x-model="socioConfigEdit.activo" class="sr-only peer">
-              <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:bg-emerald-500 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full transition-all"></div>
+      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL DE SOCIO / MATRIZ GENERAL -->
+      <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-4 sm:p-5 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
+          
+          <!-- HEADER DEL MODAL -->
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+            <div class="flex items-center gap-3">
+              <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
+              <div>
+                <h3 class="font-bold text-white text-base" x-text="socioConfigEdit.nombre === 'GENERAL' ? 'Tablero Matriz General (Remesas)' : 'Configuración Integral del Socio'"></h3>
+                <p class="text-xs text-slate-400">Valores calculados en vivo en VET (GMT-4) con el lote <strong class="text-emerald-400" x-text="ultimoLoteId || 'T012'"></strong>.</p>
+              </div>
             </div>
-            <span class="text-xs font-bold" :class="socioConfigEdit.activo ? 'text-emerald-400' : 'text-slate-500'" x-text="socioConfigEdit.activo ? 'ACTIVO' : 'INACTIVO'"></span>
-          </label>
-        </div>
-      </div>
-    </template>
-  </div>
+            <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
+          </div>
 
-  <!-- NAVEGACIÓN DE PESTAÑAS DEL MODAL -->
-  <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800 shrink-0">
-    <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-      📜 Reglas / Matriz
-    </button>
-    <button @click="tabConfigActive = 'addpais'" :class="tabConfigActive === 'addpais' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-      ➕ Añadir País
-    </button>
-    <!-- BOTÓN PERFIL VISIBLE ÚNICAMENTE SI NO ES GENERAL -->
-    <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
-      <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-        👤 Perfil
-      </button>
-    </template>
-  </div>
-</div>
+          <!-- CONTROL DE MATRIZ GENERAL Y SOCIOS -->
+          <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex-1 flex flex-col sm:flex-row items-center gap-3">
+              
+              <!-- SELECTOR DE PERFIL (SOLO PARA SOCIOS) -->
+              <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
+                <div class="w-full sm:w-1/2">
+                  <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
+                  <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
+                    <template x-for="s in socios" :key="s">
+                      <option :value="s" x-text="s"></option>
+                    </template>
+                  </select>
+                </div>
+              </template>
+
+              <!-- PAÍS MAESTRO E INTERRUPTOR ON/OFF PARA MATRIZ GENERAL -->
+              <template x-if="socioConfigEdit.nombre === 'GENERAL'">
+                <div class="w-full flex items-center justify-between gap-4">
+                  <div class="flex-1">
+                    <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
+                    <select x-model="paisMaestroGeneral" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-amber-500">
+                      <template x-for="p in listaPaisesBase" :key="p.code">
+                        <option :value="p.code" x-text="p.flag + ' ' + p.nombrePais + ' (' + p.code + ')'"></option>
+                      </template>
+                    </select>
+                  </div>
+
+                  <!-- INTERRUPTOR DE ENCENDIDO / APAGADO DIRECTO -->
+                  <div class="flex flex-col items-end shrink-0 pt-3">
+                    <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                      <div class="relative inline-flex items-center">
+                        <input type="checkbox" x-model="socioConfigEdit.activo" class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:bg-emerald-500 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full transition-all"></div>
+                      </div>
+                      <span class="text-xs font-bold" :class="socioConfigEdit.activo ? 'text-emerald-400' : 'text-slate-500'" x-text="socioConfigEdit.activo ? 'ACTIVO' : 'INACTIVO'"></span>
+                    </label>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- NAVEGACIÓN DE PESTAÑAS DEL MODAL -->
+            <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800 shrink-0">
+              <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+                📜 Reglas / Matriz
+              </button>
+              <button @click="tabConfigActive = 'addpais'" :class="tabConfigActive === 'addpais' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+                ➕ Añadir País
+              </button>
+              <!-- BOTÓN PERFIL VISIBLE ÚNICAMENTE SI NO ES GENERAL -->
+              <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
+                <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+                  👤 Perfil
+                </button>
+              </template>
+            </div>
+          </div>
 
           <!-- PANTALLA 1: REGLAS -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
@@ -852,8 +867,8 @@
             </div>
           </div>
 
-          <!-- PANTALLA 2: PERFIL -->
-          <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
+          <!-- PANTALLA 2: PERFIL (SOLO VISIBLE PARA SOCIOS) -->
+          <div x-show="tabConfigActive === 'perfil' && socioConfigEdit.nombre !== 'GENERAL'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre del Socio / Perfil</label>
@@ -909,6 +924,7 @@
             </div>
           </div>
 
+          <!-- FOOTER CON BOTONES DE ACCIÓN -->
           <div class="flex items-center justify-between pt-2 border-t border-slate-800 shrink-0">
             <span class="text-[10px] text-slate-500">Socio en edición: <strong class="text-white" x-text="socioConfigEdit.nombre || 'Nuevo Socio'"></strong></span>
             <div class="flex gap-2">
@@ -1022,7 +1038,6 @@
           await this.cargarReportes();
         },
 
-        // FILTRADO DINÁMICO EN CASCADA DE NOMBRES SEGÚN EL ROL SELECCIONADO
         get sociosFiltradosPorRol() {
           if (!this.filtroReporteRol || this.filtroReporteRol.toUpperCase() === 'TODOS') {
             return this.socios;
@@ -1035,7 +1050,6 @@
           return sociosDelRol.length > 0 ? sociosDelRol : this.socios;
         },
 
-        // LISTA DE HASHES FILTRADA DINÁMICAMENTE SEGÚN ROL, NOMBRE Y RANGO DE FECHAS
         get listaHashesDisponibles() {
           let items = this.comprobantes;
 
@@ -1076,7 +1090,6 @@
           return Array.from(hashes).sort();
         },
 
-        // CÁLCULO DE LA MONEDA Y MONTO BASE NATIVO DEL SOCIO PARA EL REPORTE
         get monedaBaseSocioReporte() {
           if (!this.filtroReporteNombre) return 'USDT';
           const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
@@ -1420,7 +1433,20 @@
         cargarSocioParaEditar() {
           if (!this.socioConfigEdit.nombre) return;
           const socioNorm = this.socioConfigEdit.nombre.trim().toUpperCase();
-          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          
+          let reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+
+          // Cargar GENERAL de forma autónoma aunque esté excluido de la tabla del directorio
+          if (!reg && socioNorm === 'GENERAL') {
+            reg = {
+              nombre: 'GENERAL',
+              roles: 'MATRIZ_GENERAL',
+              moneda_socio: 'USDT',
+              activo: true,
+              cartelera_paises: [],
+              ajustes: {}
+            };
+          }
 
           if (reg) {
             this.socioConfigEdit.roles = reg.roles || (socioNorm === 'GENERAL' ? 'MATRIZ_GENERAL' : 'SOCIO');
@@ -1486,31 +1512,32 @@
         },
 
         async consultarApiHoo() {
-  this.cargandoTasas = true;
-  this.mensajeTasas = 'Conectando con la API oficial de Hoo...';
+          this.cargandoTasas = true;
+          this.mensajeTasas = 'Conectando con la API oficial de Hoo...';
 
-  try {
-    const res = await fetch('/api/tasas/fetch-hoo');
-    const contentType = res.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error(`Servidor devolvió HTML (${res.status}). Revisa '/api/tasas/fetch-hoo' en server.js.`);
-    }
+          try {
+            const res = await fetch('/api/tasas/fetch-hoo');
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+              throw new Error(`Servidor devolvió HTML (${res.status}). Revisa '/api/tasas/fetch-hoo' en server.js.`);
+            }
 
-    const data = await res.json();
+            const data = await res.json();
 
-    if (data && data.success && data.rates && Object.keys(data.rates).length > 0) {
-      this.tasasBaul = data.rates;
-      this.mensajeTasas = '';
-    } else {
-      this.mensajeTasas = 'El motor v4 de Hoo aún está inicializando sus datos.';
-    }
-  } catch (err) {
-    console.error('Error al consultar la API:', err);
-    this.mensajeTasas = `Error: ${err.message}`;
-  } finally {
-    this.cargandoTasas = false;
-  }
-},
+            if (data && data.success && data.rates && Object.keys(data.rates).length > 0) {
+              this.tasasBaul = data.rates;
+              this.mensajeTasas = '';
+            } else {
+              this.mensajeTasas = 'El motor v4 de Hoo aún está inicializando sus datos.';
+            }
+          } catch (err) {
+            console.error('Error al consultar la API:', err);
+            this.mensajeTasas = `Error: ${err.message}`;
+          } finally {
+            this.cargandoTasas = false;
+          }
+        },
+
         async publicarTasaOficial() {
           if (Object.keys(this.tasasBaul).length === 0 || this.publicandoTasas) return;
 
