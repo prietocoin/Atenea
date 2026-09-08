@@ -406,7 +406,7 @@
         </div>
       </template>
 
-      <!-- VISTA REPORTES CON SALDO ANTERIOR EDITABLE, SALDO ACTUAL Y VISTA PREVIA -->
+      <!-- VISTA REPORTES CON SALDO ANTERIOR EDITABLE, SALDO ACTUAL Y VISTA PREVIA IMPRIMIBLE -->
       <template x-if="vistaActiva === 'reportes'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -969,14 +969,17 @@
       <div x-show="modalVistaPreviaAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#f0f8eb] text-slate-800 rounded-2xl w-full max-w-3xl p-6 sm:p-8 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col font-mono text-xs" @click.away="modalVistaPreviaAbierto = false">
           
-          <!-- HEADER COMPROBANTE -->
+          <!-- HEADER COMPROBANTE CON BOTÓN DE ENVÍO A WHATSAPP -->
           <div class="flex items-start justify-between border-b border-emerald-800/20 pb-4 shrink-0">
             <div>
               <h1 class="text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroReporteNombre || 'SOCIO')"></h1>
             </div>
             <div class="flex flex-col items-end gap-2">
               <div class="flex items-center gap-2">
-                <img src="/logo.svg" class="w-10 h-10 object-contain" alt="Logo">
+                <button @click="enviarReporteWhatsApp()" :disabled="enviandoReporte" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs transition-all flex items-center gap-1.5 shadow">
+                  <span>📲 Enviar a WhatsApp</span>
+                </button>
+                <img src="/logo.svg" class="w-10 h-10 object-contain ml-1" alt="Logo">
                 <button @click="modalVistaPreviaAbierto = false" class="text-slate-500 hover:text-slate-800 text-lg font-bold ml-2">✕</button>
               </div>
               <div class="text-right text-emerald-950 font-bold text-xs">
@@ -986,7 +989,7 @@
             </div>
           </div>
 
-          <!-- TABLA ESTILO PLANTILLA -->
+          <!-- TABLA ESTILO PLANTILLA CON TRUNCADO OFICIAL DE TASAS -->
           <div class="overflow-y-auto flex-1 space-y-2 pr-1">
             <div class="grid grid-cols-12 font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[11px]">
               <div class="col-span-2">Fecha</div>
@@ -1062,6 +1065,7 @@
 
         saldoAnteriorReporte: 0.00,
         modalVistaPreviaAbierto: false,
+        enviandoReporte: false,
 
         matrizFactorRemesaT363: {
           "USDT":  {"USDT": 1.0, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.9, "ECU": 0.9, "PAN": 0.9, "MXN": 0.9, "BRL": 0.9, "VES": 0.9, "PYG": 0.9, "EUR": 0.9, "DOP": 0.9, "BOB": 0.9, "CRC": 0.9},
@@ -1134,6 +1138,50 @@
         get nuevoSaldoReporte() {
           const saldoAnt = parseFloat(this.saldoAnteriorReporte) || 0;
           return saldoAnt + this.totalMontoSocioReporte;
+        },
+
+        get jidSocioReporte() {
+          if (!this.filtroReporteNombre) return '';
+          const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
+        },
+
+        async enviarReporteWhatsApp() {
+          const jid = this.jidSocioReporte;
+          if (!jid) {
+            alert('El socio seleccionado no posee un WhatsApp Remote JID o ID Grupo registrado en el Directorio.');
+            return;
+          }
+
+          this.enviandoReporte = true;
+          try {
+            const res = await fetch('/api/reportes/enviar-whatsapp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                socio: this.filtroReporteNombre,
+                remoteJid: jid,
+                saldoAnterior: this.saldoAnteriorReporte,
+                movimiento: this.totalMontoSocioReporte,
+                nuevoSaldo: this.nuevoSaldoReporte,
+                moneda: this.monedaBaseSocioReporte,
+                comprobantes: this.comprobantesReporte
+              })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+              alert(`✅ Reporte enviado a WhatsApp (${jid}) con éxito.`);
+            } else {
+              alert(`⚠️ Error al enviar reporte: ${data.error || 'Fallo inesperado'}`);
+            }
+          } catch (err) {
+            console.error("Error enviando reporte a WhatsApp:", err);
+            alert(`⚠️ Error al enviar reporte: ${err.message}`);
+          } finally {
+            this.enviandoReporte = false;
+          }
         },
 
         get sociosFiltradosPorRol() {
@@ -1763,22 +1811,15 @@
           return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
+        // Truncado de tasa oficial ajustado a reglas de cartelera
         formatTasa(val) {
           if (val === null || val === undefined || isNaN(val)) return '-';
-          const v = Math.abs(parseFloat(val) || 0);
-          if (v === 0) return '0';
-          if (v > 499.99) {
-            return Math.trunc(v).toString();
-          } else if (v < 10) {
-            if (v < 1) {
-              const magnitud = Math.floor(Math.log10(v));
-              const f = Math.pow(10, 2 - magnitud);
-              return (Math.trunc(v * f) / f).toString();
-            }
-            return (Math.trunc(v * 1000) / 1000).toString();
-          } else {
-            return (Math.trunc(v * 100) / 100).toFixed(2);
-          }
+          const num = parseFloat(val);
+          if (isNaN(num) || num <= 0) return num === 0 ? '0' : '-';
+          let puntoCorte = (num >= 100) ? 0 : (num >= 1) ? 2 : (-Math.floor(Math.log10(num)) + 2);
+          const mult = Math.pow(10, puntoCorte);
+          const truncado = Math.trunc(Math.round(num * mult * 1e9) / 1e9) / mult;
+          return (puntoCorte === 0) ? Math.trunc(truncado).toString() : truncado.toFixed(puntoCorte).replace(/\.?0+$/, "");
         },
 
         formatFecha(ts) {
