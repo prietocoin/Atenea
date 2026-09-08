@@ -1179,13 +1179,6 @@
           }
 
           let tipoOp = (esSocio1 ? (c.tipo_op || c.tipo_manual) : null) || 'D';
-          let esPago = false;
-
-          // Si el factor registrado en la transacción es negativo
-          if (factorAplicado < 0) {
-            esPago = true;
-            tipoOp = 'P';
-          }
 
           // Cruce con la configuración teórica del perfil del socio en directorio
           const regSocio = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
@@ -1200,32 +1193,15 @@
             const tasaTeoricaD = Math.abs(this.calcularTasaSocio(monedaOrig, factorD));
             const tasaReal = Math.abs(parseFloat(tasaAplicada) || 0);
 
-            if (!isNaN(factorP) && factorP < 0) {
-              if (Math.abs(tasaReal - tasaTeoricaP) <= Math.abs(tasaReal - tasaTeoricaD)) {
-                esPago = true;
-                tipoOp = 'P';
-              }
-            } else if (!isNaN(factorD) && factorD < 0) {
-              if (Math.abs(tasaReal - tasaTeoricaD) < Math.abs(tasaReal - tasaTeoricaP)) {
-                esPago = true;
-                tipoOp = 'P';
-              }
-            }
-          }
-
-          // Si es PAGO: fuerza el signo negativo
-          if (tipoOp === 'P' || esPago) {
-            montoBase = -Math.abs(montoBase);
-            tipoOp = 'P';
-          } else {
-            montoBase = Math.abs(montoBase);
-            if (tipoOp !== 'A' && tipoOp !== 'C') {
+            if (!isNaN(factorP) && Math.abs(tasaReal - tasaTeoricaP) <= 0.05) {
+              tipoOp = 'P';
+            } else if (!isNaN(factorD) && Math.abs(tasaReal - tasaTeoricaD) <= 0.05) {
               tipoOp = 'D';
             }
           }
 
           return {
-            montoCalculado: montoBase,
+            montoCalculado: isNaN(montoBase) ? 0 : montoBase,
             tasaCalculada: tasaAplicada,
             tipoOp: tipoOp,
             monedaSocio: monedaSocio,
