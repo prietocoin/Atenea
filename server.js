@@ -466,7 +466,8 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
 // HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES
 const getComprobantesHandler = async (req, res) => {
   try {
-    const { socio, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
+    const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
+    const targetSocio = (socio || nombre || '').trim();
 
     let query = `
       SELECT 
@@ -556,16 +557,16 @@ const getComprobantesHandler = async (req, res) => {
     }
 
     // 1. FILTRO ROL (JERARQUÍA 1)
-    if (rol && rol.trim()) {
+    if (rol && rol.trim() && rol.trim().toUpperCase() !== 'TODOS') {
       query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
       values.push(rol.trim());
       paramIndex++;
     }
 
     // 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2)
-    if (socio && socio.trim()) {
+    if (targetSocio && targetSocio.toUpperCase() !== 'TODOS') {
       query += ` AND (UPPER(TRIM(v.nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(v.nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
-      values.push(socio.trim());
+      values.push(targetSocio);
       paramIndex++;
     }
 
@@ -666,6 +667,63 @@ const getComprobantesHandler = async (req, res) => {
 app.get('/api/comprobantes', getComprobantesHandler);
 app.get('/api/cola', getComprobantesHandler);
 app.get('/api/reportes', getComprobantesHandler);
+app.get('/api/reportes/operaciones', getComprobantesHandler);
+
+// ENDPOINT DINÁMICO DE FILTROS EN CASCADA PARA SPA
+app.get('/api/reportes/filtros', async (req, res) => {
+  try {
+    const { rol } = req.query;
+
+    const rolesQuery = `
+      SELECT DISTINCT UPPER(TRIM(roles)) AS rol 
+      FROM nombres_fb 
+      WHERE roles IS NOT NULL AND TRIM(roles) != ''
+      ORDER BY rol ASC;
+    `;
+
+    let nombresQuery = `
+      SELECT DISTINCT nombre FROM (
+        SELECT nombre_socio_1 AS nombre, n1.roles AS rol FROM cola_fb c LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(c.nombre_socio_1)) WHERE nombre_socio_1 IS NOT NULL AND nombre_socio_1 != ''
+        UNION
+        SELECT nombre_socio_2 AS nombre, n2.roles AS rol FROM cola_fb c LEFT JOIN nombres_fb n2 ON UPPER(TRIM(n2.nombre)) = UPPER(TRIM(c.nombre_socio_2)) WHERE nombre_socio_2 IS NOT NULL AND nombre_socio_2 != ''
+        UNION
+        SELECT nombre, roles AS rol FROM nombres_fb WHERE roles IN ('SOCIO', 'MATRIZ_GENERAL', 'ASESOR', 'GRUPO', 'COMPRAS')
+      ) s WHERE nombre IS NOT NULL AND TRIM(nombre) != ''
+    `;
+
+    const params = [];
+    if (rol && rol.trim() && rol.trim().toUpperCase() !== 'TODOS') {
+      params.push(rol.trim());
+      nombresQuery += ` AND UPPER(TRIM(rol)) = UPPER(TRIM($1))`;
+    }
+
+    nombresQuery += ` ORDER BY nombre ASC;`;
+
+    const hashesQuery = `
+      SELECT DISTINCT hash_corto AS hash
+      FROM v_comprobantes_auditados
+      WHERE hash_corto IS NOT NULL AND hash_corto != ''
+      ORDER BY hash_corto ASC
+      LIMIT 100;
+    `;
+
+    const [rolesRes, nombresRes, hashesRes] = await Promise.all([
+      pool.query(rolesQuery),
+      pool.query(nombresQuery, params),
+      pool.query(hashesQuery)
+    ]);
+
+    res.json({
+      success: true,
+      roles: rolesRes.rows.map(r => r.rol),
+      entidades: nombresRes.rows.map(r => r.nombre),
+      hashes: hashesRes.rows.map(r => r.hash)
+    });
+  } catch (err) {
+    console.error('Error en GET /api/reportes/filtros:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
@@ -875,4 +933,3 @@ app.get('*', (req, res) => {
 app.listen(PORT, HOST, () => {
   console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
 });
-
