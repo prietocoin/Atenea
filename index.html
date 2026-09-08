@@ -488,7 +488,7 @@
               <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantesReporte.length + ' operados'"></p>
             </div>
 
-            <!-- SALDO ANTERIOR (EDITABLE) -->
+            <!-- SALDO ANTERIOR (EDITABLE O AUTOCARGADO DEL PERFIL) -->
             <div class="bg-[#131525] p-3 rounded-xl border border-amber-500/40 shadow-lg">
               <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Saldo Anterior (Editable)</p>
               <div class="flex items-center gap-1.5 mt-1">
@@ -897,9 +897,9 @@
             </div>
           </div>
 
-          <!-- PANTALLA 2: PERFIL (SOLO VISIBLE PARA SOCIOS) -->
+          <!-- PANTALLA 2: PERFIL (SOLO VISIBLE PARA SOCIOS) CON CAMPO DE SALDO ANTERIOR BASE -->
           <div x-show="tabConfigActive === 'perfil' && socioConfigEdit.nombre !== 'GENERAL'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre del Socio / Perfil</label>
                 <input type="text" x-model="socioConfigEdit.nombre" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white font-bold rounded-lg px-2.5 py-2 outline-none">
@@ -913,6 +913,11 @@
                   <option value="GRUPO">GRUPO</option>
                   <option value="COMPRAS">COMPRAS</option>
                 </select>
+              </div>
+              <!-- NUEVO CAMPO: SALDO ANTERIOR BASE -->
+              <div>
+                <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">Saldo Anterior Base</label>
+                <input type="number" step="0.01" x-model.number="socioConfigEdit.saldo_anterior" placeholder="0.00" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-bold rounded-lg px-2.5 py-2 outline-none focus:border-amber-500">
               </div>
             </div>
 
@@ -1086,6 +1091,7 @@
           nombre: '',
           roles: 'SOCIO',
           moneda_socio: 'USDT',
+          saldo_anterior: 0,
           talla: 'M',
           whatsapp: '',
           activo: true,
@@ -1400,7 +1406,7 @@
           this.socioConfigEdit.ajustes[clave] = parseFloat(valor) || 0.90;
         },
 
-        // FILTRADO ESTRICTO: DESCARTA OPERACIONES 1x Y COMPROBANTES DE 0.00 MONTO
+        // FILTRADO ESTRICTO Y AUTOCONSULTA DEL SALDO ANTERIOR REGISTRADO EN EL SOCIO
         async cargarReportes() {
           const params = new URLSearchParams();
           if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
@@ -1408,6 +1414,18 @@
           if (this.filtroReporteFechaInicio) params.append('fechaInicio', this.filtroReporteFechaInicio);
           if (this.filtroReporteFechaFin) params.append('fechaFin', this.filtroReporteFechaFin);
           if (this.filtroReporteDesdeHash) params.append('desdeHash', this.filtroReporteDesdeHash);
+
+          // Carga automática del Saldo Anterior guardado en el Perfil del Socio
+          if (this.filtroReporteNombre) {
+            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+            const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+            if (reg) {
+              const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
+              this.saldoAnteriorReporte = reg.saldo_anterior !== undefined && reg.saldo_anterior !== null 
+                ? parseFloat(reg.saldo_anterior) 
+                : (aj.saldo_anterior !== undefined ? parseFloat(aj.saldo_anterior) : 0);
+            }
+          }
 
           try {
             const res = await fetch(`/api/reportes?${params.toString()}`);
@@ -1564,6 +1582,7 @@
             nombre: 'NUEVO_SOCIO',
             roles: 'SOCIO',
             moneda_socio: 'USDT',
+            saldo_anterior: 0,
             talla: 'M',
             whatsapp: '',
             activo: true,
@@ -1643,6 +1662,7 @@
           this.modalConfigSocioAbierto = true;
         },
 
+        // LECTURA DE SALDO ANTERIOR AL CARGAR SOCIO EN MODAL DE CONFIGURACIÓN
         cargarSocioParaEditar() {
           if (!this.socioConfigEdit.nombre) return;
           const socioNorm = this.socioConfigEdit.nombre.trim().toUpperCase();
@@ -1654,6 +1674,7 @@
               nombre: 'GENERAL',
               roles: 'MATRIZ_GENERAL',
               moneda_socio: 'USDT',
+              saldo_anterior: 0,
               activo: true,
               cartelera_paises: [],
               ajustes: {}
@@ -1666,11 +1687,16 @@
             this.socioConfigEdit.whatsapp = reg.whatsapp || '';
             this.socioConfigEdit.activo = reg.activo !== false;
 
+            const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
+            this.socioConfigEdit.saldo_anterior = reg.saldo_anterior !== undefined && reg.saldo_anterior !== null 
+              ? parseFloat(reg.saldo_anterior) 
+              : (aj.saldo_anterior !== undefined ? parseFloat(aj.saldo_anterior) : 0);
+
             ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'].forEach(m => {
               this.socioConfigEdit[m] = reg[m] || 'A';
             });
 
-            this.socioConfigEdit.ajustes = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
+            this.socioConfigEdit.ajustes = aj;
 
             const cp = typeof reg.cartelera_paises === 'string' ? JSON.parse(reg.cartelera_paises) : (reg.cartelera_paises || []);
             
@@ -1686,13 +1712,18 @@
           }
         },
 
+        // GUARDADO INTEGRAL DEL SOCIO INCLUYENDO EL SALDO ANTERIOR BASE
         async guardarConfigSocio() {
           if (!this.socioConfigEdit.nombre) return;
           this.guardandoConfig = true;
 
           try {
+            if (!this.socioConfigEdit.ajustes) this.socioConfigEdit.ajustes = {};
+            this.socioConfigEdit.ajustes.saldo_anterior = parseFloat(this.socioConfigEdit.saldo_anterior) || 0;
+
             const payload = {
               ...this.socioConfigEdit,
+              saldo_anterior: parseFloat(this.socioConfigEdit.saldo_anterior) || 0,
               talla: this.calcularTallaDinamica(this.contarPaisesActivosEdit()),
               cartelera_paises: this.carteleraPaisesEdit.map((p, idx) => ({
                 pais: p.nombrePais,
@@ -1713,6 +1744,7 @@
               await this.cargarDirectorio();
               await this.cargarSocios();
               await this.cargarComprobantes();
+              await this.cargarReportes();
             } else {
               alert('Error al guardar la configuración.');
             }
