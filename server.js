@@ -22,27 +22,6 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
-const FACTORES_BASE_MERCADO = {
-  "P-USDT": 1.0,   "D-USDT": 1.0,
-  "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
-  "P-PEN": 0.976,  "D-PEN": 1.026,
-  "P-COP": 0.976,  "D-COP": 1.030,
-  "P-CLP": 0.962,  "D-CLP": 1.042,
-  "P-ARS": 0.962,  "D-ARS": 1.042,
-  "P-VES": 0.976,  "D-VES": 1.026,
-  "P-BRL": 0.952,  "D-BRL": 1.053,
-  "P-MXN": 0.943,  "D-MXN": 1.064,
-  "P-PYG": 0.962,  "D-PYG": 1.042,
-  "P-EUR": 0.926,  "D-EUR": 1.087,
-  "P-USD": 0.930,  "D-USD": 1.087,
-  "P-ECU": 0.940,  "D-ECU": 1.064,
-  "P-DOP": 0.943,  "D-DOP": 1.064,
-  "P-CRC": 0.943,  "D-CRC": 1.064,
-  "P-CAD": 0.962,  "D-CAD": 1.042,
-  "P-BOB": 0.926,  "D-BOB": 1.087
-};
-
 function aplicarReglaPrecision(val) {
   const v = Math.abs(parseFloat(val) || 0);
   if (v === 0) return 0;
@@ -66,62 +45,6 @@ function calcularTallaAutomatica(conteo) {
   if (conteo <= 6) return 'M';
   return 'L';
 }
-
-const SEED_SOCIOS_CONFIG = {
-  "GENERAL": {
-    "id_grupo": "GRP_GENERAL",
-    "nombre": "GENERAL",
-    "roles": "MATRIZ_GENERAL",
-    "moneda_socio": "USDT",
-    "talla": "L",
-    "whatsapp": "120363421142957552@g.us",
-    "activo": false,
-    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 1 },
-      { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 2 },
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 3 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 4 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 5 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 6 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "OMAR": {
-    "id_grupo": "120363323877732465@g.us",
-    "nombre": "OMAR",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "M",
-    "whatsapp": "120363323877732465@g.us",
-    "activo": true,
-    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 1 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 3 },
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 4 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "CHASAN": {
-    "id_grupo": "120363339357414946@g.us",
-    "nombre": "CHASAN",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "M",
-    "whatsapp": "120363339357414946@g.us",
-    "activo": true,
-    "pen": "D", "cop": "D", "clp": "P", "ars": "D", "ves": "D", "brl": "D", "mxn": "P", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  }
-};
 
 async function initDB() {
   try {
@@ -172,67 +95,6 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
-
-    for (const [socioKey, config] of Object.entries(SEED_SOCIOS_CONFIG)) {
-      const check = await pool.query(
-        `SELECT id_grupo FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`,
-        [config.nombre]
-      );
-
-      const jsonCartelera = JSON.stringify(config.cartelera_paises || []);
-      const jsonAjustes = JSON.stringify(config.ajustes || {});
-
-      if (check.rows.length > 0) {
-        await pool.query(
-          `UPDATE nombres_fb SET 
-            roles = COALESCE($1, roles),
-            moneda_socio = COALESCE($2, moneda_socio),
-            talla = COALESCE($3, talla),
-            whatsapp = COALESCE($4, whatsapp),
-            activo = COALESCE($5, activo),
-            pen = COALESCE($6, pen),
-            cop = COALESCE($7, cop),
-            clp = COALESCE($8, clp),
-            ars = COALESCE($9, ars),
-            ves = COALESCE($10, ves),
-            brl = COALESCE($11, brl),
-            mxn = COALESCE($12, mxn),
-            pyg = COALESCE($13, pyg),
-            usd = COALESCE($14, usd),
-            ecu = COALESCE($15, ecu),
-            eur = COALESCE($16, eur),
-            usdt = COALESCE($17, usdt),
-            cartelera_paises = CASE WHEN cartelera_paises = '[]'::jsonb OR cartelera_paises IS NULL THEN $18::jsonb ELSE cartelera_paises END,
-            ajustes = CASE WHEN ajustes = '{}'::jsonb OR ajustes IS NULL THEN $19::jsonb ELSE ajustes END
-           WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($20));`,
-          [
-            config.roles, config.moneda_socio, config.talla, config.whatsapp,
-            config.activo ?? true,
-            config.pen, config.cop, config.clp, config.ars, config.ves,
-            config.brl, config.mxn, config.pyg, config.usd, config.ecu,
-            config.eur, config.usdt,
-            jsonCartelera, jsonAjustes, config.nombre
-          ]
-        );
-      } else {
-        await pool.query(
-          `INSERT INTO nombres_fb (
-            id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo,
-            pen, cop, clp, ars, ves, brl, mxn, pyg, usd, ecu, eur, usdt,
-            cartelera_paises, ajustes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb)
-          ON CONFLICT DO NOTHING;`,
-          [
-            config.id_grupo, config.nombre, config.roles, config.moneda_socio, config.talla, config.whatsapp,
-            config.activo ?? true,
-            config.pen, config.cop, config.clp, config.ars, config.ves,
-            config.brl, config.mxn, config.pyg, config.usd, config.ecu, config.eur, config.usdt,
-            jsonCartelera, jsonAjustes
-          ]
-        );
-      }
-    }
-    console.log('✅ Base de datos sembrada.');
 
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
@@ -295,7 +157,7 @@ async function initDB() {
         ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
        AND mt_primer.moneda = UPPER(f.moneda);
     `);
-    console.log('✅ Vista v_comprobantes_auditados sincronizada con LEFT JOIN.');
+    console.log('✅ Esquema y Vista v_comprobantes_auditados sincronizados en PostgreSQL.');
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -464,7 +326,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER CENTRALIZADO: LECTURA IMPERATIVA DE NOMBRES_FB DE LAS 16 MONEDAS
+// HANDLER CENTRALIZADO: LECTURA IMPERATIVA DE LA TABLA NOMBRES_FB DE POSTGRESQL DE LAS 16 MONEDAS
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -638,7 +500,8 @@ const getComprobantesHandler = async (req, res) => {
       let m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
       
       let tipoOp1 = (row.tipo_op || 'D').trim().toUpperCase();
-      if (tipoOp1 === 'P') {
+      if (tipoOp1 === 'P' || factor1 < 0) {
+        tipoOp1 = 'P';
         m1Socio = -Math.abs(m1Socio);
         tasa1 = -Math.abs(tasa1);
       } else {
@@ -660,14 +523,15 @@ const getComprobantesHandler = async (req, res) => {
 
       let tipoOp2 = 'D';
       if (tipoOp1 === 'P') {
-        tipoOp2 = 'D'; // Si Socio 1 Paga, Socio 2 Recibe (Depósito)
+        tipoOp2 = 'D'; // Si Socio 1 Paga (-), Socio 2 Recibe (+)
       } else if (tipoOp1 === 'D' || tipoOp1 === 'A') {
-        tipoOp2 = 'P'; // Si Socio 1 Recibe, Socio 2 Paga
+        tipoOp2 = 'P'; // Si Socio 1 Recibe (+), Socio 2 Paga (-)
       } else {
         tipoOp2 = 'C';
       }
 
-      if (tipoOp2 === 'P') {
+      if (tipoOp2 === 'P' || factor2 < 0) {
+        tipoOp2 = 'P';
         m2Socio = -Math.abs(m2Socio);
         tasa2 = -Math.abs(tasa2);
       } else {
@@ -697,7 +561,7 @@ const getComprobantesHandler = async (req, res) => {
 
       return {
         ...row,
-        tipo_op: tipoOp1, // Tipo Maestro para la insignia en Comprobantes!
+        tipo_op: tipoOp1, // Tipo Maestro del Socio 1 para la insignia en Comprobantes
         tasa_1: tasa1,
         moneda_socio_1: monedaSocio1,
         m1_socio: m1Socio,
@@ -708,7 +572,7 @@ const getComprobantesHandler = async (req, res) => {
         m2_socio: m2Socio,
         m2_usdt: m2Usdt,
 
-        // PROPIEDADES CENTRALIZADAS
+        // VALORES FISICOS CENTRALIZADOS
         monto_socio_final: montoSocioFinal,
         tasa_socio_final: tasaSocioFinal,
         moneda_socio_final: monedaSocioFinal,
@@ -925,13 +789,8 @@ app.post('/api/socios/config', async (req, res) => {
     const conteoActivos = cpArray.filter(p => p.activo).length;
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
 
-    const factoresFinales = { ...FACTORES_BASE_MERCADO, ...(ajustes || {}) };
-    if (saldo_anterior !== undefined) {
-      factoresFinales.saldo_anterior = parseFloat(saldo_anterior) || 0;
-    }
-
     const jsonCartelera = JSON.stringify(cpArray);
-    const jsonAjustes = JSON.stringify(factoresFinales);
+    const jsonAjustes = JSON.stringify(ajustes || {});
     const valSaldo = parseFloat(saldo_anterior) || 0;
 
     const checkQuery = `SELECT id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
@@ -959,8 +818,8 @@ app.post('/api/socios/config', async (req, res) => {
         roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, 
         whatsapp || checkRes.rows[0].whatsapp || '',
         activo ?? true, valSaldo,
-        pen || 'A', cop || 'A', clp || 'A', ars || 'A', ves || 'A', brl || 'A', mxn || 'A', pyg || 'A',
-        dop || 'A', crc || 'A', eur || 'A', cad || 'A', usd || 'A', ecu || 'A', pan || 'A', usdt || 'A',
+        pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
+        dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'D', ecu || 'D', pan || 'D', usdt || 'A',
         jsonCartelera, jsonAjustes, socioNombre
       ]);
       rows = updateRes.rows;
@@ -978,8 +837,8 @@ app.post('/api/socios/config', async (req, res) => {
       const insertRes = await pool.query(insertQuery, [
         idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
         activo ?? true, valSaldo,
-        pen || 'A', cop || 'A', clp || 'A', ars || 'A', ves || 'A', brl || 'A', mxn || 'A', pyg || 'A',
-        dop || 'A', crc || 'A', eur || 'A', cad || 'A', usd || 'A', ecu || 'A', pan || 'A', usdt || 'A',
+        pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
+        dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'D', ecu || 'D', pan || 'D', usdt || 'A',
         jsonCartelera, jsonAjustes
       ]);
       rows = insertRes.rows;
