@@ -936,7 +936,7 @@ app.post('/api/reportes/enviar-whatsapp', async (req, res) => {
     }
 
     // URL de tu Webhook activo en n8n
-    const N8N_WEBHOOK_URL = process.env.N8N_REPORTES_WEBHOOK || 'https://n8n.jairokov.com/webhook/reportes-whatsapp';
+    const N8N_WEBHOOK_URL = process.env.N8N_REPORTES_WEBHOOK || 'https://nochon.jairokov.com/webhook-test/reportes-whatsapp';
 
     const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
