@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
+const path = require('path');
 
 // Conexión independiente utilizando las mismas variables de entorno existentes
 const pool = new Pool({
@@ -9,7 +10,9 @@ const pool = new Pool({
     ? { rejectUnauthorized: false } 
     : false
 });
-
+router.get('/reportes', (req, res) => {
+  res.sendFile(path.join(__dirname, 'reportes.html'));
+});
 router.get('/api/reportes/operaciones', async (req, res) => {
   try {
     const { rol, nombre, fechaInicio, fechaFin, desdeHash } = req.query;
