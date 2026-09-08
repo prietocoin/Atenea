@@ -76,7 +76,7 @@ const SEED_SOCIOS_CONFIG = {
     "talla": "L",
     "whatsapp": "120363421142957552@g.us",
     "activo": false,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "D", "mxn": "D", "pyg": "D", "usd": "D", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 1 },
       { "pais": "Venezuela", "moneda": "VES", "activo": true, "orden": 2 },
@@ -89,13 +89,13 @@ const SEED_SOCIOS_CONFIG = {
   },
   "OMAR": {
     "id_grupo": "120363323877732465@g.us",
-    "nombre": "Omar",
+    "nombre": "OMAR",
     "roles": "SOCIO",
     "moneda_socio": "USDT",
     "talla": "M",
     "whatsapp": "120363323877732465@g.us",
     "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "pen": "D", "cop": "D", "clp": "D", "ars": "D", "ves": "D", "brl": "P", "mxn": "D", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 1 },
       { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
@@ -106,13 +106,13 @@ const SEED_SOCIOS_CONFIG = {
   },
   "CHASAN": {
     "id_grupo": "120363339357414946@g.us",
-    "nombre": "Chasan",
+    "nombre": "CHASAN",
     "roles": "SOCIO",
     "moneda_socio": "USDT",
     "talla": "M",
     "whatsapp": "120363339357414946@g.us",
     "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
+    "pen": "D", "cop": "D", "clp": "P", "ars": "D", "ves": "D", "brl": "D", "mxn": "P", "pyg": "D", "usd": "P", "ecu": "D", "eur": "D", "usdt": "A",
     "cartelera_paises": [
       { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
       { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
@@ -464,7 +464,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER CENTRALIZADO CON MATRIZ COMPLETA DE 16 MONEDAS Y REGLAS DE ETIQUETADO
+// HANDLER CENTRALIZADO: LECTURA IMPERATIVA DE NOMBRES_FB DE LAS 16 MONEDAS
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -626,7 +626,7 @@ const getComprobantesHandler = async (req, res) => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
 
-      // RESOLUCIÓN SOCIO 1 (Emisor / Asignador Imperativo)
+      // --- SOCIO 1 (TIPO MAESTRO IMPERATIVO DE NOMBRES_FB) ---
       let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
       if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
@@ -637,9 +637,8 @@ const getComprobantesHandler = async (req, res) => {
       let tasa1 = aplicarReglaPrecision(tasa1Raw);
       let m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
       
-      let tipoOp1 = (row.tipo_op || 'D').toUpperCase();
-      if (factor1 < 0 || tipoOp1 === 'P') {
-        tipoOp1 = 'P';
+      let tipoOp1 = (row.tipo_op || 'D').trim().toUpperCase();
+      if (tipoOp1 === 'P') {
         m1Socio = -Math.abs(m1Socio);
         tasa1 = -Math.abs(tasa1);
       } else {
@@ -648,7 +647,7 @@ const getComprobantesHandler = async (req, res) => {
       }
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
 
-      // RESOLUCIÓN SOCIO 2
+      // --- SOCIO 2 (CONTRAPARTE AL SOCIO 1) ---
       let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
       if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
       const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
@@ -660,14 +659,20 @@ const getComprobantesHandler = async (req, res) => {
       let m2Socio = tasa2 > 0 ? parseFloat((monto / tasa2).toFixed(2)) : 0;
 
       let tipoOp2 = 'D';
-      if (factor2 < 0 || tipoOp1 === 'D') {
-        tipoOp2 = 'P';
+      if (tipoOp1 === 'P') {
+        tipoOp2 = 'D'; // Si Socio 1 Paga, Socio 2 Recibe (Depósito)
+      } else if (tipoOp1 === 'D' || tipoOp1 === 'A') {
+        tipoOp2 = 'P'; // Si Socio 1 Recibe, Socio 2 Paga
+      } else {
+        tipoOp2 = 'C';
+      }
+
+      if (tipoOp2 === 'P') {
         m2Socio = -Math.abs(m2Socio);
         tasa2 = -Math.abs(tasa2);
       } else {
         m2Socio = Math.abs(m2Socio);
         tasa2 = Math.abs(tasa2);
-        tipoOp2 = 'D';
       }
       const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
 
@@ -687,22 +692,12 @@ const getComprobantesHandler = async (req, res) => {
         }
       }
 
-      // GARANTÍA DE SIGNO Y ETIQUETA HASH
-      if (montoSocioFinal < 0 || tasaSocioFinal < 0 || tipoOpSocioFinal === 'P') {
-        tipoOpSocioFinal = 'P';
-        montoSocioFinal = -Math.abs(montoSocioFinal);
-        tasaSocioFinal = -Math.abs(tasaSocioFinal);
-      } else if (tipoOpSocioFinal !== 'A' && tipoOpSocioFinal !== 'C') {
-        tipoOpSocioFinal = 'D';
-        montoSocioFinal = Math.abs(montoSocioFinal);
-        tasaSocioFinal = Math.abs(tasaSocioFinal);
-      }
-
       const hashCorto = row.hash_corto || 'OP';
       const etiquetaHash = `[${tipoOpSocioFinal}-${hashCorto}]`;
 
       return {
         ...row,
+        tipo_op: tipoOp1, // Tipo Maestro para la insignia en Comprobantes!
         tasa_1: tasa1,
         moneda_socio_1: monedaSocio1,
         m1_socio: m1Socio,
@@ -713,7 +708,7 @@ const getComprobantesHandler = async (req, res) => {
         m2_socio: m2Socio,
         m2_usdt: m2Usdt,
 
-        // VALORES FISICOS CENTRALIZADOS PARA TABLA WEB Y N8N
+        // PROPIEDADES CENTRALIZADAS
         monto_socio_final: montoSocioFinal,
         tasa_socio_final: tasaSocioFinal,
         moneda_socio_final: monedaSocioFinal,
