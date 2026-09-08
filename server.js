@@ -14,13 +14,13 @@ const DEFAULT_DB_URL = 'postgres://postgres:lrh48me5dz3pqtgg214j@automat_postgre
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || DEFAULT_DB_URL,
-  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('postgres-db') ? { rejectUnauthorized: false } : false,
+  ssl: false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });
 
-pool.on('error', (err) => console.error('⚠️ Error crítico en el Pool de PostgreSQL:', err.message));
+pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
 // FACTORES BASE DE MERCADO MATRIZ COMPLETA (T363)
 const FACTORES_BASE_MERCADO = {
@@ -120,142 +120,58 @@ const SEED_SOCIOS_CONFIG = {
       { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 }
     ],
     "ajustes": FACTORES_BASE_MERCADO
-  },
-  "JOSEM": {
-    "id_grupo": "120363345944393252@g.us",
-    "nombre": "JoseM",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "L",
-    "whatsapp": "",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "NELSY": {
-    "id_grupo": "GRP_NELSY",
-    "nombre": "Nelsy",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "L",
-    "whatsapp": "",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 2 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 3 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 4 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 5 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 6 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "MERLI": {
-    "id_grupo": "120363307631639715@g.us",
-    "nombre": "Merli",
-    "roles": "SOCIO",
-    "moneda_socio": "PEN",
-    "talla": "L",
-    "whatsapp": "120363307631639715@g.us",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Chile", "moneda": "CLP", "activo": true, "orden": 1 },
-      { "pais": "Colombia", "moneda": "COP", "activo": true, "orden": 2 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 3 },
-      { "pais": "Paraguay", "moneda": "PYG", "activo": true, "orden": 4 },
-      { "pais": "EEUU-Zelle", "moneda": "USD", "activo": true, "orden": 5 },
-      { "pais": "Brazil", "moneda": "BRL", "activo": true, "orden": 6 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
-  },
-  "JAVIER": {
-    "id_grupo": "120363401374720092@g.us",
-    "nombre": "Javier",
-    "roles": "SOCIO",
-    "moneda_socio": "USDT",
-    "talla": "S",
-    "whatsapp": "120363422300818123@g.us",
-    "activo": true,
-    "pen": "A", "cop": "A", "clp": "A", "ars": "A", "ves": "A", "brl": "A", "mxn": "A", "pyg": "A", "usd": "A", "ecu": "A", "eur": "A", "usdt": "A",
-    "cartelera_paises": [
-      { "pais": "Peru", "moneda": "PEN", "activo": true, "orden": 1 },
-      { "pais": "Argentina", "moneda": "ARS", "activo": true, "orden": 2 }
-    ],
-    "ajustes": FACTORES_BASE_MERCADO
   }
 };
 
 async function initDB() {
   try {
-    // 1. CREACIÓN GARANTIZADA DE TODAS LAS TABLAS BASE
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS nombres_fb (id SERIAL PRIMARY KEY, nombre VARCHAR(100) UNIQUE);
-      CREATE TABLE IF NOT EXISTS cola_fb (id SERIAL PRIMARY KEY, hash_largo VARCHAR(255) UNIQUE);
-      CREATE TABLE IF NOT EXISTS comprobantes_fb (id SERIAL PRIMARY KEY, hash_largo VARCHAR(255) UNIQUE);
-      CREATE TABLE IF NOT EXISTS mercado_tasas (id SERIAL PRIMARY KEY, id_tasa VARCHAR(20), moneda VARCHAR(10), tasa_base NUMERIC(18,6), timestamp BIGINT);
-      CREATE TABLE IF NOT EXISTS notificaciones_tasas (id SERIAL PRIMARY KEY, id_tasa VARCHAR(50), creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+      CREATE TABLE IF NOT EXISTS mercado_tasas (
+        id SERIAL PRIMARY KEY,
+        id_tasa VARCHAR(20) NOT NULL,
+        moneda VARCHAR(10) NOT NULL,
+        tasa_base NUMERIC(18, 6) NOT NULL,
+        timestamp BIGINT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS notificaciones_tasas (
+        id SERIAL PRIMARY KEY,
+        id_tasa VARCHAR(50) NOT NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_id_tasa ON mercado_tasas(id_tasa);
+      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_moneda_ts ON mercado_tasas(moneda, timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_mercado_tasas_ts ON mercado_tasas (timestamp ASC);
+      CREATE INDEX IF NOT EXISTS idx_cola_fb_ts ON cola_fb (timestamp DESC);
     `);
 
-    // 2. MIGRACIÓN FORZADA Y ADICIÓN SEGURA DE COLUMNAS
     await pool.query(`
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS id_grupo VARCHAR(100);
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS roles VARCHAR(50) DEFAULT 'SOCIO';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS moneda_socio VARCHAR(20) DEFAULT 'USDT';
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cop VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS clp VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ves VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ars VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS mxn VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS brl VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pyg VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS dop VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS crc VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS eur VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cad VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ecu VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pan VARCHAR(10);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usdt VARCHAR(10);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS talla VARCHAR(10) DEFAULT 'M';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(100);
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS recordar_activo BOOLEAN DEFAULT FALSE;
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pen VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cop VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS clp VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ars VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ves VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS brl VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS mxn VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pyg VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usd VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ecu VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS eur VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cad VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS dop VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS crc VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS pan VARCHAR(10) DEFAULT 'A';
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS usdt VARCHAR(10) DEFAULT 'A';
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
-      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS hash_corto VARCHAR(50);
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS timestamp BIGINT;
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS nombre_socio_1 VARCHAR(100);
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS nombre_socio_2 VARCHAR(100);
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS url_imagen TEXT;
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS conteo INT DEFAULT 1;
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS estado VARCHAR(50) DEFAULT 'PENDIENTE';
-      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
-      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS monto NUMERIC(18,2);
-      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS moneda VARCHAR(20);
-      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS banco VARCHAR(100);
-      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS referencia VARCHAR(100);
-      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS titular VARCHAR(150);
-      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS procesado_ia BOOLEAN DEFAULT FALSE;
-      ALTER TABLE comprobantes_fb ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
-      ALTER TABLE mercado_tasas ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
     `);
 
-    // 3. SIEMBRA INICIAL DE SOCIOS
     for (const [socioKey, config] of Object.entries(SEED_SOCIOS_CONFIG)) {
       const check = await pool.query(
         `SELECT id_grupo FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`,
@@ -304,7 +220,7 @@ async function initDB() {
             pen, cop, clp, ars, ves, brl, mxn, pyg, usd, ecu, eur, usdt,
             cartelera_paises, ajustes
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb)
-          ON CONFLICT (nombre) DO NOTHING;`,
+          ON CONFLICT DO NOTHING;`,
           [
             config.id_grupo, config.nombre, config.roles, config.moneda_socio, config.talla, config.whatsapp,
             config.activo ?? true,
@@ -315,9 +231,8 @@ async function initDB() {
         );
       }
     }
-    console.log('✅ Base de datos verificada y sembrada.');
+    console.log('✅ Base de datos sembrada.');
 
-    // 4. RECREACIÓN DE LA VISTA AUDITADA
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       CREATE VIEW v_comprobantes_auditados AS
@@ -341,7 +256,7 @@ async function initDB() {
         c.hash_largo,
         c.hash_corto,
         c.timestamp AS timestamp_comprobante,
-        to_timestamp(CASE WHEN c.timestamp > 10000000000 THEN c.timestamp/1000 ELSE c.timestamp END) AS fecha_hora_comprobante,
+        to_timestamp(c.timestamp) AS fecha_hora_comprobante,
         COALESCE(f.monto, 0) AS monto,
         COALESCE(UPPER(f.moneda), 'USDT') AS moneda,
         f.banco,
@@ -377,10 +292,9 @@ async function initDB() {
        AND mt.moneda = UPPER(f.moneda)
       LEFT JOIN mercado_tasas mt_primer
         ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote)
-       AND mt_primer.moneda = UPPER(f.moneda)
-      WHERE COALESCE(c.estado, '') != 'DESCARTADO';
+       AND mt_primer.moneda = UPPER(f.moneda);
     `);
-    console.log('✅ Vista v_comprobantes_auditados activa.');
+    console.log('✅ Vista v_comprobantes_auditados sincronizada con LEFT JOIN.');
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
   }
@@ -549,7 +463,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER COMPROBANTES Y REPORTES CON MANEJO DE SEGUNDOS/MILISEGUNDOS Y PARSEO SEGURO
+// HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -590,7 +504,7 @@ const getComprobantesHandler = async (req, res) => {
           mt_s1.tasa_base,
           CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_1,
-        COALESCE(n1.ajustes->>(t.tipo_op || '-' || v.moneda), '1.0') AS factor_1_text,
+        COALESCE((n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_1,
 
         CASE 
           WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
@@ -602,7 +516,7 @@ const getComprobantesHandler = async (req, res) => {
           mt_s2.tasa_base,
           CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_2,
-        COALESCE(n2.ajustes->>(t.tipo_op || '-' || v.moneda), '1.0') AS factor_2_text
+        COALESCE((n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_2
 
       FROM v_comprobantes_auditados v
       LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
@@ -655,28 +569,28 @@ const getComprobantesHandler = async (req, res) => {
       paramIndex++;
     }
 
-    // 3. FILTRO BUSCAR HASH ESPECÍFICO
+    // 3. FILTRO BUSCAR HASH ESPECÍFICO EN COMPROBANTES
     if (hash && hash.trim()) {
       query += ` AND (v.hash_corto ILIKE $${paramIndex} OR v.hash_largo ILIKE $${paramIndex})`;
       values.push(`%${hash.trim()}%`);
       paramIndex++;
     }
 
-    // 4. FILTRO FECHA INICIO (TOLERA MS Y SEGUNDOS)
+    // 4. FILTRO FECHA INICIO (GMT-4 VENEZUELA)
     if (fechaInicio && fechaInicio.trim()) {
       const startTimestamp = Math.floor(new Date(fechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
       if (!isNaN(startTimestamp)) {
-        query += ` AND (CASE WHEN v.timestamp_comprobante > 10000000000 THEN v.timestamp_comprobante / 1000 ELSE v.timestamp_comprobante END) >= $${paramIndex}`;
+        query += ` AND v.timestamp_comprobante >= $${paramIndex}`;
         values.push(startTimestamp);
         paramIndex++;
       }
     }
 
-    // 5. FILTRO FECHA FIN (TOLERA MS Y SEGUNDOS)
+    // 5. FILTRO FECHA FIN (GMT-4 VENEZUELA)
     if (fechaFin && fechaFin.trim()) {
       const endTimestamp = Math.floor(new Date(fechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
       if (!isNaN(endTimestamp)) {
-        query += ` AND (CASE WHEN v.timestamp_comprobante > 10000000000 THEN v.timestamp_comprobante / 1000 ELSE v.timestamp_comprobante END) <= $${paramIndex}`;
+        query += ` AND v.timestamp_comprobante <= $${paramIndex}`;
         values.push(endTimestamp);
         paramIndex++;
       }
@@ -707,8 +621,7 @@ const getComprobantesHandler = async (req, res) => {
       let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
       if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
-      const f1Val = parseFloat(row.factor_1_text);
-      const factor1 = !isNaN(f1Val) && f1Val > 0 ? f1Val : 1.0;
+      const factor1 = Math.abs(parseFloat(row.factor_1) || 1.0);
 
       const tasaCrossBase1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
       const tasa1Raw = tasaCrossBase1 * factor1;
@@ -720,8 +633,7 @@ const getComprobantesHandler = async (req, res) => {
       let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
       if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
       const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
-      const f2Val = parseFloat(row.factor_2_text);
-      const factor2 = !isNaN(f2Val) && f2Val > 0 ? f2Val : 1.0;
+      const factor2 = Math.abs(parseFloat(row.factor_2) || 1.0);
 
       const tasaCrossBase2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
       const tasa2Raw = tasaCrossBase2 * factor2;
@@ -893,8 +805,10 @@ app.post('/api/socios/config', async (req, res) => {
     const conteoActivos = cpArray.filter(p => p.activo).length;
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
 
+    const factoresFinales = { ...FACTORES_BASE_MERCADO, ...(ajustes || {}) };
+
     const jsonCartelera = JSON.stringify(cpArray);
-    const jsonAjustes = JSON.stringify({ ...FACTORES_BASE_MERCADO, ...(ajustes || {}) });
+    const jsonAjustes = JSON.stringify(factoresFinales);
 
     const checkQuery = `SELECT id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
     const checkRes = await pool.query(checkQuery, [socioNombre]);
@@ -950,29 +864,6 @@ app.post('/api/socios/config', async (req, res) => {
   } catch (err) {
     console.error("Error guardando socio:", err.message);
     res.status(500).json({ error: err.message });
-  }
-});
-
-// ENDPOINT PARA VISTA PREVIA Y DISPARO DE REPORTE A N8N / EVOLUTION API
-app.post('/api/reportes/enviar-n8n', async (req, res) => {
-  try {
-    const { socio, rol, saldo_anterior, nuevo_saldo, moneda_socio, operaciones, remoteJid } = req.body;
-
-    if (!socio) {
-      return res.status(400).json({ success: false, message: 'El nombre del socio es obligatorio.' });
-    }
-
-    await pool.query(
-      `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
-      [`REPORTE_${socio.toUpperCase().replace(/\s+/g, '_')}_${Date.now()}`]
-    );
-
-    res.json({
-      success: true,
-      message: `Reporte de ${socio} procesado correctamente. Enviado a n8n para generación gráfica y transmisión por Evolution API.`
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
   }
 });
 
