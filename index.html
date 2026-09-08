@@ -406,7 +406,7 @@
         </div>
       </template>
 
-      <!-- VISTA REPORTES CON TASA SOCIO Y HASHES FILTRADOS DINÁMICAMENTE -->
+      <!-- VISTA REPORTES CON SALDO ANTERIOR EDITABLE, SALDO ACTUAL Y VISTA PREVIA -->
       <template x-if="vistaActiva === 'reportes'">
         <div class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -414,9 +414,14 @@
               <h2 class="text-lg font-bold text-white tracking-wide">Resumen de Operaciones & Reportes</h2>
               <p class="text-xs text-slate-400">Filtrado ordenado jerárquicamente por Rol, Nombre, Rango de Fechas (GMT-4 VET) y Hash.</p>
             </div>
-            <button @click="cargarReportes()" class="px-4 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 shadow-md">
-              🔍 Aplicar Filtros de Reporte
-            </button>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button @click="cargarReportes()" class="px-4 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 shadow-md">
+                🔍 Aplicar Filtros de Reporte
+              </button>
+              <button @click="modalVistaPreviaAbierto = true" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all shadow-lg flex items-center gap-1.5">
+                📄 Vista Previa de Reporte
+              </button>
+            </div>
           </div>
 
           <!-- BARRA DE FILTROS EN ORDEN DE JERARQUÍA EXACTO -->
@@ -471,19 +476,37 @@
 
           </div>
 
-          <!-- CARDS DE MÉTRICAS CON MONEDA BASE NATIVA DEL SOCIO -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
+          <!-- CARDS DE MÉTRICAS CON SALDO ANTERIOR EDITABLE Y SALDO ACTUAL CALCULADO -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
               <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Sujeto / Entidad Auditada</p>
-              <p class="text-base font-black text-white mt-1" x-text="filtroReporteNombre || 'Todas las entidades'"></p>
+              <p class="text-base font-black text-white mt-1 truncate" x-text="filtroReporteNombre || 'Todas las entidades'"></p>
             </div>
-            <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
+
+            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comprobantes Filtrados</p>
               <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantesReporte.length + ' operados'"></p>
             </div>
-            <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
-              <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Monto Acumulado (Moneda Socio)</p>
+
+            <!-- SALDO ANTERIOR (EDITABLE) -->
+            <div class="bg-[#131525] p-3 rounded-xl border border-amber-500/40 shadow-lg">
+              <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Saldo Anterior (Editable)</p>
+              <div class="flex items-center gap-1.5 mt-1">
+                <input type="number" step="0.01" x-model.number="saldoAnteriorReporte" class="w-full bg-[#1a1d33] border border-amber-500/50 rounded-lg px-2 py-0.5 text-amber-300 font-black text-base outline-none focus:border-amber-400">
+                <span class="text-xs font-bold text-amber-400 shrink-0" x-text="monedaBaseSocioReporte"></span>
+              </div>
+            </div>
+
+            <!-- MOVIMIENTO FILTRADO EN EL PERÍODO -->
+            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
+              <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Movimiento Filtrado</p>
               <p class="text-base font-black text-emerald-400 mt-1" x-text="formatMonto(totalMontoSocioReporte) + ' ' + monedaBaseSocioReporte"></p>
+            </div>
+
+            <!-- SALDO ACTUAL (TOTAL CÁLCULO EN VIVO) -->
+            <div class="bg-[#131525] p-3 rounded-xl border border-emerald-500/50 bg-emerald-950/20 shadow-lg">
+              <p class="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Saldo Actual (Total)</p>
+              <p class="text-base font-black text-emerald-300 mt-1" x-text="formatMonto(nuevoSaldoReporte) + ' ' + monedaBaseSocioReporte"></p>
             </div>
           </div>
 
@@ -942,6 +965,67 @@
         </div>
       </div>
 
+      <!-- MODAL 3: VISTA PREVIA IMPRIMIBLE (ESTADO DE CUENTA FUNDABLOCK) -->
+      <div x-show="modalVistaPreviaAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-[#f0f8eb] text-slate-800 rounded-2xl w-full max-w-3xl p-6 sm:p-8 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col font-mono text-xs" @click.away="modalVistaPreviaAbierto = false">
+          
+          <!-- HEADER COMPROBANTE -->
+          <div class="flex items-start justify-between border-b border-emerald-800/20 pb-4 shrink-0">
+            <div>
+              <h1 class="text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroReporteNombre || 'SOCIO')"></h1>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <div class="flex items-center gap-2">
+                <img src="/logo.svg" class="w-10 h-10 object-contain" alt="Logo">
+                <button @click="modalVistaPreviaAbierto = false" class="text-slate-500 hover:text-slate-800 text-lg font-bold ml-2">✕</button>
+              </div>
+              <div class="text-right text-emerald-950 font-bold text-xs">
+                <span>Saldo anterior</span>
+                <span class="ml-4 font-black text-sm" x-text="formatMonto(saldoAnteriorReporte)"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABLA ESTILO PLANTILLA -->
+          <div class="overflow-y-auto flex-1 space-y-2 pr-1">
+            <div class="grid grid-cols-12 font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[11px]">
+              <div class="col-span-2">Fecha</div>
+              <div class="col-span-8">Descripcion</div>
+              <div class="col-span-2 text-right">Saldos</div>
+            </div>
+
+            <template x-for="c in comprobantesReporte" :key="c.hash_largo">
+              <div class="grid grid-cols-12 border-b border-dashed border-slate-300 py-1.5 items-center text-[11px]">
+                <div class="col-span-2 text-slate-700" x-text="formatFechaVE(c.timestamp).split(',')[0]"></div>
+                <div class="col-span-8 text-slate-800 pr-2 leading-relaxed">
+                  <span class="font-bold text-emerald-800" x-text="'[' + (c.hash_corto || 'OP') + ']'"></span>
+                  <span x-text="'Monto: ' + formatMonto(c.monto) + ', '"></span>
+                  <span x-text="'Titular: ' + (c.titular || '-') + ', '"></span>
+                  <span x-text="'Banco: ' + (c.banco || '-') + ', '"></span>
+                  <span x-text="'Moneda: ' + c.moneda + ', '"></span>
+                  <span x-text="'Tasa(' + (c.lote_tasa_asignado || 'T360') + '): ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
+                </div>
+                <div class="col-span-2 text-right font-bold text-slate-900" x-text="formatMonto(obtenerMontoSocioCalculado(c))"></div>
+              </div>
+            </template>
+          </div>
+
+          <!-- FOOTER: NUEVO SALDO & LOGO FUNDABLOCK -->
+          <div class="flex items-end justify-between border-t border-emerald-800/20 pt-4 shrink-0">
+            <div class="flex items-center gap-2">
+              <img src="/logo.svg" class="w-6 h-6 object-contain" alt="FB">
+              <span class="font-bold text-slate-800 text-sm">Fundablock</span>
+            </div>
+
+            <div class="bg-[#dcf0d8] border border-emerald-700/40 rounded-xl px-5 py-2.5 text-right flex items-center gap-4">
+              <span class="text-xs font-bold text-emerald-950">Nuevo saldo</span>
+              <span class="text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoReporte)"></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -975,6 +1059,9 @@
         filtroReporteFechaFin: '',
         filtroReporteDesdeHash: '',
         comprobantesReporte: [],
+
+        saldoAnteriorReporte: 0.00,
+        modalVistaPreviaAbierto: false,
 
         matrizFactorRemesaT363: {
           "USDT":  {"USDT": 1.0, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.9, "ECU": 0.9, "PAN": 0.9, "MXN": 0.9, "BRL": 0.9, "VES": 0.9, "PYG": 0.9, "EUR": 0.9, "DOP": 0.9, "BOB": 0.9, "CRC": 0.9},
@@ -1042,6 +1129,11 @@
           await this.cargarDirectorio();
           await this.cargarComprobantes();
           await this.cargarReportes();
+        },
+
+        get nuevoSaldoReporte() {
+          const saldoAnt = parseFloat(this.saldoAnteriorReporte) || 0;
+          return saldoAnt + this.totalMontoSocioReporte;
         },
 
         get sociosFiltradosPorRol() {
