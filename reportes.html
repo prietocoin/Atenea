@@ -204,8 +204,10 @@
         <input type="date" id="fechaFin" />
       </div>
       <div class="filter-group">
-        <label>5. Desde Hash</label>
-        <input type="text" id="desdeHash" placeholder="Opcional..." />
+        <label>5. Desde Hash X en adelante</label>
+        <select id="desdeHash">
+          <option value="">NINGUNO (TODOS)</option>
+        </select>
       </div>
     </div>
 
@@ -251,6 +253,40 @@
   </div>
 
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarFiltrosOpciones();
+    });
+
+    async function cargarFiltrosOpciones() {
+      try {
+        const res = await fetch('/api/reportes/filtros');
+        const result = await res.json();
+
+        if (!result.success) return;
+
+        const selectNombre = document.getElementById('filtroNombre');
+        selectNombre.innerHTML = '<option value="TODOS">TODOS</option>';
+        result.entidades.forEach(nombre => {
+          const opt = document.createElement('option');
+          opt.value = nombre;
+          opt.innerText = nombre;
+          selectNombre.appendChild(opt);
+        });
+
+        const selectHash = document.getElementById('desdeHash');
+        selectHash.innerHTML = '<option value="">NINGUNO (TODOS)</option>';
+        result.hashes.forEach(hash => {
+          const opt = document.createElement('option');
+          opt.value = hash;
+          opt.innerText = hash;
+          selectHash.appendChild(opt);
+        });
+
+      } catch (err) {
+        console.error('Error al inicializar filtros:', err);
+      }
+    }
+
     async function cargarReporte() {
       const rol = document.getElementById('filtroRol').value;
       const nombre = document.getElementById('filtroNombre').value;
