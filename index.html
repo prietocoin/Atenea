@@ -690,56 +690,64 @@
         </div>
       </div>
 
-      <!-- MODAL 2: CONFIGURACIÓN INTEGRAL DE SOCIO / MATRIZ GENERAL -->
-      <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
-        <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-4 sm:p-5 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
-          
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
-            <div class="flex items-center gap-3">
-              <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
-              <div>
-                <h3 class="font-bold text-white text-base" x-text="socioConfigEdit.nombre === 'GENERAL' ? 'Tablero Matriz General (Remesas)' : 'Configuración Integral del Socio'"></h3>
-                <p class="text-xs text-slate-400">Valores calculados en vivo en VET (GMT-4) con el lote <strong class="text-emerald-400" x-text="ultimoLoteId || 'T012'"></strong>.</p>
-              </div>
-            </div>
-            <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
-          </div>
+      <!-- CONTROL DE MATRIZ GENERAL Y SOCIOS -->
+<div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+  <div class="flex-1 flex flex-col sm:flex-row items-center gap-3">
+    
+    <!-- SELECTOR DE PERFIL (SOLO PARA SOCIOS) -->
+    <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
+      <div class="w-full sm:w-1/2">
+        <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
+        <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
+          <template x-for="s in socios" :key="s">
+            <option :value="s" x-text="s"></option>
+          </template>
+        </select>
+      </div>
+    </template>
 
-          <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex-1 flex flex-col sm:flex-row items-center gap-2">
-              <div class="w-full sm:w-1/2">
-                <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
-                <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
-                  <template x-for="s in socios" :key="s">
-                    <option :value="s" x-text="s"></option>
-                  </template>
-                </select>
-              </div>
+    <!-- PAÍS MAESTRO E INTERRUPTOR ON/OFF PARA MATRIZ GENERAL -->
+    <template x-if="socioConfigEdit.nombre === 'GENERAL'">
+      <div class="w-full flex items-center justify-between gap-4">
+        <div class="flex-1">
+          <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
+          <select x-model="paisMaestroGeneral" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-amber-500">
+            <template x-for="p in listaPaisesBase" :key="p.code">
+              <option :value="p.code" x-text="p.flag + ' ' + p.nombrePais + ' (' + p.code + ')'"></option>
+            </template>
+          </select>
+        </div>
 
-              <template x-if="socioConfigEdit.nombre === 'GENERAL'">
-                <div class="w-full sm:w-1/2">
-                  <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
-                  <select x-model="paisMaestroGeneral" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-amber-500">
-                    <template x-for="p in listaPaisesBase" :key="p.code">
-                      <option :value="p.code" x-text="p.flag + ' ' + p.nombrePais + ' (' + p.code + ')'"></option>
-                    </template>
-                  </select>
-                </div>
-              </template>
+        <!-- INTERRUPTOR DE ENCENDIDO / APAGADO DIRECTO -->
+        <div class="flex flex-col items-end shrink-0 pt-3">
+          <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+            <div class="relative inline-flex items-center">
+              <input type="checkbox" x-model="socioConfigEdit.activo" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:bg-emerald-500 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full transition-all"></div>
             </div>
+            <span class="text-xs font-bold" :class="socioConfigEdit.activo ? 'text-emerald-400' : 'text-slate-500'" x-text="socioConfigEdit.activo ? 'ACTIVO' : 'INACTIVO'"></span>
+          </label>
+        </div>
+      </div>
+    </template>
+  </div>
 
-            <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800 shrink-0">
-              <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-                📜 Reglas / Matriz
-              </button>
-              <button @click="tabConfigActive = 'addpais'" :class="tabConfigActive === 'addpais' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-                ➕ Añadir País
-              </button>
-              <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-                👤 Perfil
-              </button>
-            </div>
-          </div>
+  <!-- NAVEGACIÓN DE PESTAÑAS DEL MODAL -->
+  <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800 shrink-0">
+    <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+      📜 Reglas / Matriz
+    </button>
+    <button @click="tabConfigActive = 'addpais'" :class="tabConfigActive === 'addpais' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+      ➕ Añadir País
+    </button>
+    <!-- BOTÓN PERFIL VISIBLE ÚNICAMENTE SI NO ES GENERAL -->
+    <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
+      <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+        👤 Perfil
+      </button>
+    </template>
+  </div>
+</div>
 
           <!-- PANTALLA 1: REGLAS -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
