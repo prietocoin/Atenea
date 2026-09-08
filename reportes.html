@@ -253,84 +253,118 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarFiltrosOpciones();
+  document.addEventListener('DOMContentLoaded', () => {
+    inicializarFiltros();
+    
+    // Escuchar cambios en el selector de Rol para actualizar Nombres en cascada
+    document.getElementById('filtroRol').addEventListener('change', (e) => {
+      cargarNombresPorRol(e.target.value);
     });
+  });
 
-    async function cargarFiltrosOpciones() {
-      try {
-        const res = await fetch('/api/reportes/filtros');
-        const result = await res.json();
+  async function inicializarFiltros() {
+    try {
+      const res = await fetch('/api/reportes/filtros');
+      const result = await res.json();
 
-        if (!result.success) return;
+      if (!result.success) return;
 
-        const selectNombre = document.getElementById('filtroNombre');
-        selectNombre.innerHTML = '<option value="TODOS">TODOS</option>';
-        result.entidades.forEach(nombre => {
-          const opt = document.createElement('option');
-          opt.value = nombre;
-          opt.innerText = nombre;
-          selectNombre.appendChild(opt);
-        });
+      // Cargar Roles en selector 1
+      const selectRol = document.getElementById('filtroRol');
+      selectRol.innerHTML = '<option value="TODOS">TODOS LOS ROLES</option>';
+      result.roles.forEach(rol => {
+        const opt = document.createElement('option');
+        opt.value = rol;
+        opt.innerText = rol;
+        selectRol.appendChild(opt);
+      });
 
-        const selectHash = document.getElementById('desdeHash');
-        selectHash.innerHTML = '<option value="">NINGUNO (TODOS)</option>';
-        result.hashes.forEach(hash => {
-          const opt = document.createElement('option');
-          opt.value = hash;
-          opt.innerText = hash;
-          selectHash.appendChild(opt);
-        });
+      // Cargar Nombres iniciales
+      actualizarSelectNombre(result.entidades);
 
-      } catch (err) {
-        console.error('Error al inicializar filtros:', err);
-      }
+      // Cargar Hashes
+      const selectHash = document.getElementById('desdeHash');
+      selectHash.innerHTML = '<option value="">NINGUNO (TODOS)</option>';
+      result.hashes.forEach(hash => {
+        const opt = document.createElement('option');
+        opt.value = hash;
+        opt.innerText = hash;
+        selectHash.appendChild(opt);
+      });
+
+    } catch (err) {
+      console.error('Error al inicializar filtros:', err);
     }
+  }
 
-    async function cargarReporte() {
-      const rol = document.getElementById('filtroRol').value;
-      const nombre = document.getElementById('filtroNombre').value;
-      const fechaInicio = document.getElementById('fechaInicio').value;
-      const fechaFin = document.getElementById('fechaFin').value;
-      const desdeHash = document.getElementById('desdeHash').value;
+  async function cargarNombresPorRol(rolSeleccionado) {
+    try {
+      const res = await fetch(`/api/reportes/filtros?rol=${encodeURIComponent(rolSeleccionado)}`);
+      const result = await res.json();
 
-      const params = new URLSearchParams({ rol, nombre, fechaInicio, fechaFin, desdeHash });
-
-      try {
-        const res = await fetch(`/api/reportes/operaciones?${params}`);
-        const result = await res.json();
-
-        if (!result.success) return;
-
-        document.getElementById('resEntidad').innerText = nombre;
-        document.getElementById('resComprobantes').innerText = `${result.totales.comprobantes} operados`;
-        document.getElementById('resMonto').innerText = `${result.totales.montoAcumulado}`;
-
-        const tbody = document.getElementById('tablaCuerpo');
-        tbody.innerHTML = '';
-
-        if (result.data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay operaciones registradas.</td></tr>';
-          return;
-        }
-
-        result.data.forEach(item => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${new Date(item.fecha_hora).toLocaleString()}</td>
-            <td class="hash">${item.hash || '-'}</td>
-            <td><strong>${item.descripcion || '-'}</strong><br><small style="color:var(--text-muted);">${item.banco || ''}</small></td>
-            <td><span class="badge">${item.lote || '-'}</span></td>
-            <td>${item.monto_origen || '0'} ${item.moneda_origen || ''}</td>
-            <td style="color:var(--green-highlight); font-weight:700;">${item.monto_socio || '0'} ${item.moneda_socio || ''}</td>
-            <td>$${item.equiv_usd || '0.00'}</td>
-          `;
-          tbody.appendChild(row);
-        });
-      } catch (err) {
-        console.error('Error cargando el reporte:', err);
+      if (result.success) {
+        actualizarSelectNombre(result.entidades);
       }
+    } catch (err) {
+      console.error('Error actualizando nombres por rol:', err);
     }
-  </script>
+  }
+
+  function actualizarSelectNombre(listaEntidades) {
+    const selectNombre = document.getElementById('filtroNombre');
+    selectNombre.innerHTML = '<option value="TODOS">TODOS</option>';
+    listaEntidades.forEach(nombre => {
+      const opt = document.createElement('option');
+      opt.value = nombre;
+      opt.innerText = nombre;
+      selectNombre.appendChild(opt);
+    });
+  }
+
+  async function cargarReporte() {
+    const rol = document.getElementById('filtroRol').value;
+    const nombre = document.getElementById('filtroNombre').value;
+    const fechaInicio = document.getElementById('fechaInicio').value;
+    const fechaFin = document.getElementById('fechaFin').value;
+    const desdeHash = document.getElementById('desdeHash').value;
+
+    const params = new URLSearchParams({ rol, nombre, fechaInicio, fechaFin, desdeHash });
+
+    try {
+      const res = await fetch(`/api/reportes/operaciones?${params}`);
+      const result = await res.json();
+
+      if (!result.success) return;
+
+      document.getElementById('resEntidad').innerText = nombre;
+      document.getElementById('resComprobantes').innerText = `${result.totales.comprobantes} operados`;
+      document.getElementById('resMonto').innerText = `${result.totales.montoAcumulado}`;
+
+      const tbody = document.getElementById('tablaCuerpo');
+      tbody.innerHTML = '';
+
+      if (result.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay operaciones registradas.</td></tr>';
+        return;
+      }
+
+      result.data.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${new Date(item.fecha_hora).toLocaleString()}</td>
+          <td class="hash">${item.hash || '-'}</td>
+          <td><strong>${item.descripcion || '-'}</strong><br><small style="color:var(--text-muted);">${item.banco || ''}</small></td>
+          <td><span class="badge">${item.lote || '-'}</span></td>
+          <td>${item.monto_origen || '0'} ${item.moneda_origen || ''}</td>
+          <td style="color:var(--green-highlight); font-weight:700;">${item.monto_socio || '0'} ${item.moneda_socio || ''}</td>
+          <td>$${item.equiv_usd || '0.00'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      console.error('Error cargando el reporte:', err);
+    }
+  }
+</script>
 </body>
 </html>
