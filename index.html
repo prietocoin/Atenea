@@ -230,7 +230,7 @@
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-1.5">
-                          <img :src="item.url_imagen" class="w-8 h-8 object-cover rounded-lg border border-slate-700/60 bg-slate-900" alt="Comprobante" @error="$event.target.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><rect width=\'100%\' height=\'100%\' fill=\'%23121824\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'12\'>SIN IMG</text></svg>'">
+                          <img :src="item.url_imagen" class="w-8 h-8 object-cover rounded-lg border border-slate-700/60 bg-slate-900" alt="Comprobante" @error="$event.target.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><rect width=\'100%\' height=\'100%\' fill=\'%23121824\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%238b5cf6\' font-size=\'12\'>SIN IMG</text></svg>'">
                           <a :href="item.url_imagen" target="_blank" class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                           </a>
@@ -1132,7 +1132,7 @@
           { nombrePais: 'Dominicana', code: 'DOP', flag: '🇩🇴' },
           { nombrePais: 'Costa Rica', code: 'CRC', flag: '🇨🇷' },
           { nombrePais: 'EEUU-Zelle', code: 'USD', flag: '🇺🇸' },
-          { nombrePais: 'Panama', code: 'PAN', flag: '🇵\u0041' },
+          { nombrePais: 'Panama', code: 'PAN', flag: '🇵🇦' },
           { nombrePais: 'Canada', code: 'CAD', flag: '🇨🇦' }
         ],
 
@@ -1171,54 +1171,32 @@
           return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
         },
 
-        // UNIFICADOR CENTRAL: DETERMINA MONTO, TASA Y TIPO (P/D) PRESERVANDO EL SIGNO DE LA TASA
+        // CONSUMO DIRECTO DE LA FUENTE FÍSICA CALCULADA POR EL BACKEND
         obtenerInformacionSocioOperacion(c) {
+          if (c.monto_socio_final !== undefined && c.etiqueta_hash !== undefined) {
+            return {
+              montoCalculado: parseFloat(c.monto_socio_final) || 0,
+              tasaCalculada: parseFloat(c.tasa_socio_final) || 0,
+              tipoOp: c.tipo_op_socio || 'D',
+              monedaSocio: c.moneda_socio_final || 'USDT',
+              hashCorto: c.hash_corto || 'OP'
+            };
+          }
+
           const socioNorm = (this.filtroReporteNombre || '').trim().toUpperCase();
           let esSocio1 = true;
           let tasaAplicada = c.tasa_1 !== undefined && c.tasa_1 !== null ? parseFloat(c.tasa_1) : (c.tasa_base || 1.0);
           let montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
-          let factorAplicado = c.factor_1 !== undefined && c.factor_1 !== null ? parseFloat(c.factor_1) : 1.0;
           let monedaSocio = c.moneda_socio_1 || c.moneda || 'USDT';
 
-          if (socioNorm) {
-            if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-              esSocio1 = false;
-              tasaAplicada = c.tasa_2 !== undefined && c.tasa_2 !== null ? parseFloat(c.tasa_2) : (c.tasa_base || 1.0);
-              montoBase = c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
-              factorAplicado = c.factor_2 !== undefined && c.factor_2 !== null ? parseFloat(c.factor_2) : 1.0;
-              monedaSocio = c.moneda_socio_2 || c.moneda || 'USDT';
-            }
+          if (socioNorm && c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
+            esSocio1 = false;
+            tasaAplicada = c.tasa_2 !== undefined && c.tasa_2 !== null ? parseFloat(c.tasa_2) : (c.tasa_base || 1.0);
+            montoBase = c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
+            monedaSocio = c.moneda_socio_2 || c.moneda || 'USDT';
           }
 
           let tipoOp = (esSocio1 ? (c.tipo_op || c.tipo_manual) : null) || 'D';
-
-          // Cruce con la configuración teórica del perfil del socio en directorio
-          const regSocio = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-          if (regSocio) {
-            const ajustes = typeof regSocio.ajustes === 'string' ? JSON.parse(regSocio.ajustes) : (regSocio.ajustes || {});
-            const monedaOrig = (c.moneda || '').toUpperCase();
-            
-            const factorP = parseFloat(ajustes[`P-${monedaOrig}`]);
-            const factorD = parseFloat(ajustes[`D-${monedaOrig}`]);
-
-            const tasaTeoricaP = this.calcularTasaSocio(monedaOrig, factorP);
-            const tasaTeoricaD = this.calcularTasaSocio(monedaOrig, factorD);
-            const tasaRealAbs = Math.abs(parseFloat(tasaAplicada) || 0);
-
-            if (!isNaN(factorP) && Math.abs(tasaRealAbs - Math.abs(tasaTeoricaP)) <= 0.05) {
-              tipoOp = 'P';
-              tasaAplicada = tasaTeoricaP; // Preserva el signo negativo si factorP era negativo
-            } else if (!isNaN(factorD) && Math.abs(tasaRealAbs - Math.abs(tasaTeoricaD)) <= 0.05) {
-              tipoOp = 'D';
-              tasaAplicada = tasaTeoricaD;
-            }
-          }
-
-          // Si el factor registrado o la tasa aplicada es negativa, forzar monto negativo
-          if (factorAplicado < 0 || parseFloat(tasaAplicada) < 0) {
-            montoBase = -Math.abs(montoBase);
-            if (parseFloat(tasaAplicada) > 0) tasaAplicada = -tasaAplicada;
-          }
 
           return {
             montoCalculado: isNaN(montoBase) ? 0 : montoBase,
@@ -1229,8 +1207,8 @@
           };
         },
 
-        // Helper para obtener [TIPO-HASH] (Ej: [P-7a110fc] o [D-8fde7bf])
         obtenerEtiquetaHash(c) {
+          if (c.etiqueta_hash) return c.etiqueta_hash;
           const info = this.obtenerInformacionSocioOperacion(c);
           return `[${info.tipoOp}-${info.hashCorto}]`;
         },
@@ -1335,16 +1313,19 @@
         },
 
         obtenerMonedaSocioCalculada(c) {
+          if (c.moneda_socio_final) return c.moneda_socio_final;
           const info = this.obtenerInformacionSocioOperacion(c);
           return info.monedaSocio;
         },
 
         obtenerMontoSocioCalculado(c) {
+          if (c.monto_socio_final !== undefined) return parseFloat(c.monto_socio_final) || 0;
           const info = this.obtenerInformacionSocioOperacion(c);
           return info.montoCalculado;
         },
 
         obtenerTasaSocioCalculada(c) {
+          if (c.tasa_socio_final !== undefined) return parseFloat(c.tasa_socio_final) || 0;
           const info = this.obtenerInformacionSocioOperacion(c);
           return info.tasaCalculada;
         },
