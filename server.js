@@ -932,22 +932,35 @@ app.post('/api/reportes/enviar-whatsapp', async (req, res) => {
     const { socio, remoteJid, saldoAnterior, movimiento, nuevoSaldo, moneda, comprobantes } = req.body;
 
     if (!remoteJid || !remoteJid.trim()) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'El socio seleccionado no posee un WhatsApp Remote JID válido en el Directorio.' 
-      });
+      return res.status(400).json({ success: false, error: 'El socio no posee un JID válido en el Directorio.' });
     }
 
-    // Registra la notificación en la cola para que n8n u Evolution API lo procesen
-    await pool.query(
-      `INSERT INTO notificaciones_tasas (id_tasa) VALUES ($1);`,
-      [`REPORTE_${socio}_${Date.now()}`]
-    );
+    // URL de tu Webhook activo en n8n
+    const N8N_WEBHOOK_URL = process.env.N8N_REPORTES_WEBHOOK || 'https://n8n.jairokov.com/webhook/reportes-whatsapp';
+
+    const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        socio,
+        remoteJid,
+        saldoAnterior,
+        movimiento,
+        nuevoSaldo,
+        moneda,
+        comprobantes,
+        fechaEnvio: new Date().toISOString()
+      })
+    });
+
+    if (!n8nResponse.ok) {
+      throw new Error(`n8n respondió con estatus HTTP ${n8nResponse.status}`);
+    }
 
     res.json({
       success: true,
-      message: `Reporte de ${socio} encolado para envío a ${remoteJid}`,
-      data: { socio, remoteJid, saldoAnterior, movimiento, nuevoSaldo, moneda, totalItems: comprobantes?.length || 0 }
+      message: `Reporte de ${socio} enviado exitosamente a n8n.`,
+      remoteJid
     });
   } catch (err) {
     console.error("Error en POST /api/reportes/enviar-whatsapp:", err.message);
