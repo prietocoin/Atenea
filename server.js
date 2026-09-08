@@ -168,6 +168,7 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(50);
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS recordar_activo BOOLEAN DEFAULT FALSE;
+      ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS saldo_anterior NUMERIC(18, 2) DEFAULT 0.00;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
@@ -463,7 +464,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER COMPROBANTES Y REPORTES CON FILTROS SECUENCIALES
+// HANDLER CENTRALIZADO CON CÁLCULOS ALGEBRAICOS Y FÍSICOS EN SERVIDOR
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -500,24 +501,26 @@ const getComprobantesHandler = async (req, res) => {
           ELSE UPPER(TRIM(COALESCE(n1.moneda_socio, 'USDT')))
         END AS moneda_socio_1,
         n1.roles AS rol_socio_1,
+        n1.ajustes AS ajustes_socio_1,
         
         COALESCE(
           mt_s1.tasa_base,
           CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_1,
-        COALESCE((n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_1,
+        (n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric AS factor_1_raw,
 
         CASE 
           WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
           ELSE UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT')))
         END AS moneda_socio_2,
         n2.roles AS rol_socio_2,
+        n2.ajustes AS ajustes_socio_2,
 
         COALESCE(
           mt_s2.tasa_base,
           CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_2,
-        COALESCE((n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric, 1.0) AS factor_2
+        (n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric AS factor_2_raw
 
       FROM v_comprobantes_auditados v
       LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
@@ -619,29 +622,73 @@ const getComprobantesHandler = async (req, res) => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
 
+      // RESOLUCIÓN SOCIO 1
       let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
       if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
-      const factor1 = Math.abs(parseFloat(row.factor_1) || 1.0);
+      const factor1 = row.factor_1_raw !== null && row.factor_1_raw !== undefined ? parseFloat(row.factor_1_raw) : 1.0;
 
       const tasaCrossBase1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
-      const tasa1Raw = tasaCrossBase1 * factor1;
-      const tasa1 = aplicarReglaPrecision(tasa1Raw);
-
-      const m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
+      const tasa1Raw = tasaCrossBase1 * Math.abs(factor1);
+      let tasa1 = aplicarReglaPrecision(tasa1Raw);
+      let m1Socio = tasa1 > 0 ? parseFloat((monto / tasa1).toFixed(2)) : 0;
+      
+      let tipoOp1 = (row.tipo_op || 'D').toUpperCase();
+      if (factor1 < 0 || tipoOp1 === 'P') {
+        tipoOp1 = 'P';
+        m1Socio = -Math.abs(m1Socio);
+        tasa1 = -Math.abs(tasa1);
+      } else {
+        m1Socio = Math.abs(m1Socio);
+        tasa1 = Math.abs(tasa1);
+      }
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
 
+      // RESOLUCIÓN SOCIO 2
       let monedaSocio2 = (row.moneda_socio_2 || 'USDT').toUpperCase();
       if (monedaSocio2 === 'USD') monedaSocio2 = 'USDT';
       const tasaBaseSocio2 = parseFloat(row.tasa_base_socio_2) || 1.0;
-      const factor2 = Math.abs(parseFloat(row.factor_2) || 1.0);
+      const factor2 = row.factor_2_raw !== null && row.factor_2_raw !== undefined ? parseFloat(row.factor_2_raw) : 1.0;
 
       const tasaCrossBase2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
-      const tasa2Raw = tasaCrossBase2 * factor2;
-      const tasa2 = aplicarReglaPrecision(tasa2Raw);
+      const tasa2Raw = tasaCrossBase2 * Math.abs(factor2);
+      let tasa2 = aplicarReglaPrecision(tasa2Raw);
+      let m2Socio = tasa2 > 0 ? parseFloat((monto / tasa2).toFixed(2)) : 0;
 
-      const m2Socio = tasa2 > 0 ? parseFloat((monto / tasa2).toFixed(2)) : 0;
+      // Evaluación del puesto de Socio 2: Si el factor2 es negativo o socio 1 es Depósito, el puesto 2 actúa en Pago
+      let tipoOp2 = 'P';
+      const aj2 = typeof row.ajustes_socio_2 === 'string' ? JSON.parse(row.ajustes_socio_2) : (row.ajustes_socio_2 || {});
+      const factorP2 = parseFloat(aj2[`P-${(row.moneda || '').toUpperCase()}`]);
+      
+      if (factor2 < 0 || !isNaN(factorP2)) {
+        tipoOp2 = 'P';
+        m2Socio = -Math.abs(m2Socio);
+        tasa2 = -Math.abs(tasa2);
+      } else {
+        m2Socio = Math.abs(m2Socio);
+        tasa2 = Math.abs(tasa2);
+        tipoOp2 = 'D';
+      }
       const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
+
+      // DETERMINACIÓN FÍSICA PARA EL SOCIO SELECCIONADO EN EL FILTRO
+      let montoSocioFinal = m1Socio;
+      let tasaSocioFinal = tasa1;
+      let monedaSocioFinal = monedaSocio1;
+      let tipoOpSocioFinal = tipoOp1;
+
+      if (targetSocio) {
+        const targetNorm = targetSocio.trim().toUpperCase();
+        if (row.nombre_socio_2 && row.nombre_socio_2.trim().toUpperCase() === targetNorm) {
+          montoSocioFinal = m2Socio;
+          tasaSocioFinal = tasa2;
+          monedaSocioFinal = monedaSocio2;
+          tipoOpSocioFinal = tipoOp2;
+        }
+      }
+
+      const hashCorto = row.hash_corto || 'OP';
+      const etiquetaHash = `[${tipoOpSocioFinal}-${hashCorto}]`;
 
       return {
         ...row,
@@ -653,7 +700,14 @@ const getComprobantesHandler = async (req, res) => {
         tasa_2: tasa2,
         moneda_socio_2: monedaSocio2,
         m2_socio: m2Socio,
-        m2_usdt: m2Usdt
+        m2_usdt: m2Usdt,
+
+        // PROPIEDADES CENTRALIZADAS PARA AUDITORÍA Y N8N
+        monto_socio_final: montoSocioFinal,
+        tasa_socio_final: tasaSocioFinal,
+        moneda_socio_final: monedaSocioFinal,
+        tipo_op_socio: tipoOpSocioFinal,
+        etiqueta_hash: etiquetaHash
       };
     });
 
@@ -843,7 +897,7 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
 app.post('/api/socios/config', async (req, res) => {
   try {
     const { 
-      nombre, roles, moneda_socio, whatsapp, activo,
+      nombre, roles, moneda_socio, saldo_anterior, whatsapp, activo,
       pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
       cartelera_paises, ajustes 
     } = req.body;
@@ -866,9 +920,13 @@ app.post('/api/socios/config', async (req, res) => {
     const tallaCalculada = calcularTallaAutomatica(conteoActivos);
 
     const factoresFinales = { ...FACTORES_BASE_MERCADO, ...(ajustes || {}) };
+    if (saldo_anterior !== undefined) {
+      factoresFinales.saldo_anterior = parseFloat(saldo_anterior) || 0;
+    }
 
     const jsonCartelera = JSON.stringify(cpArray);
     const jsonAjustes = JSON.stringify(factoresFinales);
+    const valSaldo = parseFloat(saldo_anterior) || 0;
 
     const checkQuery = `SELECT id_grupo, whatsapp FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1));`;
     const checkRes = await pool.query(checkQuery, [socioNombre]);
@@ -883,17 +941,18 @@ app.post('/api/socios/config', async (req, res) => {
           talla = $3,
           whatsapp = $4,
           activo = $5,
-          pen = $6, cop = $7, clp = $8, ars = $9, ves = $10, brl = $11, mxn = $12, pyg = $13,
-          dop = $14, crc = $15, eur = $16, cad = $17, usd = $18, ecu = $19, pan = $20, usdt = $21,
-          cartelera_paises = $22::jsonb,
-          ajustes = $23::jsonb
-        WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($24))
+          saldo_anterior = $6,
+          pen = $7, cop = $8, clp = $9, ars = $10, ves = $11, brl = $12, mxn = $13, pyg = $14,
+          dop = $15, crc = $16, eur = $17, cad = $18, usd = $19, ecu = $20, pan = $21, usdt = $22,
+          cartelera_paises = $23::jsonb,
+          ajustes = $24::jsonb
+        WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($25))
         RETURNING *;
       `;
       const updateRes = await pool.query(updateQuery, [
         roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, 
         whatsapp || checkRes.rows[0].whatsapp || '',
-        activo ?? true,
+        activo ?? true, valSaldo,
         pen || 'A', cop || 'A', clp || 'A', ars || 'A', ves || 'A', brl || 'A', mxn || 'A', pyg || 'A',
         dop || 'A', crc || 'A', eur || 'A', cad || 'A', usd || 'A', ecu || 'A', pan || 'A', usdt || 'A',
         jsonCartelera, jsonAjustes, socioNombre
@@ -903,16 +962,16 @@ app.post('/api/socios/config', async (req, res) => {
       const idGrupo = whatsapp && whatsapp.trim() ? whatsapp.trim() : ('GRP_' + socioNombre.toUpperCase().replace(/\s+/g, '_'));
       const insertQuery = `
         INSERT INTO nombres_fb (
-          id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo,
+          id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo, saldo_anterior,
           pen, cop, clp, ars, ves, brl, mxn, pyg, dop, crc, eur, cad, usd, ecu, pan, usdt,
           cartelera_paises, ajustes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb, $25::jsonb)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25::jsonb, $26::jsonb)
         RETURNING *;
       `;
       const insertRes = await pool.query(insertQuery, [
         idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
-        activo ?? true,
+        activo ?? true, valSaldo,
         pen || 'A', cop || 'A', clp || 'A', ars || 'A', ves || 'A', brl || 'A', mxn || 'A', pyg || 'A',
         dop || 'A', crc || 'A', eur || 'A', cad || 'A', usd || 'A', ecu || 'A', pan || 'A', usdt || 'A',
         jsonCartelera, jsonAjustes
@@ -926,7 +985,8 @@ app.post('/api/socios/config', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// Endpoint para dispatch del reporte por WhatsApp/n8n
+
+// ENDPOINT DISPATCH DEL REPORTE POR WHATSAPP/N8N
 app.post('/api/reportes/enviar-whatsapp', async (req, res) => {
   try {
     const { socio, remoteJid, saldoAnterior, movimiento, nuevoSaldo, moneda, comprobantes } = req.body;
@@ -935,7 +995,6 @@ app.post('/api/reportes/enviar-whatsapp', async (req, res) => {
       return res.status(400).json({ success: false, error: 'El socio no posee un JID válido en el Directorio.' });
     }
 
-    // URL de tu Webhook activo en n8n
     const N8N_WEBHOOK_URL = process.env.N8N_REPORTES_WEBHOOK || 'https://nochon.jairokov.com/webhook/reportes-whatsapp';
 
     const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
