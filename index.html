@@ -730,19 +730,27 @@
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
-          <!-- CONTROL DE MATRIZ GENERAL Y SOCIOS -->
+          <!-- CONTROL DE MATRIZ GENERAL Y SOCIOS CON CAMPO SALDO ANTERIOR VISIBLE AL INICIO -->
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex-1 flex flex-col sm:flex-row items-center gap-3">
               
-              <!-- SELECTOR DE PERFIL (SOLO PARA SOCIOS) -->
+              <!-- SELECTOR DE PERFIL + CAMPO SALDO ANTERIOR BASE (DIRECTAMENTE EN EL HEADER DEL MODAL) -->
               <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
-                <div class="w-full sm:w-1/2">
-                  <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
-                  <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
-                    <template x-for="s in socios" :key="s">
-                      <option :value="s" x-text="s"></option>
-                    </template>
-                  </select>
+                <div class="w-full flex items-center gap-3">
+                  <div class="flex-1">
+                    <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
+                    <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
+                      <template x-for="s in socios" :key="s">
+                        <option :value="s" x-text="s"></option>
+                      </template>
+                    </select>
+                  </div>
+
+                  <!-- NUEVO CAMPO SALDO ANTERIOR BASE DESTACADO AL INICIO -->
+                  <div class="w-36">
+                    <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">Saldo Anterior Base</label>
+                    <input type="number" step="0.01" x-model.number="socioConfigEdit.saldo_anterior" placeholder="0.00" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-amber-500">
+                  </div>
                 </div>
               </template>
 
@@ -897,9 +905,9 @@
             </div>
           </div>
 
-          <!-- PANTALLA 2: PERFIL (SOLO VISIBLE PARA SOCIOS) CON CAMPO DE SALDO ANTERIOR BASE -->
+          <!-- PANTALLA 2: PERFIL (SOLO VISIBLE PARA SOCIOS) -->
           <div x-show="tabConfigActive === 'perfil' && socioConfigEdit.nombre !== 'GENERAL'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre del Socio / Perfil</label>
                 <input type="text" x-model="socioConfigEdit.nombre" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white font-bold rounded-lg px-2.5 py-2 outline-none">
@@ -913,11 +921,6 @@
                   <option value="GRUPO">GRUPO</option>
                   <option value="COMPRAS">COMPRAS</option>
                 </select>
-              </div>
-              <!-- NUEVO CAMPO: SALDO ANTERIOR BASE -->
-              <div>
-                <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">Saldo Anterior Base</label>
-                <input type="number" step="0.01" x-model.number="socioConfigEdit.saldo_anterior" placeholder="0.00" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-bold rounded-lg px-2.5 py-2 outline-none focus:border-amber-500">
               </div>
             </div>
 
@@ -1421,9 +1424,8 @@
             const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
             if (reg) {
               const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
-              this.saldoAnteriorReporte = reg.saldo_anterior !== undefined && reg.saldo_anterior !== null 
-                ? parseFloat(reg.saldo_anterior) 
-                : (aj.saldo_anterior !== undefined ? parseFloat(aj.saldo_anterior) : 0);
+              const valSaldo = aj.saldo_anterior !== undefined ? aj.saldo_anterior : reg.saldo_anterior;
+              this.saldoAnteriorReporte = valSaldo !== undefined && valSaldo !== null ? parseFloat(valSaldo) : 0;
             }
           }
 
@@ -1688,9 +1690,8 @@
             this.socioConfigEdit.activo = reg.activo !== false;
 
             const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
-            this.socioConfigEdit.saldo_anterior = reg.saldo_anterior !== undefined && reg.saldo_anterior !== null 
-              ? parseFloat(reg.saldo_anterior) 
-              : (aj.saldo_anterior !== undefined ? parseFloat(aj.saldo_anterior) : 0);
+            const valSaldo = aj.saldo_anterior !== undefined ? aj.saldo_anterior : reg.saldo_anterior;
+            this.socioConfigEdit.saldo_anterior = valSaldo !== undefined && valSaldo !== null ? parseFloat(valSaldo) : 0;
 
             ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'].forEach(m => {
               this.socioConfigEdit[m] = reg[m] || 'A';
@@ -1719,11 +1720,12 @@
 
           try {
             if (!this.socioConfigEdit.ajustes) this.socioConfigEdit.ajustes = {};
-            this.socioConfigEdit.ajustes.saldo_anterior = parseFloat(this.socioConfigEdit.saldo_anterior) || 0;
+            const saldoVal = parseFloat(this.socioConfigEdit.saldo_anterior) || 0;
+            this.socioConfigEdit.ajustes.saldo_anterior = saldoVal;
 
             const payload = {
               ...this.socioConfigEdit,
-              saldo_anterior: parseFloat(this.socioConfigEdit.saldo_anterior) || 0,
+              saldo_anterior: saldoVal,
               talla: this.calcularTallaDinamica(this.contarPaisesActivosEdit()),
               cartelera_paises: this.carteleraPaisesEdit.map((p, idx) => ({
                 pais: p.nombrePais,
