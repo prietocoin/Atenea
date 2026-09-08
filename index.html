@@ -830,7 +830,7 @@
                     </div>
                   </template>
 
-                  <!-- MODO SOCIO INDIVIDUAL -->
+                  <!-- MODO SOCIO INDIVIDUAL (CONSERVA SIGNOS NEGATIVOS PARA SUMA ALGEBRAICA) -->
                   <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
                     <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
                       <div class="bg-amber-950/40 p-2 rounded-lg border border-amber-500/30 flex flex-col justify-between">
@@ -843,7 +843,7 @@
                         </div>
                         <div class="flex items-center justify-between gap-1">
                           <span class="text-[8px] text-slate-400 font-sans uppercase shrink-0">Factor:</span>
-                          <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['P-' + p.code]" placeholder="f_P" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-amber-300 font-bold outline-none text-right">
+                          <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['P-' + p.code]" placeholder="-0.95" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-amber-300 font-bold outline-none text-right">
                         </div>
                       </div>
 
@@ -857,7 +857,7 @@
                         </div>
                         <div class="flex items-center justify-between gap-1">
                           <span class="text-[8px] text-slate-400 font-sans uppercase shrink-0">Factor:</span>
-                          <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" placeholder="f_D" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-cyan-300 font-bold outline-none text-right">
+                          <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" placeholder="1.0" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-cyan-300 font-bold outline-none text-right">
                         </div>
                       </div>
                     </div>
@@ -990,7 +990,7 @@
             </div>
           </div>
 
-          <!-- TABLA FLEXIBLE SIN SOLAPAMIENTO DE FECHA Y TEXTO -->
+          <!-- TABLA FLEXIBLE CON FORMATO [TIPO-HASH] (Ej: [D-7a110fc]) -->
           <div class="overflow-y-auto flex-1 space-y-2 pr-1">
             <div class="flex items-center font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[10px] sm:text-[11px]">
               <div class="w-16 sm:w-24 shrink-0">Fecha</div>
@@ -1002,7 +1002,8 @@
               <div class="flex items-start border-b border-dashed border-slate-300 py-1.5 text-[10px] sm:text-[11px]">
                 <div class="w-16 sm:w-24 shrink-0 text-slate-700 font-bold leading-tight" x-text="formatFechaVE(c.timestamp).split(',')[0]"></div>
                 <div class="flex-1 text-slate-800 px-1 leading-relaxed break-words">
-                  <span class="font-bold text-emerald-800" x-text="'[' + (c.hash_corto || 'OP') + ']'"></span>
+                  <!-- FORMATO [TIPO-HASH] -->
+                  <span class="font-bold text-emerald-800" x-text="obtenerEtiquetaHash(c)"></span>
                   <span x-text="'Monto: ' + formatMonto(c.monto) + ', '"></span>
                   <span x-text="'Titular: ' + (c.titular || '-') + ', '"></span>
                   <span x-text="'Banco: ' + (c.banco || '-') + ', '"></span>
@@ -1148,6 +1149,14 @@
           return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
         },
 
+        // Helper para obtener [TIPO-HASH] (Ej: [D-7a110fc] o [P-26e57b7])
+        obtenerEtiquetaHash(c) {
+          const hash = c.hash_corto || 'OP';
+          const socioActual = this.filtroReporteNombre || c.nombre_socio_1;
+          const tipo = (this.getCodigoOperativo(socioActual, c.moneda) || c.tipo_op || c.tipo_manual || 'D').toUpperCase();
+          return `[${tipo}-${hash}]`;
+        },
+
         async enviarReporteWhatsApp() {
           const jid = this.jidSocioReporte;
           if (!jid) {
@@ -1260,17 +1269,18 @@
           return c.moneda_socio_1 || 'USDT';
         },
 
+        // EVALUACIÓN DE REGISTROS DOBLES (2x) Y PRESERVACIÓN DE SIGNO ALGEBRAICO
         obtenerMontoSocioCalculado(c) {
           if (this.filtroReporteNombre) {
             const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
             if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-              return c.m1_socio !== undefined ? c.m1_socio : c.monto;
+              return c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
             }
             if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-              return c.m2_socio !== undefined ? c.m2_socio : c.monto;
+              return c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
             }
           }
-          return c.m1_socio !== undefined ? c.m1_socio : c.monto;
+          return c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
         },
 
         obtenerTasaSocioCalculada(c) {
@@ -1452,9 +1462,10 @@
           return this.carteleraPaisesEdit.filter(p => p.activo).length;
         },
 
+        // MANTENIMIENTO DEL SIGNO NEGATIVO EN EL FACTOR PARA SUMA ALGEBRAICA (PAGO VS DEPÓSITO)
         calcularTasaSocio(monedaCode, factor) {
-          if (!factor) return 0;
-          const f = Math.abs(parseFloat(factor) || 0);
+          if (factor === undefined || factor === null || factor === '') return 0;
+          const f = parseFloat(factor) || 0; // Sin Math.abs para mantener los signos negativos de PAGOS
 
           let monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
           if (this.socioConfigEdit.nombre === 'GENERAL') {
@@ -1475,23 +1486,23 @@
 
         prepararNuevoSocio() {
           const factoresDefault = {
-            "P-USDT": 1.0,   "D-USDT": 1.0,
-            "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
-            "P-PEN": 0.976,  "D-PEN": 1.026,
-            "P-COP": 0.976,  "D-COP": 1.030,
-            "P-CLP": 0.962,  "D-CLP": 1.042,
-            "P-ARS": 0.962,  "D-ARS": 1.042,
-            "P-VES": 0.976,  "D-VES": 1.026,
-            "P-BRL": 0.952,  "D-BRL": 1.053,
-            "P-MXN": 0.943,  "D-MXN": 1.064,
-            "P-PYG": 0.962,  "D-PYG": 1.042,
-            "P-EUR": 0.926,  "D-EUR": 1.087,
-            "P-USD": 0.930,  "D-USD": 1.087,
-            "P-ECU": 0.940,  "D-ECU": 1.064,
-            "P-DOP": 0.943,  "D-DOP": 1.064,
-            "P-CRC": 0.943,  "D-CRC": 1.064,
-            "P-CAD": 0.962,  "D-CAD": 1.042,
-            "P-BOB": 0.926,  "D-BOB": 1.087
+            "P-USDT": -1.0,  "D-USDT": 1.0,
+            "P-PYUSD": -0.8, "D-PYUSD": 1.2,
+            "P-PEN": -0.976, "D-PEN": 1.026,
+            "P-COP": -0.976, "D-COP": 1.030,
+            "P-CLP": -0.962, "D-CLP": 1.042,
+            "P-ARS": -0.962, "D-ARS": 1.042,
+            "P-VES": -0.976, "D-VES": 1.026,
+            "P-BRL": -0.952, "D-BRL": 1.053,
+            "P-MXN": -0.943, "D-MXN": 1.064,
+            "P-PYG": -0.962, "D-PYG": 1.042,
+            "P-EUR": -0.926, "D-EUR": 1.087,
+            "P-USD": -0.930, "D-USD": 1.087,
+            "P-ECU": -0.940, "D-ECU": 1.064,
+            "P-DOP": -0.943, "D-DOP": 1.064,
+            "P-CRC": -0.943, "D-CRC": 1.064,
+            "P-CAD": -0.962, "D-CAD": 1.042,
+            "P-BOB": -0.926, "D-BOB": 1.087
           };
 
           this.socioConfigEdit = {
@@ -1815,8 +1826,8 @@
         // Truncado de tasa oficial ajustado a reglas de cartelera
         formatTasa(val) {
           if (val === null || val === undefined || isNaN(val)) return '-';
-          const num = parseFloat(val);
-          if (isNaN(num) || num <= 0) return num === 0 ? '0' : '-';
+          const num = Math.abs(parseFloat(val));
+          if (isNaN(num) || num === 0) return num === 0 ? '0' : '-';
           let puntoCorte = (num >= 100) ? 0 : (num >= 1) ? 2 : (-Math.floor(Math.log10(num)) + 2);
           const mult = Math.pow(10, puntoCorte);
           const truncado = Math.trunc(Math.round(num * mult * 1e9) / 1e9) / mult;
