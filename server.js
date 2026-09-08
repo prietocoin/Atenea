@@ -814,7 +814,9 @@ app.get('/api/socios', async (req, res) => {
 
 app.get('/api/directorio', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM nombres_fb ORDER BY nombre ASC;');
+    const { rows } = await pool.query(
+      "SELECT * FROM nombres_fb WHERE UPPER(TRIM(nombre)) != 'GENERAL' ORDER BY nombre ASC;"
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
