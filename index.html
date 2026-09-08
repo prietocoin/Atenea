@@ -1478,32 +1478,31 @@
         },
 
         async consultarApiHoo() {
-          this.cargandoTasas = true;
-          this.mensajeTasas = 'Conectando con la API oficial de Hoo...';
+  this.cargandoTasas = true;
+  this.mensajeTasas = 'Conectando con la API oficial de Hoo...';
 
-          try {
-            const res = await fetch('/api/tasas/fetch-hoo');
-            const contentType = res.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-              throw new Error(`Servidor devolvió HTML (${res.status}). Revisa '/api/tasas/fetch-hoo' en server.js.`);
-            }
+  try {
+    const res = await fetch('/api/tasas/fetch-hoo');
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error(`Servidor devolvió HTML (${res.status}). Revisa '/api/tasas/fetch-hoo' en server.js.`);
+    }
 
-            const data = await res.json();
+    const data = await res.json();
 
-            if (data && data.success && data.rates && Object.keys(data.rates).length > 0) {
-              this.tasasBaul = data.rates;
-              this.mensajeTasas = '';
-            } else {
-              this.mensajeTasas = 'El motor v4 de Hoo aún está inicializando sus datos.';
-            }
-          } catch (err) {
-            console.error('Error al consultar la API:', err);
-            this.mensajeTasas = `Error: ${err.message}`;
-          } fontAlly {
-            this.cargandoTasas = false;
-          }
-        },
-
+    if (data && data.success && data.rates && Object.keys(data.rates).length > 0) {
+      this.tasasBaul = data.rates;
+      this.mensajeTasas = '';
+    } else {
+      this.mensajeTasas = 'El motor v4 de Hoo aún está inicializando sus datos.';
+    }
+  } catch (err) {
+    console.error('Error al consultar la API:', err);
+    this.mensajeTasas = `Error: ${err.message}`;
+  } finally {
+    this.cargandoTasas = false;
+  }
+},
         async publicarTasaOficial() {
           if (Object.keys(this.tasasBaul).length === 0 || this.publicandoTasas) return;
 
