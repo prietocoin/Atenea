@@ -80,4 +80,38 @@ router.get('/api/reportes/operaciones', async (req, res) => {
   }
 });
 
+// Endpoint para obtener listas dinámicas de entidades y hashes
+router.get('/api/reportes/filtros', async (req, res) => {
+  try {
+    const entidadesQuery = `
+      SELECT DISTINCT entidad_auditada 
+      FROM operaciones 
+      WHERE entidad_auditada IS NOT NULL AND entidad_auditada != '' 
+      ORDER BY entidad_auditada ASC
+    `;
+    
+    const hashesQuery = `
+      SELECT DISTINCT hash, id 
+      FROM operaciones 
+      WHERE hash IS NOT NULL AND hash != '' 
+      ORDER BY id DESC 
+      LIMIT 100
+    `;
+
+    const [entidadesRes, hashesRes] = await Promise.all([
+      pool.query(entidadesQuery),
+      pool.query(hashesQuery)
+    ]);
+
+    res.json({
+      success: true,
+      entidades: entidadesRes.rows.map(r => r.entidad_auditada),
+      hashes: hashesRes.rows.map(r => r.hash)
+    });
+  } catch (error) {
+    console.error('Error obteniendo lista de filtros:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
