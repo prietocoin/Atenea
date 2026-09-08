@@ -634,7 +634,7 @@
         </div>
       </template>
 
-      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE -->
+      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE CON TASAS Y FACTORES VISIBLES -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -671,6 +671,18 @@
                 <div>
                   <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Socio 2</label>
                   <input type="text" x-model="itemEdicion.nombre_socio_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-200 uppercase outline-none focus:border-purple-500">
+                </div>
+              </div>
+
+              <!-- NUEVOS CAMPOS: TASAS SOCIO 1 Y SOCIO 2 CON CONSERVACIÓN DE SIGNO -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Tasa Socio 1</label>
+                  <input type="number" step="any" x-model="itemEdicion.tasa_1" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold outline-none focus:border-purple-500">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Tasa Socio 2</label>
+                  <input type="number" step="any" x-model="itemEdicion.tasa_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-300 font-mono font-bold outline-none focus:border-purple-500">
                 </div>
               </div>
 
@@ -746,7 +758,7 @@
                     </select>
                   </div>
 
-                  <!-- NUEVO CAMPO SALDO ANTERIOR BASE DESTACADO AL INICIO -->
+                  <!-- CAMPO SALDO ANTERIOR BASE DESTACADO AL INICIO -->
                   <div class="w-36">
                     <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">Saldo Anterior Base</label>
                     <input type="number" step="0.01" x-model.number="socioConfigEdit.saldo_anterior" placeholder="0.00" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-amber-500">
@@ -1120,7 +1132,7 @@
           { nombrePais: 'Dominicana', code: 'DOP', flag: '🇩🇴' },
           { nombrePais: 'Costa Rica', code: 'CRC', flag: '🇨🇷' },
           { nombrePais: 'EEUU-Zelle', code: 'USD', flag: '🇺🇸' },
-          { nombrePais: 'Panama', code: 'PAN', flag: '🇵🇦' },
+          { nombrePais: 'Panama', code: 'PAN', flag: '🇵\u0041' },
           { nombrePais: 'Canada', code: 'CAD', flag: '🇨🇦' }
         ],
 
@@ -1159,11 +1171,11 @@
           return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
         },
 
-        // UNIFICADOR CENTRAL: DETERMINA MONTO, TASA Y TIPO (P/D) SEGÚN LA TASA APLICADA Y EL PERFIL
+        // UNIFICADOR CENTRAL: DETERMINA MONTO, TASA Y TIPO (P/D) PRESERVANDO EL SIGNO DE LA TASA
         obtenerInformacionSocioOperacion(c) {
           const socioNorm = (this.filtroReporteNombre || '').trim().toUpperCase();
           let esSocio1 = true;
-          let tasaAplicada = c.tasa_1 || c.tasa_base || 1.0;
+          let tasaAplicada = c.tasa_1 !== undefined && c.tasa_1 !== null ? parseFloat(c.tasa_1) : (c.tasa_base || 1.0);
           let montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
           let factorAplicado = c.factor_1 !== undefined && c.factor_1 !== null ? parseFloat(c.factor_1) : 1.0;
           let monedaSocio = c.moneda_socio_1 || c.moneda || 'USDT';
@@ -1171,7 +1183,7 @@
           if (socioNorm) {
             if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
               esSocio1 = false;
-              tasaAplicada = c.tasa_2 || c.tasa_base || 1.0;
+              tasaAplicada = c.tasa_2 !== undefined && c.tasa_2 !== null ? parseFloat(c.tasa_2) : (c.tasa_base || 1.0);
               montoBase = c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
               factorAplicado = c.factor_2 !== undefined && c.factor_2 !== null ? parseFloat(c.factor_2) : 1.0;
               monedaSocio = c.moneda_socio_2 || c.moneda || 'USDT';
@@ -1189,15 +1201,23 @@
             const factorP = parseFloat(ajustes[`P-${monedaOrig}`]);
             const factorD = parseFloat(ajustes[`D-${monedaOrig}`]);
 
-            const tasaTeoricaP = Math.abs(this.calcularTasaSocio(monedaOrig, factorP));
-            const tasaTeoricaD = Math.abs(this.calcularTasaSocio(monedaOrig, factorD));
-            const tasaReal = Math.abs(parseFloat(tasaAplicada) || 0);
+            const tasaTeoricaP = this.calcularTasaSocio(monedaOrig, factorP);
+            const tasaTeoricaD = this.calcularTasaSocio(monedaOrig, factorD);
+            const tasaRealAbs = Math.abs(parseFloat(tasaAplicada) || 0);
 
-            if (!isNaN(factorP) && Math.abs(tasaReal - tasaTeoricaP) <= 0.05) {
+            if (!isNaN(factorP) && Math.abs(tasaRealAbs - Math.abs(tasaTeoricaP)) <= 0.05) {
               tipoOp = 'P';
-            } else if (!isNaN(factorD) && Math.abs(tasaReal - tasaTeoricaD) <= 0.05) {
+              tasaAplicada = tasaTeoricaP; // Preserva el signo negativo si factorP era negativo
+            } else if (!isNaN(factorD) && Math.abs(tasaRealAbs - Math.abs(tasaTeoricaD)) <= 0.05) {
               tipoOp = 'D';
+              tasaAplicada = tasaTeoricaD;
             }
+          }
+
+          // Si el factor registrado o la tasa aplicada es negativa, forzar monto negativo
+          if (factorAplicado < 0 || parseFloat(tasaAplicada) < 0) {
+            montoBase = -Math.abs(montoBase);
+            if (parseFloat(tasaAplicada) > 0) tasaAplicada = -tasaAplicada;
           }
 
           return {
@@ -1849,7 +1869,9 @@
         abrirModal(item) {
           this.itemEdicion = { 
             ...item, 
-            tipo_manual: this.getCodigoOperativo(item.nombre_socio_1, item.moneda) || 'A' 
+            tipo_manual: this.getCodigoOperativo(item.nombre_socio_1, item.moneda) || item.tipo_op || 'A',
+            tasa_1: item.tasa_1 !== undefined ? item.tasa_1 : item.tasa_base,
+            tasa_2: item.tasa_2 !== undefined ? item.tasa_2 : item.tasa_base
           };
           this.modalAbierto = true;
         },
@@ -1888,15 +1910,18 @@
           return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
-        // Truncado de tasa oficial
+        // Truncado de tasa oficial preservando signo negativo
         formatTasa(val) {
           if (val === null || val === undefined || isNaN(val)) return '-';
-          const num = Math.abs(parseFloat(val));
+          const num = parseFloat(val);
           if (isNaN(num) || num === 0) return num === 0 ? '0' : '-';
-          let puntoCorte = (num >= 100) ? 0 : (num >= 1) ? 2 : (-Math.floor(Math.log10(num)) + 2);
+          const esNeg = num < 0;
+          const absNum = Math.abs(num);
+          let puntoCorte = (absNum >= 100) ? 0 : (absNum >= 1) ? 2 : (-Math.floor(Math.log10(absNum)) + 2);
           const mult = Math.pow(10, puntoCorte);
-          const truncado = Math.trunc(Math.round(num * mult * 1e9) / 1e9) / mult;
-          return (puntoCorte === 0) ? Math.trunc(truncado).toString() : truncado.toFixed(puntoCorte).replace(/\.?0+$/, "");
+          const truncado = Math.trunc(Math.round(absNum * mult * 1e9) / 1e9) / mult;
+          const res = (puntoCorte === 0) ? Math.trunc(truncado).toString() : truncado.toFixed(puntoCorte).replace(/\.?0+$/, "");
+          return esNeg ? `-${res}` : res;
         },
 
         formatFecha(ts) {
