@@ -1167,7 +1167,7 @@
           return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
         },
 
-        // CONSUMO DIRECTO DE LA FUENTE FÍSICA CALCULADA POR EL BACKEND EN POSTGRESQL
+        // CONSUMO DIRECTO DE LA FUENTE FÍSICA DE POSTGRESQL
         obtenerInformacionSocioOperacion(c) {
           if (c.monto_socio_final !== undefined && c.etiqueta_hash !== undefined) {
             return {
