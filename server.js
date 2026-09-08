@@ -867,6 +867,11 @@ app.post('/api/socios/config', async (req, res) => {
   }
 });
 
+// Inyección del módulo de reportes
+const reportesRouter = require('./reportes');
+app.use(reportesRouter);
+
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -875,6 +880,3 @@ app.listen(PORT, HOST, () => {
   console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
 });
 
-// Inyección del módulo de reportes
-const reportesRouter = require('./reportes');
-app.use(reportesRouter);
