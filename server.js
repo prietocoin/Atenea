@@ -46,7 +46,7 @@ function calcularTallaAutomatica(conteo) {
   return 'L';
 }
 
-// PROCEDIMIENTO FÍSICO DE PERSISTENCIA EN TABLA POSTGRESQL
+// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL (CERO OVERRIDES DE SIGNO)
 async function sincronizarComprobantesAuditadosFisico() {
   try {
     const rawQuery = `
@@ -160,11 +160,11 @@ async function sincronizarComprobantesAuditadosFisico() {
       const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
       const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
 
-      // Socio 1 dicta imperativamente el tipo
+      // 1. SOCIO 1 DICTA OBLIGATORIAMENTE EL TIPO DE OPERACIÓN (Socio 1 vs Moneda)
       let tipoOp1 = (r.tipo_op_s1 || 'D').trim().toUpperCase();
       if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
 
-      // Socio 2 hereda el mismo tipo de operación
+      // 2. SOCIO 2 HEREDA ESTRICTAMENTE EL MISMO TIPO DE OPERACIÓN
       let tipoOp2 = tipoOp1;
 
       const aj1 = typeof r.ajustes_socio_1 === 'string' ? JSON.parse(r.ajustes_socio_1) : (r.ajustes_socio_1 || {});
@@ -176,34 +176,28 @@ async function sincronizarComprobantesAuditadosFisico() {
       const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
       const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
 
-      // Socio 1
+      // 3. SOCIO 1: CÁLCULO SIN SOBREESCRIBIR SIGNOS (Respeta el signo nativo del factor)
       const tasaBaseSocio1 = parseFloat(r.tasa_base_socio_1) || 1.0;
       const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
-      const tasa1Signed = tasaCross1 * factor1;
+      const tasa1Signed = tasaCross1 * factor1; // Conserva signo del factor1
+
       let tasa1Abs = aplicarReglaPrecision(Math.abs(tasa1Signed));
       let tasa1 = tasa1Signed < 0 ? -tasa1Abs : tasa1Abs;
-      let m1Socio = tasa1Abs > 0 ? parseFloat((monto / tasa1Abs).toFixed(2)) : 0;
-      if (tasa1 < 0 || tipoOp1 === 'P') {
-        m1Socio = -Math.abs(m1Socio);
-        if (tasa1 > 0) tasa1 = -tasa1;
-      } else {
-        m1Socio = Math.abs(m1Socio);
-      }
+
+      let m1SocioAbs = tasa1Abs > 0 ? parseFloat((monto / tasa1Abs).toFixed(2)) : 0;
+      let m1Socio = factor1 < 0 ? -m1SocioAbs : m1SocioAbs;
       const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
 
-      // Socio 2 (Hereda tipoOp1)
+      // 4. SOCIO 2: CÁLCULO SIN SOBREESCRIBIR SIGNOS (Respeta el signo nativo del factor)
       const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
       const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
-      const tasa2Signed = tasaCross2 * factor2;
+      const tasa2Signed = tasaCross2 * factor2; // Conserva signo del factor2
+
       let tasa2Abs = aplicarReglaPrecision(Math.abs(tasa2Signed));
       let tasa2 = tasa2Signed < 0 ? -tasa2Abs : tasa2Abs;
-      let m2Socio = tasa2Abs > 0 ? parseFloat((monto / tasa2Abs).toFixed(2)) : 0;
-      if (tasa2 < 0 || tipoOp2 === 'P') {
-        m2Socio = -Math.abs(m2Socio);
-        if (tasa2 > 0) tasa2 = -tasa2;
-      } else {
-        m2Socio = Math.abs(m2Socio);
-      }
+
+      let m2SocioAbs = tasa2Abs > 0 ? parseFloat((monto / tasa2Abs).toFixed(2)) : 0;
+      let m2Socio = factor2 < 0 ? -m2SocioAbs : m2SocioAbs;
       const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
 
       await pool.query(`
@@ -317,7 +311,6 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
     `);
 
-    // TABLA FÍSICA PERMANENTE EN LUGAR DE UNA VIEW
     await pool.query(`
       DROP VIEW IF EXISTS v_comprobantes_auditados CASCADE;
       
@@ -528,7 +521,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER QUE CONSUME DE LA TABLA FÍSICA CONGELADA
+// HANDLER QUE RETORNA LOS DATOS CONGELADOS DE LA TABLA FÍSICA
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
