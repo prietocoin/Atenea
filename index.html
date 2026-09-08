@@ -533,7 +533,8 @@
                   <template x-for="c in comprobantesReporte" :key="c.hash_largo">
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       <td class="px-3 py-2 align-middle text-slate-400 font-mono whitespace-nowrap" x-text="formatFechaVE(c.timestamp)"></td>
-                      <td class="px-3 py-2 align-middle font-mono font-bold text-purple-300 whitespace-nowrap" x-text="c.hash_corto"></td>
+                      <!-- COLUMNA HASH CON FORMATO [TIPO-HASH] (Ej: [P-7a110fc]) -->
+                      <td class="px-3 py-2 align-middle font-mono font-bold text-purple-300 whitespace-nowrap" x-text="obtenerEtiquetaHash(c)"></td>
                       <td class="px-3 py-2 align-middle">
                         <div class="flex flex-col">
                           <span class="font-bold text-slate-200" x-text="c.titular || 'Sin Titular'"></span>
@@ -548,7 +549,7 @@
                       </td>
 
                       <td class="px-3 py-2 align-middle text-right font-bold text-slate-300 whitespace-nowrap" x-text="formatMonto(c.monto) + ' ' + c.moneda"></td>
-                      <td class="px-3 py-2 align-middle text-right font-black text-emerald-400 whitespace-nowrap" x-text="formatMonto(obtenerMontoSocioCalculado(c)) + ' ' + obtenerMonedaSocioCalculada(c)"></td>
+                      <td class="px-3 py-2 align-middle text-right font-black whitespace-nowrap" :class="obtenerMontoSocioCalculado(c) < 0 ? 'text-rose-400' : 'text-emerald-400'" x-text="formatMonto(obtenerMontoSocioCalculado(c)) + ' ' + obtenerMonedaSocioCalculada(c)"></td>
                       <td class="px-3 py-2 align-middle text-right font-bold text-slate-400 whitespace-nowrap" x-text="'$' + formatMonto(c.monto_usd_equivalente)"></td>
                     </tr>
                   </template>
@@ -830,7 +831,7 @@
                     </div>
                   </template>
 
-                  <!-- MODO SOCIO INDIVIDUAL (CONSERVA SIGNOS NEGATIVOS PARA SUMA ALGEBRAICA) -->
+                  <!-- MODO SOCIO INDIVIDUAL -->
                   <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
                     <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
                       <div class="bg-amber-950/40 p-2 rounded-lg border border-amber-500/30 flex flex-col justify-between">
@@ -990,7 +991,7 @@
             </div>
           </div>
 
-          <!-- TABLA FLEXIBLE CON FORMATO [TIPO-HASH] (Ej: [D-7a110fc]) -->
+          <!-- TABLA FLEXIBLE CON FORMATO [TIPO-HASH] (Ej: [P-7a110fc]) -->
           <div class="overflow-y-auto flex-1 space-y-2 pr-1">
             <div class="flex items-center font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[10px] sm:text-[11px]">
               <div class="w-16 sm:w-24 shrink-0">Fecha</div>
@@ -1010,7 +1011,7 @@
                   <span x-text="'Moneda: ' + c.moneda + ', '"></span>
                   <span x-text="'Tasa(' + (c.lote_tasa_asignado || 'T360') + '): ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
                 </div>
-                <div class="w-16 sm:w-24 shrink-0 text-right font-bold text-slate-900" x-text="formatMonto(obtenerMontoSocioCalculado(c))"></div>
+                <div class="w-16 sm:w-24 shrink-0 text-right font-bold" :class="obtenerMontoSocioCalculado(c) < 0 ? 'text-rose-600' : 'text-slate-900'" x-text="formatMonto(obtenerMontoSocioCalculado(c))"></div>
               </div>
             </template>
           </div>
@@ -1149,12 +1150,39 @@
           return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
         },
 
-        // Helper para obtener [TIPO-HASH] (Ej: [D-7a110fc] o [P-26e57b7])
+        // EXTRACCIÓN DE FACTOR Y TIPO DE OPERACIÓN DESDE LA CONFIGURACIÓN DEL SOCIO
+        obtenerFactorYTipo(c) {
+          const socioNorm = (this.filtroReporteNombre || '').trim().toUpperCase();
+          let factor = 1.0;
+          let tipoOp = (c.tipo_op || c.tipo_manual || 'D').toUpperCase();
+
+          if (socioNorm) {
+            if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
+              factor = c.factor_1 !== undefined && c.factor_1 !== null ? parseFloat(c.factor_1) : 1.0;
+              tipoOp = (this.getCodigoOperativo(c.nombre_socio_1, c.moneda) || c.tipo_op || 'D').toUpperCase();
+            } else if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
+              factor = c.factor_2 !== undefined && c.factor_2 !== null ? parseFloat(c.factor_2) : 1.0;
+              tipoOp = (this.getCodigoOperativo(c.nombre_socio_2, c.moneda) || c.tipo_op || 'D').toUpperCase();
+            }
+          }
+
+          const regSocio = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          if (regSocio && regSocio.ajustes) {
+            const ajustes = typeof regSocio.ajustes === 'string' ? JSON.parse(regSocio.ajustes) : regSocio.ajustes;
+            const claveAjuste = `${tipoOp}-${(c.moneda || '').toUpperCase()}`;
+            if (ajustes && ajustes[claveAjuste] !== undefined && ajustes[claveAjuste] !== '') {
+              factor = parseFloat(ajustes[claveAjuste]);
+            }
+          }
+
+          return { factor, tipoOp };
+        },
+
+        // Helper para obtener [TIPO-HASH] (Ej: [P-7a110fc] o [D-8fde7bf])
         obtenerEtiquetaHash(c) {
           const hash = c.hash_corto || 'OP';
-          const socioActual = this.filtroReporteNombre || c.nombre_socio_1;
-          const tipo = (this.getCodigoOperativo(socioActual, c.moneda) || c.tipo_op || c.tipo_manual || 'D').toUpperCase();
-          return `[${tipo}-${hash}]`;
+          const { tipoOp } = this.obtenerFactorYTipo(c);
+          return `[${tipoOp}-${hash}]`;
         },
 
         async enviarReporteWhatsApp() {
@@ -1269,18 +1297,31 @@
           return c.moneda_socio_1 || 'USDT';
         },
 
-        // EVALUACIÓN DE REGISTROS DOBLES (2x) Y PRESERVACIÓN DE SIGNO ALGEBRAICO
+        // EVALUACIÓN DE MONTO CON SIGNO ALGEBRAICO SEGÚN FACTOR Y TIPO DE OPERACIÓN
         obtenerMontoSocioCalculado(c) {
-          if (this.filtroReporteNombre) {
-            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+          const socioNorm = (this.filtroReporteNombre || '').trim().toUpperCase();
+          let montoBase = 0;
+
+          if (socioNorm) {
             if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-              return c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
+              montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
+            } else if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
+              montoBase = c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
+            } else {
+              montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
             }
-            if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-              return c.m2_socio !== undefined ? parseFloat(c.m2_socio) : parseFloat(c.monto);
-            }
+          } else {
+            montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
           }
-          return c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
+
+          const { factor, tipoOp } = this.obtenerFactorYTipo(c);
+
+          // Si el factor configurado es negativo o es un Pago ('P'): el monto pasa a ser negativo
+          if (factor < 0 || tipoOp === 'P') {
+            return -Math.abs(montoBase);
+          } else {
+            return Math.abs(montoBase);
+          }
         },
 
         obtenerTasaSocioCalculada(c) {
@@ -1352,6 +1393,7 @@
           this.socioConfigEdit.ajustes[clave] = parseFloat(valor) || 0.90;
         },
 
+        // FILTRADO ESTRICTO: DESCARTA OPERACIONES 1x Y COMPROBANTES DE 0.00 MONTO
         async cargarReportes() {
           const params = new URLSearchParams();
           if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
@@ -1363,7 +1405,13 @@
           try {
             const res = await fetch(`/api/reportes?${params.toString()}`);
             if (res.ok) {
-              this.comprobantesReporte = await res.json();
+              const data = await res.json();
+              if (this.filtroReporteNombre) {
+                // Filtra descartando las operaciones 1x (conteo <= 1 sin socio_2) y montos de $0.00
+                this.comprobantesReporte = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
+              } else {
+                this.comprobantesReporte = data.filter(c => parseFloat(c.monto || 0) !== 0);
+              }
             }
           } catch (err) {
             console.error("Error al cargar reportes:", err);
@@ -1462,10 +1510,9 @@
           return this.carteleraPaisesEdit.filter(p => p.activo).length;
         },
 
-        // MANTENIMIENTO DEL SIGNO NEGATIVO EN EL FACTOR PARA SUMA ALGEBRAICA (PAGO VS DEPÓSITO)
         calcularTasaSocio(monedaCode, factor) {
           if (factor === undefined || factor === null || factor === '') return 0;
-          const f = parseFloat(factor) || 0; // Sin Math.abs para mantener los signos negativos de PAGOS
+          const f = parseFloat(factor) || 0;
 
           let monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
           if (this.socioConfigEdit.nombre === 'GENERAL') {
@@ -1823,7 +1870,7 @@
           return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
-        // Truncado de tasa oficial ajustado a reglas de cartelera
+        // Truncado de tasa oficial
         formatTasa(val) {
           if (val === null || val === undefined || isNaN(val)) return '-';
           const num = Math.abs(parseFloat(val));
