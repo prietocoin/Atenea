@@ -464,7 +464,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER CENTRALIZADO CON CÁLCULOS ALGEBRAICOS Y FÍSICOS EN SERVIDOR
+// HANDLER CENTRALIZADO CON MATRIZ COMPLETA DE 16 MONEDAS Y REGLAS DE ETIQUETADO
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -507,7 +507,7 @@ const getComprobantesHandler = async (req, res) => {
           mt_s1.tasa_base,
           CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_1,
-        (n1.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric AS factor_1_raw,
+        (n1.ajustes->>(t.tipo_op || '-' || UPPER(v.moneda)))::numeric AS factor_1_raw,
 
         CASE 
           WHEN UPPER(TRIM(COALESCE(n2.moneda_socio, 'USDT'))) = 'USD' THEN 'USDT'
@@ -520,7 +520,7 @@ const getComprobantesHandler = async (req, res) => {
           mt_s2.tasa_base,
           CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) IN ('USD', 'USDT', 'PYUSD') THEN 1.0 ELSE 1.0 END
         ) AS tasa_base_socio_2,
-        (n2.ajustes->>(t.tipo_op || '-' || v.moneda))::numeric AS factor_2_raw
+        (n2.ajustes->>(t.tipo_op || '-' || UPPER(v.moneda)))::numeric AS factor_2_raw
 
       FROM v_comprobantes_auditados v
       LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(v.nombre_socio_1))
@@ -536,13 +536,23 @@ const getComprobantesHandler = async (req, res) => {
 
       LEFT JOIN LATERAL (
         SELECT COALESCE(
-          CASE v.moneda
+          CASE UPPER(TRIM(v.moneda))
             WHEN 'PEN' THEN n1.pen
             WHEN 'COP' THEN n1.cop
             WHEN 'CLP' THEN n1.clp
-            WHEN 'VES' THEN n1.ves
             WHEN 'ARS' THEN n1.ars
+            WHEN 'MXN' THEN n1.mxn
+            WHEN 'BRL' THEN n1.brl
+            WHEN 'VES' THEN n1.ves
+            WHEN 'PYG' THEN n1.pyg
+            WHEN 'DOP' THEN n1.dop
+            WHEN 'CRC' THEN n1.crc
+            WHEN 'EUR' THEN n1.eur
+            WHEN 'CAD' THEN n1.cad
             WHEN 'USD' THEN n1.usd
+            WHEN 'ECU' THEN n1.ecu
+            WHEN 'PAN' THEN n1.pan
+            WHEN 'USDT' THEN n1.usdt
             ELSE 'D'
           END,
           'D'
@@ -559,28 +569,24 @@ const getComprobantesHandler = async (req, res) => {
       query += ` AND v.conteo > 1`;
     }
 
-    // 1. FILTRO ROL (JERARQUÍA 1)
     if (rol && rol.trim() && rol.trim().toUpperCase() !== 'TODOS') {
       query += ` AND (UPPER(TRIM(n1.roles)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(n2.roles)) = UPPER(TRIM($${paramIndex})))`;
       values.push(rol.trim());
       paramIndex++;
     }
 
-    // 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2)
     if (targetSocio && targetSocio.toUpperCase() !== 'TODOS') {
       query += ` AND (UPPER(TRIM(v.nombre_socio_1)) = UPPER(TRIM($${paramIndex})) OR UPPER(TRIM(v.nombre_socio_2)) = UPPER(TRIM($${paramIndex})))`;
       values.push(targetSocio);
       paramIndex++;
     }
 
-    // 3. FILTRO BUSCAR HASH ESPECÍFICO EN COMPROBANTES
     if (hash && hash.trim()) {
       query += ` AND (v.hash_corto ILIKE $${paramIndex} OR v.hash_largo ILIKE $${paramIndex})`;
       values.push(`%${hash.trim()}%`);
       paramIndex++;
     }
 
-    // 4. FILTRO FECHA INICIO (GMT-4 VENEZUELA)
     if (fechaInicio && fechaInicio.trim()) {
       const startTimestamp = Math.floor(new Date(fechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
       if (!isNaN(startTimestamp)) {
@@ -590,7 +596,6 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    // 5. FILTRO FECHA FIN (GMT-4 VENEZUELA)
     if (fechaFin && fechaFin.trim()) {
       const endTimestamp = Math.floor(new Date(fechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
       if (!isNaN(endTimestamp)) {
@@ -600,7 +605,6 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    // 6. FILTRO DESDE HASH X EN ADELANTE
     if (desdeHash && desdeHash.trim()) {
       const hashRes = await pool.query(
         `SELECT timestamp_comprobante FROM v_comprobantes_auditados WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
@@ -622,7 +626,7 @@ const getComprobantesHandler = async (req, res) => {
       const monto = parseFloat(row.monto) || 0;
       const tasaBaseOrigen = parseFloat(row.tasa_base) || 1.0;
 
-      // RESOLUCIÓN SOCIO 1
+      // RESOLUCIÓN SOCIO 1 (Emisor / Asignador Imperativo)
       let monedaSocio1 = (row.moneda_socio_1 || 'USDT').toUpperCase();
       if (monedaSocio1 === 'USD') monedaSocio1 = 'USDT';
       const tasaBaseSocio1 = parseFloat(row.tasa_base_socio_1) || 1.0;
@@ -655,12 +659,8 @@ const getComprobantesHandler = async (req, res) => {
       let tasa2 = aplicarReglaPrecision(tasa2Raw);
       let m2Socio = tasa2 > 0 ? parseFloat((monto / tasa2).toFixed(2)) : 0;
 
-      // Evaluación del puesto de Socio 2: Si el factor2 es negativo o socio 1 es Depósito, el puesto 2 actúa en Pago
-      let tipoOp2 = 'P';
-      const aj2 = typeof row.ajustes_socio_2 === 'string' ? JSON.parse(row.ajustes_socio_2) : (row.ajustes_socio_2 || {});
-      const factorP2 = parseFloat(aj2[`P-${(row.moneda || '').toUpperCase()}`]);
-      
-      if (factor2 < 0 || !isNaN(factorP2)) {
+      let tipoOp2 = 'D';
+      if (factor2 < 0 || tipoOp1 === 'D') {
         tipoOp2 = 'P';
         m2Socio = -Math.abs(m2Socio);
         tasa2 = -Math.abs(tasa2);
@@ -671,7 +671,7 @@ const getComprobantesHandler = async (req, res) => {
       }
       const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
 
-      // DETERMINACIÓN FÍSICA PARA EL SOCIO SELECCIONADO EN EL FILTRO
+      // DETERMINACIÓN FÍSICA PARA EL SOCIO EN EL FILTRO REPORTE
       let montoSocioFinal = m1Socio;
       let tasaSocioFinal = tasa1;
       let monedaSocioFinal = monedaSocio1;
@@ -685,6 +685,17 @@ const getComprobantesHandler = async (req, res) => {
           monedaSocioFinal = monedaSocio2;
           tipoOpSocioFinal = tipoOp2;
         }
+      }
+
+      // GARANTÍA DE SIGNO Y ETIQUETA HASH
+      if (montoSocioFinal < 0 || tasaSocioFinal < 0 || tipoOpSocioFinal === 'P') {
+        tipoOpSocioFinal = 'P';
+        montoSocioFinal = -Math.abs(montoSocioFinal);
+        tasaSocioFinal = -Math.abs(tasaSocioFinal);
+      } else if (tipoOpSocioFinal !== 'A' && tipoOpSocioFinal !== 'C') {
+        tipoOpSocioFinal = 'D';
+        montoSocioFinal = Math.abs(montoSocioFinal);
+        tasaSocioFinal = Math.abs(tasaSocioFinal);
       }
 
       const hashCorto = row.hash_corto || 'OP';
@@ -702,7 +713,7 @@ const getComprobantesHandler = async (req, res) => {
         m2_socio: m2Socio,
         m2_usdt: m2Usdt,
 
-        // PROPIEDADES CENTRALIZADAS PARA AUDITORÍA Y N8N
+        // VALORES FISICOS CENTRALIZADOS PARA TABLA WEB Y N8N
         monto_socio_final: montoSocioFinal,
         tasa_socio_final: tasaSocioFinal,
         moneda_socio_final: monedaSocioFinal,
