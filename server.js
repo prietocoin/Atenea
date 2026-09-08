@@ -22,22 +22,30 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
+// REGLA UNIVERSAL DE TRUNCADO STRICTO (CORTE DE DÍGITOS SIN REDONDEAR)
 function aplicarReglaPrecision(val) {
-  const v = Math.abs(parseFloat(val) || 0);
-  if (v === 0) return 0;
+  if (val === null || val === undefined || isNaN(val) || val === 0) return 0;
+  const num = parseFloat(val);
+  if (num === 0) return 0;
 
+  const signo = num < 0 ? -1 : 1;
+  const v = Math.abs(num);
+
+  let res = 0;
   if (v > 499.99) {
-    return Math.trunc(v);
-  } else if (v < 10) {
-    if (v < 1) {
-      const magnitud = Math.floor(Math.log10(v));
-      const f = Math.pow(10, 2 - magnitud);
-      return Math.trunc(v * f) / f;
-    }
-    return Math.trunc(v * 1000) / 1000;
+    // Sin decimales (Truncado entero puro)
+    res = Math.trunc(v);
+  } else if (v > 0.99) {
+    // 2 decimales (Truncado puro)
+    res = Math.trunc(v * 100) / 100;
   } else {
-    return Math.trunc(v * 100) / 100;
+    // Menor a 1 -> 3 cifras significativas (Truncado puro)
+    const magnitud = Math.floor(Math.log10(v));
+    const factor = Math.pow(10, 2 - magnitud);
+    res = Math.trunc(v * factor) / factor;
   }
+
+  return signo * res;
 }
 
 function calcularTallaAutomatica(conteo) {
@@ -46,7 +54,7 @@ function calcularTallaAutomatica(conteo) {
   return 'L';
 }
 
-// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL (CERO OVERRIDES DE SIGNO)
+// SINCRONIZACIÓN FÍSICA CON TRUNCADO STRICTO EN CADA PASO
 async function sincronizarComprobantesAuditadosFisico() {
   try {
     const rawQuery = `
@@ -160,11 +168,11 @@ async function sincronizarComprobantesAuditadosFisico() {
       const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
       const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
 
-      // 1. SOCIO 1 DICTA OBLIGATORIAMENTE EL TIPO DE OPERACIÓN (Socio 1 vs Moneda)
+      // 1. Tipo imperativo de Socio 1
       let tipoOp1 = (r.tipo_op_s1 || 'D').trim().toUpperCase();
       if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
 
-      // 2. SOCIO 2 HEREDA ESTRICTAMENTE EL MISMO TIPO DE OPERACIÓN
+      // 2. Socio 2 hereda estrictamente el mismo tipo
       let tipoOp2 = tipoOp1;
 
       const aj1 = typeof r.ajustes_socio_1 === 'string' ? JSON.parse(r.ajustes_socio_1) : (r.ajustes_socio_1 || {});
@@ -176,29 +184,29 @@ async function sincronizarComprobantesAuditadosFisico() {
       const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
       const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
 
-      // 3. SOCIO 1: CÁLCULO SIN SOBREESCRIBIR SIGNOS (Respeta el signo nativo del factor)
+      // 3. SOCIO 1: TRUNCADO FÍSICO DE TASA Y MONTO
       const tasaBaseSocio1 = parseFloat(r.tasa_base_socio_1) || 1.0;
       const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
-      const tasa1Signed = tasaCross1 * factor1; // Conserva signo del factor1
+      const tasa1Signed = tasaCross1 * factor1;
+      
+      const tasa1 = aplicarReglaPrecision(tasa1Signed);
 
-      let tasa1Abs = aplicarReglaPrecision(Math.abs(tasa1Signed));
-      let tasa1 = tasa1Signed < 0 ? -tasa1Abs : tasa1Abs;
+      let m1Raw = Math.abs(tasa1) > 0 ? (monto / Math.abs(tasa1)) : 0;
+      if (factor1 < 0 || tasa1 < 0) m1Raw = -m1Raw;
+      const m1Socio = aplicarReglaPrecision(m1Raw);
+      const m1Usdt = tasaBaseSocio1 > 0 ? aplicarReglaPrecision(m1Socio / tasaBaseSocio1) : m1Socio;
 
-      let m1SocioAbs = tasa1Abs > 0 ? parseFloat((monto / tasa1Abs).toFixed(2)) : 0;
-      let m1Socio = factor1 < 0 ? -m1SocioAbs : m1SocioAbs;
-      const m1Usdt = tasaBaseSocio1 > 0 ? parseFloat((m1Socio / tasaBaseSocio1).toFixed(2)) : m1Socio;
-
-      // 4. SOCIO 2: CÁLCULO SIN SOBREESCRIBIR SIGNOS (Respeta el signo nativo del factor)
+      // 4. SOCIO 2: TRUNCADO FÍSICO DE TASA Y MONTO
       const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
       const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
-      const tasa2Signed = tasaCross2 * factor2; // Conserva signo del factor2
+      const tasa2Signed = tasaCross2 * factor2;
 
-      let tasa2Abs = aplicarReglaPrecision(Math.abs(tasa2Signed));
-      let tasa2 = tasa2Signed < 0 ? -tasa2Abs : tasa2Abs;
+      const tasa2 = aplicarReglaPrecision(tasa2Signed);
 
-      let m2SocioAbs = tasa2Abs > 0 ? parseFloat((monto / tasa2Abs).toFixed(2)) : 0;
-      let m2Socio = factor2 < 0 ? -m2SocioAbs : m2SocioAbs;
-      const m2Usdt = tasaBaseSocio2 > 0 ? parseFloat((m2Socio / tasaBaseSocio2).toFixed(2)) : m2Socio;
+      let m2Raw = Math.abs(tasa2) > 0 ? (monto / Math.abs(tasa2)) : 0;
+      if (factor2 < 0 || tasa2 < 0) m2Raw = -m2Raw;
+      const m2Socio = aplicarReglaPrecision(m2Raw);
+      const m2Usdt = tasaBaseSocio2 > 0 ? aplicarReglaPrecision(m2Socio / tasaBaseSocio2) : m2Socio;
 
       await pool.query(`
         INSERT INTO comprobantes_auditados_fb (
@@ -521,7 +529,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER QUE RETORNA LOS DATOS CONGELADOS DE LA TABLA FÍSICA
+// HANDLER QUE RETORNA LOS DATOS FÍSICOS CON TRUNCADO STRICTO
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
