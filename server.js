@@ -874,3 +874,7 @@ app.get('*', (req, res) => {
 app.listen(PORT, HOST, () => {
   console.log(`✅ Servidor Atenea v2 activo en http://${HOST}:${PORT}`);
 });
+
+// Inyección del módulo de reportes
+const reportesRouter = require('./reportes');
+app.use(reportesRouter);
