@@ -966,28 +966,70 @@
       </div>
 
       <!-- MODAL 3: VISTA PREVIA IMPRIMIBLE (ESTADO DE CUENTA FUNDABLOCK) -->
-      <div x-show="modalVistaPreviaAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
-        <div class="bg-[#f0f8eb] text-slate-800 rounded-2xl w-full max-w-3xl p-6 sm:p-8 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col font-mono text-xs" @click.away="modalVistaPreviaAbierto = false">
+      <div x-show="modalVistaPreviaAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm" x-cloak>
+        <div class="bg-[#f0f8eb] text-slate-800 rounded-2xl w-full max-w-3xl p-4 sm:p-8 space-y-3 sm:space-y-4 shadow-2xl relative max-h-[95vh] flex flex-col font-mono text-xs overflow-hidden" @click.away="modalVistaPreviaAbierto = false">
           
-          <!-- HEADER COMPROBANTE CON BOTÓN DE ENVÍO A WHATSAPP -->
-          <div class="flex items-start justify-between border-b border-emerald-800/20 pb-4 shrink-0">
-            <div>
-              <h1 class="text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroReporteNombre || 'SOCIO')"></h1>
+          <!-- HEADER COMPROBANTE RESPONSIVO -->
+          <div class="flex flex-col sm:flex-row sm:items-start justify-between border-b border-emerald-800/20 pb-3 gap-2 shrink-0 relative">
+            <!-- Botón Cerrar Flotante en Móvil -->
+            <button @click="modalVistaPreviaAbierto = false" class="absolute top-0 right-0 sm:hidden text-slate-500 hover:text-slate-800 text-base font-bold">✕</button>
+
+            <div class="pr-6 sm:pr-0">
+              <h1 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroReporteNombre || 'SOCIO')"></h1>
+              <div class="text-[11px] sm:text-xs text-emerald-950 font-bold mt-1">
+                <span>Saldo anterior:</span>
+                <span class="font-black text-xs sm:text-sm ml-1" x-text="formatMonto(saldoAnteriorReporte)"></span>
+              </div>
             </div>
-            <div class="flex flex-col items-end gap-2">
-              <div class="flex items-center gap-2">
-                <button @click="enviarReporteWhatsApp()" :disabled="enviandoReporte" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs transition-all flex items-center gap-1.5 shadow">
-                  <span>📲 Enviar a WhatsApp</span>
-                </button>
-                <img src="/logo.svg" class="w-10 h-10 object-contain ml-1" alt="Logo">
-                <button @click="modalVistaPreviaAbierto = false" class="text-slate-500 hover:text-slate-800 text-lg font-bold ml-2">✕</button>
-              </div>
-              <div class="text-right text-emerald-950 font-bold text-xs">
-                <span>Saldo anterior</span>
-                <span class="ml-4 font-black text-sm" x-text="formatMonto(saldoAnteriorReporte)"></span>
-              </div>
+
+            <div class="flex items-center gap-2 mt-1 sm:mt-0">
+              <button @click="enviarReporteWhatsApp()" :disabled="enviandoReporte" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-[11px] sm:text-xs transition-all flex items-center gap-1.5 shadow shrink-0">
+                <span>📲 Enviar a WhatsApp</span>
+              </button>
+              <img src="/logo.svg" class="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0" alt="Logo">
+              <button @click="modalVistaPreviaAbierto = false" class="hidden sm:block text-slate-500 hover:text-slate-800 text-lg font-bold ml-1">✕</button>
             </div>
           </div>
+
+          <!-- TABLA FLEXIBLE SIN SOLAPAMIENTO DE FECHA Y TEXTO -->
+          <div class="overflow-y-auto flex-1 space-y-2 pr-1">
+            <div class="flex items-center font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[10px] sm:text-[11px]">
+              <div class="w-16 sm:w-24 shrink-0">Fecha</div>
+              <div class="flex-1 px-1">Descripcion</div>
+              <div class="w-16 sm:w-24 shrink-0 text-right">Saldos</div>
+            </div>
+
+            <template x-for="c in comprobantesReporte" :key="c.hash_largo">
+              <div class="flex items-start border-b border-dashed border-slate-300 py-1.5 text-[10px] sm:text-[11px]">
+                <div class="w-16 sm:w-24 shrink-0 text-slate-700 font-bold leading-tight" x-text="formatFechaVE(c.timestamp).split(',')[0]"></div>
+                <div class="flex-1 text-slate-800 px-1 leading-relaxed break-words">
+                  <span class="font-bold text-emerald-800" x-text="'[' + (c.hash_corto || 'OP') + ']'"></span>
+                  <span x-text="'Monto: ' + formatMonto(c.monto) + ', '"></span>
+                  <span x-text="'Titular: ' + (c.titular || '-') + ', '"></span>
+                  <span x-text="'Banco: ' + (c.banco || '-') + ', '"></span>
+                  <span x-text="'Moneda: ' + c.moneda + ', '"></span>
+                  <span x-text="'Tasa(' + (c.lote_tasa_asignado || 'T360') + '): ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
+                </div>
+                <div class="w-16 sm:w-24 shrink-0 text-right font-bold text-slate-900" x-text="formatMonto(obtenerMontoSocioCalculado(c))"></div>
+              </div>
+            </template>
+          </div>
+
+          <!-- FOOTER RESPONSIVO -->
+          <div class="flex items-center justify-between border-t border-emerald-800/20 pt-3 shrink-0 gap-2">
+            <div class="flex items-center gap-1.5 shrink-0">
+              <img src="/logo.svg" class="w-5 h-5 sm:w-6 sm:h-6 object-contain" alt="FB">
+              <span class="font-bold text-slate-800 text-xs sm:text-sm">Fundablock</span>
+            </div>
+
+            <div class="bg-[#dcf0d8] border border-emerald-700/40 rounded-xl px-3 sm:px-5 py-1.5 sm:py-2.5 text-right flex items-center gap-2 sm:gap-4 shrink-0">
+              <span class="text-[10px] sm:text-xs font-bold text-emerald-950 uppercase">Nuevo saldo</span>
+              <span class="text-lg sm:text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoReporte)"></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
 
           <!-- TABLA ESTILO PLANTILLA CON TRUNCADO OFICIAL DE TASAS -->
           <div class="overflow-y-auto flex-1 space-y-2 pr-1">
