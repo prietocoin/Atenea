@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// REGLA UNIVERSAL DE TRUNCADO STRICTO (CORTE DE DÍGITOS SIN REDONDEAR)
+// REGLA UNIVERSAL DE TRUNCADO ESTRICTO (CORTE DE DÍGITOS SIN REDONDEAR)
 function aplicarReglaPrecision(val) {
   if (val === null || val === undefined || isNaN(val) || val === 0) return 0;
   const num = parseFloat(val);
@@ -30,19 +30,20 @@ function aplicarReglaPrecision(val) {
 
   const signo = num < 0 ? -1 : 1;
   const v = Math.abs(num);
+  const vRound = Math.round(v * 1e8) / 1e8;
 
   let res = 0;
-  if (v > 499.99) {
-    // Sin decimales (Truncado entero puro)
-    res = Math.trunc(v);
-  } else if (v > 0.99) {
-    // 2 decimales (Truncado puro)
-    res = Math.trunc(v * 100) / 100;
+  if (vRound > 499.99) {
+    // > 499.99: Sin decimales (Truncado entero puro)
+    res = Math.trunc(vRound);
+  } else if (vRound > 0.99) {
+    // > 0.99 y <= 499.99: 2 decimales (Truncado puro)
+    res = Math.trunc(vRound * 100) / 100;
   } else {
-    // Menor a 1 -> 3 cifras significativas (Truncado puro)
-    const magnitud = Math.floor(Math.log10(v));
+    // < 1: 3 cifras significativas (Truncado puro)
+    const magnitud = Math.floor(Math.log10(vRound));
     const factor = Math.pow(10, 2 - magnitud);
-    res = Math.trunc(v * factor) / factor;
+    res = Math.trunc(vRound * factor) / factor;
   }
 
   return signo * res;
@@ -54,7 +55,7 @@ function calcularTallaAutomatica(conteo) {
   return 'L';
 }
 
-// SINCRONIZACIÓN FÍSICA CON TRUNCADO STRICTO EN CADA PASO
+// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL CON TRUNCADO PURO
 async function sincronizarComprobantesAuditadosFisico() {
   try {
     const rawQuery = `
@@ -168,11 +169,11 @@ async function sincronizarComprobantesAuditadosFisico() {
       const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
       const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
 
-      // 1. Tipo imperativo de Socio 1
+      // 1. Socio 1 dicta imperativamente el tipo
       let tipoOp1 = (r.tipo_op_s1 || 'D').trim().toUpperCase();
       if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
 
-      // 2. Socio 2 hereda estrictamente el mismo tipo
+      // 2. Socio 2 hereda exactamente el mismo tipo
       let tipoOp2 = tipoOp1;
 
       const aj1 = typeof r.ajustes_socio_1 === 'string' ? JSON.parse(r.ajustes_socio_1) : (r.ajustes_socio_1 || {});
@@ -184,7 +185,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
       const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
 
-      // 3. SOCIO 1: TRUNCADO FÍSICO DE TASA Y MONTO
+      // 3. SOCIO 1: TRUNCADO ESTRICTO DE TASA Y MONTO
       const tasaBaseSocio1 = parseFloat(r.tasa_base_socio_1) || 1.0;
       const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
       const tasa1Signed = tasaCross1 * factor1;
@@ -196,7 +197,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const m1Socio = aplicarReglaPrecision(m1Raw);
       const m1Usdt = tasaBaseSocio1 > 0 ? aplicarReglaPrecision(m1Socio / tasaBaseSocio1) : m1Socio;
 
-      // 4. SOCIO 2: TRUNCADO FÍSICO DE TASA Y MONTO
+      // 4. SOCIO 2: TRUNCADO ESTRICTO DE TASA Y MONTO
       const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
       const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
       const tasa2Signed = tasaCross2 * factor2;
@@ -529,7 +530,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER QUE RETORNA LOS DATOS FÍSICOS CON TRUNCADO STRICTO
+// HANDLER QUE RETORNA LOS DATOS FÍSICOS TRUNCADOS PUKOS DE POSTGRESQL
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
