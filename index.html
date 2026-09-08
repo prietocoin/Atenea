@@ -1,3341 +1,1670 @@
 <!DOCTYPE html>
-
 <html lang="es" class="dark">
-
 <head>
-
   <meta charset="UTF-8">
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Atenea Panel - Gestión de Comprobantes & Reportes</title>
-
   
-
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
-
   <link rel="shortcut icon" href="/logo.svg">
-
   
-
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-
   <script src="https://cdn.tailwindcss.com"></script>
-
   <style>[x-cloak] { display: none !important; }</style>
-
   <script>
-
     tailwind.config = {
-
       darkMode: 'class',
-
       theme: {
-
         extend: {
-
           colors: { brand: { dark: '#0d0f1d', card: '#16192b', border: '#262a42', accent: '#8b5cf6' } }
-
         }
-
       }
-
     }
-
   </script>
-
 </head>
-
 <body class="bg-[#0b0d19] text-slate-200 font-sans antialiased min-h-screen" x-data="app()" x-init="init()">
 
-
-
   <div class="flex flex-col md:flex-row min-h-screen">
-
     
-
     <!-- BARRA LATERAL NAV -->
-
     <aside class="w-full md:w-64 bg-[#111322] border-r border-slate-800/80 p-4 flex flex-col justify-between shrink-0">
-
       <div>
-
         <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800">
-
           <div class="w-10 h-10 rounded-xl border border-purple-500/40 bg-[#16192b] p-1 flex items-center justify-center shadow-lg shrink-0">
-
-            <img src="/logo.svg" alt="Fundablock Logo" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=FB';">
-
+            <img src="/logo.svg" alt="Fundablock Logo" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><rect width=\'100%\' height=\'100%\' fill=\'%2316192b\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%238b5cf6\' font-size=\'20\' font-weight=\'bold\'>FB</text></svg>';">
           </div>
-
           <div>
-
             <h1 class="font-extrabold text-white text-base tracking-wide">FUNDABLOCK</h1>
-
             <p class="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Atenea Panel v2.0</p>
-
           </div>
-
         </div>
 
-
-
         <nav class="space-y-1">
-
           <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Auditoría en Vivo</p>
-
           
-
           <button @click="vistaActiva = 'comprobantes'" :class="vistaActiva === 'comprobantes' && !modalConfigSocioAbierto ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
-
             <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-
             Comprobantes
-
           </button>
-
-
 
           <button @click="vistaActiva = 'tasas'" :class="vistaActiva === 'tasas' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
-
             <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-
             Baúl & Cartelera Tasas
-
           </button>
-
-
 
           <button @click="vistaActiva = 'reportes'" :class="vistaActiva === 'reportes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
-
             <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-
             Reportes & Resumen
-
           </button>
 
-
-
           <div class="pt-4 space-y-1">
-
             <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Base de Datos & Matriz</p>
-
             <button @click="vistaActiva = 'directorio'" :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
-
               <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-
               Directorio (nombres_fb)
-
             </button>
-
-
 
             <button @click="abrirConfigGeneral()" :class="modalConfigSocioAbierto && socioConfigEdit.nombre === 'GENERAL' ? 'bg-amber-500/30 text-amber-300 border border-amber-500/60 shadow-lg' : 'text-slate-400 hover:bg-amber-500/10 hover:text-amber-300'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all border border-transparent">
-
               <span class="text-amber-400">🌐</span>
-
               Matriz General (Remesas)
-
             </button>
-
           </div>
-
         </nav>
-
       </div>
-
     </aside>
 
-
-
     <!-- CONTENIDO PRINCIPAL -->
-
     <main class="flex-1 p-3 md:p-6 overflow-x-hidden flex flex-col">
-
       
-
       <!-- VISTA COMPROBANTES -->
-
       <template x-if="vistaActiva === 'comprobantes'">
-
         <div class="space-y-4 flex-1 flex flex-col">
-
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
-
             <h2 class="text-lg font-bold text-white tracking-wide">Gestión De Comprobantes & IA</h2>
-
             <div class="flex items-center gap-2">
-
               <button @click="cargarComprobantes()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/60 active:scale-95">
-
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-
               </button>
-
               <span class="px-2.5 py-1 rounded-xl bg-purple-900/40 text-purple-300 text-xs font-semibold border border-purple-500/30">
-
                 <span x-text="comprobantes.length"></span> ítems
-
               </span>
-
             </div>
-
           </div>
-
-
 
           <!-- FILTROS COMPROBANTES -->
-
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
-
             <select x-model="filtroSocio" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
-
               <option value="">Todos los Socios</option>
-
               <template x-for="s in socios" :key="s">
-
                 <option :value="s" x-text="s"></option>
-
               </template>
-
             </select>
-
             <input type="date" x-model="filtroFecha" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none" />
-
             <input type="text" x-model="filtroHash" @input.debounce.300ms="cargarComprobantes()" placeholder="Buscar Hash..." class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none" />
-
             <label class="flex items-center gap-2 px-2.5 py-1.5 bg-[#1a1d33] border border-slate-700/80 rounded-lg cursor-pointer text-xs text-slate-300">
-
               <input type="checkbox" x-model="soloDuplicados" @change="cargarComprobantes()" class="rounded bg-slate-800 border-slate-600 text-purple-600">
-
               <span>Duplicados (>1)</span>
-
             </label>
-
           </div>
-
-
 
           <!-- 📱 VISTA MÓVIL COMPROBANTES -->
-
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
-
             <template x-for="item in comprobantes" :key="item.hash_largo">
-
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
-
                 <div class="w-[30%] shrink-0 flex flex-col justify-start">
-
                   <div class="relative aspect-square w-full">
-
-                    <img :src="item.url_imagen" class="w-full h-full object-cover rounded-lg border border-slate-700/50 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100%' height='100%' fill='%23121824'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='12'>SIN IMG</text></svg>'">
-
+                    <img :src="item.url_imagen" class="w-full h-full object-cover rounded-lg border border-slate-700/50 bg-slate-900 shadow-sm" alt="Comprobante" @error="$event.target.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><rect width=\'100%\' height=\'100%\' fill=\'%23121824\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'12\'>SIN IMG</text></svg>'">
                     <a :href="item.url_imagen" target="_blank" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-lg text-white backdrop-blur-sm">
-
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-
                     </a>
-
                   </div>
-
                 </div>
-
-
 
                 <div class="w-[70%] flex flex-col justify-between min-w-0 gap-1">
-
                   <div class="flex items-center justify-between gap-1">
-
                     <div class="flex items-center gap-1 truncate">
-
                       <span class="px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-300 font-mono text-[9px] font-bold border border-purple-500/20 truncate" x-text="item.hash_corto"></span>
-
                       <span class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-bold" x-text="'x' + item.conteo"></span>
-
                       <template x-if="item.procesado_ia">
-
                         <span class="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[8px] font-bold">✓ IA</span>
-
                       </template>
-
                     </div>
-
-
 
                     <div class="flex items-center gap-1 shrink-0">
-
                       <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-
                         <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase shadow-sm">
-
                           <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
-
                         </button>
-
                       </template>
-
                       <template x-if="item.lote_tasa_asignado">
-
                         <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
-
                       </template>
-
                       <button @click="eliminarComprobante(item.hash_largo)" title="Eliminar" class="text-rose-400 hover:text-rose-300 p-0.5 ml-0.5 active:scale-90 transition-transform">
-
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-
                       </button>
-
                       <button @click="abrirModal(item)" title="Editar" class="text-purple-400 hover:text-purple-300 p-0.5 active:scale-90 transition-transform">
-
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-
                       </button>
-
                     </div>
-
                   </div>
-
-
 
                   <div class="flex items-baseline gap-1 my-0.5">
-
                     <span class="font-black text-emerald-400 text-sm leading-none" x-text="formatMonto(item.monto)"></span>
-
                     <span class="text-[10px] font-bold text-slate-300 uppercase" x-text="item.moneda || '---'"></span>
-
                   </div>
-
-
 
                   <div class="flex flex-col gap-1 bg-[#1a1d33] p-1.5 rounded-lg border border-slate-800/80 my-0.5 text-[9px]">
-
                     <div class="flex items-center justify-between gap-1">
-
                       <span class="font-bold text-purple-300 truncate min-w-0" x-text="item.nombre_socio_1 || '-'"></span>
-
                       <div class="flex items-center gap-1.5 shrink-0 font-mono">
-
                         <template x-if="item.m1_socio !== undefined">
-
                           <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || '')"></span>
-
                         </template>
-
                         <div class="shrink-0 w-[56px] text-center px-0.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300 font-mono text-[8px] font-bold truncate" x-text="'T1:' + (formatTasa(item.tasa_1) || '-')"></div>
-
                       </div>
-
                     </div>
-
-
 
                     <template x-if="item.nombre_socio_2">
-
                       <div class="flex items-center justify-between gap-1 border-t border-slate-800/60 pt-0.5">
-
                         <span class="font-bold text-pink-300 truncate min-w-0" x-text="item.nombre_socio_2"></span>
-
                         <div class="flex items-center gap-1.5 shrink-0 font-mono">
-
                           <template x-if="item.m2_socio !== undefined">
-
                             <span class="text-emerald-300 font-bold text-[8px]" x-text="formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || '')"></span>
-
                           </template>
-
                           <div class="shrink-0 w-[56px] text-center px-0.5 py-0.5 rounded bg-pink-950/80 border border-pink-500/30 text-pink-300 font-mono text-[8px] font-bold truncate" x-text="'T2:' + (formatTasa(item.tasa_2) || '-')"></div>
-
                         </div>
-
                       </div>
-
                     </template>
-
                   </div>
-
-
 
                   <div class="flex items-end justify-between border-t border-slate-800/60 pt-1 gap-1">
-
                     <div class="flex flex-col text-[8px] text-slate-400 truncate min-w-0 flex-1">
-
                       <span class="font-bold text-slate-200 uppercase truncate" x-text="obtenerPrimeraPalabra(item.titular)"></span>
-
                       <span class="text-slate-400 uppercase truncate" x-text="item.banco || '-'"></span>
-
                       <span class="font-mono text-slate-500 truncate" x-text="'Ref: ' + (item.referencia || '-')"></span>
-
                     </div>
-
-
 
                     <div class="flex flex-col items-end shrink-0 text-[8px] font-mono leading-tight">
-
                       <template x-if="item.monto_usd_equivalente">
-
                         <div class="flex items-center gap-1">
-
                           <span class="font-bold text-slate-400 text-[7px] uppercase">ME0</span>
-
                           <span class="text-emerald-300 font-bold flex items-center gap-0.5">
-
                             <span>🪙</span>
-
                             <span x-text="formatMonto(item.monto_usd_equivalente)"></span>
-
                           </span>
-
                         </div>
-
                       </template>
-
                       <div class="flex items-center gap-1 mt-0.5">
-
                         <span class="font-bold text-purple-400 text-[7px] uppercase">ME1</span>
-
                         <span class="text-emerald-300 font-bold flex items-center gap-0.5">
-
                           <span>🪙</span>
-
                           <span x-text="formatMonto(item.m1_usdt)"></span>
-
                         </span>
-
                       </div>
-
                     </div>
-
                   </div>
 
-
-
                 </div>
-
               </div>
-
             </template>
-
           </div>
 
-
-
           <!-- 💻 VISTA ESCRITORIO COMPROBANTES -->
-
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
-
             <div class="overflow-x-auto overflow-y-auto flex-1">
-
               <table class="w-full text-xs text-left border-collapse">
-
                 <thead class="sticky top-0 z-10 bg-[#171a2e] shadow-md border-b border-slate-800">
-
                   <tr class="text-slate-400 uppercase font-bold text-[10px] tracking-wider">
-
                     <th class="px-3 py-2.5">IMAGEN & R2</th>
-
                     <th class="px-3 py-2.5">HASH / ESTADO</th>
-
                     <th class="px-3 py-2.5">MONTO & MONEDA</th>
-
                     <th class="px-3 py-2.5">LOTE & TIPO</th>
-
                     <th class="px-3 py-2.5">BANCO / TITULAR</th>
-
                     <th class="px-3 py-2.5">REFERENCIA</th>
-
                     <th class="px-3 py-2.5">SOCIOS, TASAS & MONTOS (1 & 2)</th>
-
                     <th class="px-3 py-2.5">FECHA / HORA</th>
-
                   </tr>
-
                 </thead>
-
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-
                   <template x-for="item in comprobantes" :key="item.hash_largo">
-
                     <tr class="hover:bg-slate-800/30 transition-colors">
-
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-
                         <div class="flex items-center gap-1.5">
-
-                          <img :src="item.url_imagen" class="w-8 h-8 object-cover rounded-lg border border-slate-700/60 bg-slate-900" alt="Comprobante">
-
+                          <img :src="item.url_imagen" class="w-8 h-8 object-cover rounded-lg border border-slate-700/60 bg-slate-900" alt="Comprobante" @error="$event.target.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><rect width=\'100%\' height=\'100%\' fill=\'%23121824\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'12\'>SIN IMG</text></svg>'">
                           <a :href="item.url_imagen" target="_blank" class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700">
-
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-
                           </a>
-
                         </div>
-
                       </td>
 
-
-
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-
                         <div class="flex items-center gap-1">
-
                           <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 font-mono text-[10px] border border-purple-500/30 font-bold" x-text="item.hash_corto"></span>
-
                           <button @click="abrirModal(item)" class="p-1 rounded text-slate-400 hover:text-purple-300 hover:bg-purple-900/40 transition-all">
-
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-
                           </button>
-
                         </div>
-
                         <div class="flex items-center gap-1 mt-0.5">
-
                           <span class="px-1 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-bold" x-text="'x' + item.conteo"></span>
-
                           <template x-if="item.procesado_ia">
-
                             <span class="px-1 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">✓ IA OK</span>
-
                           </template>
-
                         </div>
-
                       </td>
 
-
-
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-
                         <div class="flex flex-col">
-
                           <span class="font-bold text-emerald-400 text-xs" x-text="formatMonto(item.monto) + ' ' + (item.moneda || '')"></span>
-
                           <template x-if="item.monto_usd_equivalente">
-
                             <span class="text-[9px] font-bold text-slate-400" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
-
                           </template>
-
                           <template x-if="item.tasa_base || item.tasa_mercado_aplicada">
-
                             <span class="text-[8px] font-mono text-slate-500 mt-0.5" x-text="'Base: ' + (item.tasa_base || item.tasa_mercado_aplicada)"></span>
-
                           </template>
-
                         </div>
-
                       </td>
 
-
-
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-
                         <div class="flex items-center gap-1.5">
-
                           <template x-if="item.lote_tasa_asignado">
-
                             <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
-
                           </template>
-
                           <template x-if="getCodigoOperativo(item.nombre_socio_1, item.moneda)">
-
                             <button @click="abrirModal(item)" :class="claseInsignia(getCodigoOperativo(item.nombre_socio_1, item.moneda))" class="px-1.5 py-0.5 rounded text-[10px] font-black border uppercase hover:opacity-80">
-
                               <span x-text="getCodigoOperativo(item.nombre_socio_1, item.moneda)"></span>
-
                             </button>
-
                           </template>
-
                         </div>
-
                       </td>
-
-
 
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-
                         <p class="font-bold text-slate-200 uppercase text-[11px]" x-text="item.banco || '-'"></p>
-
                         <p class="text-[9px] text-slate-400 uppercase font-semibold" x-text="obtenerPrimeraPalabra(item.titular)"></p>
-
                       </td>
-
-
 
                       <td class="px-3 py-2 align-middle font-mono text-slate-300 whitespace-nowrap text-[11px]" x-text="item.referencia || '-'"></td>
 
-
-
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-
                         <div class="flex flex-col gap-1.5">
-
                           <div class="flex flex-col">
-
                             <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
-
                             <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
-
                               <template x-if="item.tasa_1">
-
                                 <span class="text-purple-400 font-bold" x-text="'T1: ' + formatTasa(item.tasa_1) + ' ' + (item.moneda !== item.moneda_socio_1 ? item.moneda + '/' + item.moneda_socio_1 : '')"></span>
-
                               </template>
-
                               <template x-if="item.m1_socio !== undefined">
-
                                 <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: ' + formatMonto(item.m1_socio) + ' ' + item.moneda_socio_1"></span>
-
                               </template>
-
                               <template x-if="item.m1_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_1)">
-
                                 <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m1_usdt) + ' USD)'"></span>
-
                               </template>
-
                             </div>
-
                           </div>
-
-
 
                           <template x-if="item.nombre_socio_2">
-
                             <div class="flex flex-col border-t border-slate-800/60 pt-1">
-
                               <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
-
                               <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
-
                                 <template x-if="item.tasa_2">
-
                                   <span class="text-pink-400 font-bold" x-text="'T2: ' + formatTasa(item.tasa_2) + ' ' + (item.moneda !== item.moneda_socio_2 ? item.moneda + '/' + item.moneda_socio_2 : '')"></span>
-
                                 </template>
-
                                 <template x-if="item.m2_socio !== undefined">
-
                                   <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: ' + formatMonto(item.m2_socio) + ' ' + item.moneda_socio_2"></span>
-
                                 </template>
-
                                 <template x-if="item.m2_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_2)">
-
                                   <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m2_usdt) + ' USD)'"></span>
-
                                 </template>
-
                               </div>
-
                             </div>
-
                           </template>
-
                         </div>
-
                       </td>
-
-
 
                       <td class="px-3 py-2 align-middle text-slate-400 text-[10px] whitespace-nowrap" x-text="formatFechaVE(item.timestamp)"></td>
-
                     </tr>
-
                   </template>
-
                 </tbody>
-
               </table>
-
             </div>
-
           </div>
 
-
-
         </div>
-
       </template>
-
-
 
       <!-- VISTA TASAS CON GUÍA DE MERCADO Y BORRADOR EN PARALELO -->
-
       <template x-if="vistaActiva === 'tasas'">
-
         <div class="space-y-4">
-
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-
             <h2 class="text-lg font-bold text-white tracking-wide">Baúl & Cartelera de Tasas</h2>
-
             <div class="flex items-center gap-2 flex-wrap">
-
               <button @click="reenviarTasas()" class="px-3.5 py-2 bg-amber-600/30 text-amber-300 border border-amber-500/50 rounded-xl text-xs font-bold hover:bg-amber-600/50 transition-all flex items-center gap-2">🔄 Reenviar Tasa Actual</button>
-
               <button @click="consultarApiHoo()" :disabled="cargandoTasas" class="px-3.5 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 transition-all flex items-center gap-2">⚡ Conectar Hoo API</button>
-
             </div>
-
           </div>
-
-
 
           <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN (TABLA MERCADO) -->
-
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-3 shadow-xl">
-
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-
               <div class="flex items-center gap-2">
-
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-
                 <p class="text-xs font-bold text-slate-300 uppercase tracking-wider">Tasas Activas en Producción (Tabla Mercado)</p>
-
               </div>
-
               <template x-if="ultimoLoteId">
-
                 <span class="px-2.5 py-0.5 bg-emerald-950/80 text-emerald-300 text-xs font-mono font-bold border border-emerald-500/40 rounded-lg shadow-sm" x-text="'Lote Activo: ' + ultimoLoteId"></span>
-
               </template>
-
             </div>
-
-
 
             <template x-if="Object.keys(ultimasTasasMercado).length === 0">
-
               <div class="text-center py-4 text-slate-500 text-xs font-medium">No hay tasas registradas en producción.</div>
-
             </template>
-
-
 
             <template x-if="Object.keys(ultimasTasasMercado).length > 0">
-
               <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-
                 <template x-for="(valor, moneda) in ultimasTasasMercado" :key="moneda">
-
                   <div class="bg-[#1a1d33] p-2 rounded-xl border border-slate-700/50 flex flex-col justify-between">
-
                     <span class="text-[9px] font-extrabold text-purple-400 uppercase" x-text="moneda"></span>
-
                     <span class="text-xs text-emerald-300 font-mono font-extrabold mt-0.5" x-text="formatMonto(valor)"></span>
-
                   </div>
-
                 </template>
-
               </div>
-
             </template>
-
           </div>
-
-
 
           <!-- BLOQUE 2: BORRADOR Y CAPTURA HOO PREVIO A PRODUCCIÓN -->
-
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
-
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-
               <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Borrador Capturado (Paso previo a Publicar)</p>
-
               <template x-if="codigoTasaActual">
-
                 <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs font-mono font-bold border border-purple-500/30 rounded" x-text="'Lote a Publicar: ' + codigoTasaActual"></span>
-
               </template>
-
             </div>
-
-
 
             <template x-if="Object.keys(tasasBaul).length === 0">
-
               <div class="text-center py-8 text-slate-500 text-xs font-medium">
-
                 Haz clic en <strong class="text-purple-400">"Conectar Hoo API"</strong> para capturar un borrador de tasas.
-
               </div>
-
             </template>
-
-
 
             <template x-if="Object.keys(tasasBaul).length > 0">
-
               <div class="space-y-4">
-
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-
                   <template x-for="(valor, moneda) in tasasBaul" :key="moneda">
-
                     <div class="bg-[#1a1d33] p-2.5 rounded-xl border border-slate-700/60 flex flex-col justify-between">
-
                       <span class="text-[10px] font-extrabold text-purple-400 uppercase" x-text="moneda"></span>
-
                       <input type="number" step="any" x-model="tasasBaul[moneda]" class="w-full bg-transparent text-sm text-emerald-400 font-extrabold outline-none border-b border-slate-700/80 focus:border-purple-500 mt-1">
-
                     </div>
-
                   </template>
-
                 </div>
-
-
 
                 <div class="flex justify-end pt-2 border-t border-slate-800">
-
                   <button @click="publicarTasaOficial()" :disabled="publicandoTasas" class="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all shadow-lg">🚀 Publicar Tasa Oficial a Producción</button>
-
                 </div>
-
               </div>
-
             </template>
-
           </div>
 
-
-
         </div>
-
       </template>
-
-
 
       <!-- VISTA REPORTES CON TASA SOCIO Y HASHES FILTRADOS DINÁMICAMENTE -->
-
       <template x-if="vistaActiva === 'reportes'">
-
         <div class="space-y-4">
-
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-
             <div>
-
               <h2 class="text-lg font-bold text-white tracking-wide">Resumen de Operaciones & Reportes</h2>
-
               <p class="text-xs text-slate-400">Filtrado ordenado jerárquicamente por Rol, Nombre, Rango de Fechas (GMT-4 VET) y Hash.</p>
-
             </div>
-
             <button @click="cargarReportes()" class="px-4 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 shadow-md">
-
               🔍 Aplicar Filtros de Reporte
-
             </button>
-
           </div>
-
-
 
           <!-- BARRA DE FILTROS EN ORDEN DE JERARQUÍA EXACTO -->
-
           <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5 bg-[#131525] p-3 rounded-2xl border border-slate-800 shadow-xl">
-
             
-
             <!-- 1. FILTRO ROL (JERARQUÍA 1) -->
-
             <div>
-
               <label class="block text-[9px] font-bold text-emerald-400 uppercase mb-1">1. Rol (Separación Aritmética)</label>
-
-              <select x-model="filtroReporteRol" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-emerald-500/50 text-xs text-emerald-300 font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
-
+              <select x-model="filtroReporteRol" @change="filtroReporteNombre = ''; cargarReportes()" class="w-full bg-[#1a1d33] border border-emerald-500/50 text-xs text-emerald-300 font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
                 <option value="">Todos los Roles</option>
-
                 <option value="SOCIO">SOCIO</option>
-
                 <option value="ASESOR">ASESOR</option>
-
                 <option value="GRUPO">GRUPO</option>
-
                 <option value="COMPRAS">COMPRAS</option>
-
                 <option value="MATRIZ_GENERAL">MATRIZ_GENERAL</option>
-
               </select>
-
             </div>
 
-
-
-            <!-- 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2) -->
-
+            <!-- 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2 - EN CASCADA CON ROL) -->
             <div>
-
               <label class="block text-[9px] font-bold text-purple-400 uppercase mb-1">2. Nombre (Socio/Grupo/Asesor)</label>
-
               <select x-model="filtroReporteNombre" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
-
                 <option value="">Todos los Nombres</option>
-
-                <template x-for="s in socios" :key="s">
-
+                <template x-for="s in sociosFiltradosPorRol" :key="s">
                   <option :value="s" x-text="s"></option>
-
                 </template>
-
               </select>
-
             </div>
-
-
 
             <!-- 3. FECHA INICIO (GMT-4 VET) -->
-
             <div>
-
               <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">3. Fecha Inicio (GMT-4 VET)</label>
-
               <input type="date" x-model="filtroReporteFechaInicio" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500" />
-
             </div>
-
-
 
             <!-- 4. FECHA FIN (GMT-4 VET) -->
-
             <div>
-
               <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">4. Fecha Fin (GMT-4 VET)</label>
-
               <input type="date" x-model="filtroReporteFechaFin" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500" />
-
             </div>
-
-
 
             <!-- 5. SELECTOR DE HASHES FILTRADOS SEGÚN EL SOCIO Y FECHA -->
-
             <div>
-
               <label class="block text-[9px] font-bold text-amber-400 uppercase mb-1">5. Desde Hash X en Adelante</label>
-
               <select x-model="filtroReporteDesdeHash" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-mono font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-amber-500">
-
-                <option value="">Seleccionar Hash...</option>
-
+                <option value="">NINGUNO (TODOS)</option>
                 <template x-for="h in listaHashesDisponibles" :key="h">
-
                   <option :value="h" x-text="h"></option>
-
                 </template>
-
               </select>
-
             </div>
 
-
-
           </div>
-
-
 
           <!-- CARDS DE MÉTRICAS CON MONEDA BASE NATIVA DEL SOCIO -->
-
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-
             <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
-
               <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Sujeto / Entidad Auditada</p>
-
               <p class="text-base font-black text-white mt-1" x-text="filtroReporteNombre || 'Todas las entidades'"></p>
-
             </div>
-
             <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
-
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comprobantes Filtrados</p>
-
               <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantesReporte.length + ' operados'"></p>
-
             </div>
-
             <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
-
               <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Monto Acumulado (Moneda Socio)</p>
-
               <p class="text-base font-black text-emerald-400 mt-1" x-text="formatMonto(totalMontoSocioReporte) + ' ' + monedaBaseSocioReporte"></p>
-
             </div>
-
           </div>
-
-
 
           <!-- TABLA DE MOVIMIENTOS CON TASA Y MONEDA SOCIO DEBIDAMENTE MOSTRADAS -->
-
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
-
             <div class="p-3 border-b border-slate-800 bg-[#171a2e] flex items-center justify-between">
-
               <span class="text-xs font-bold text-slate-300 uppercase">Detalle de Operaciones Filtradas</span>
-
               <span class="text-[10px] text-purple-400 font-mono font-bold">Zona Horaria: VET (GMT-4)</span>
-
             </div>
-
             <div class="overflow-x-auto">
-
               <table class="w-full text-xs text-left border-collapse">
-
                 <thead>
-
                   <tr class="text-slate-400 border-b border-slate-800 bg-[#111322] uppercase font-bold text-[10px]">
-
                     <th class="px-3 py-2.5">FECHA/HORA (VET)</th>
-
                     <th class="px-3 py-2.5">HASH</th>
-
                     <th class="px-3 py-2.5">DESCRIPCIÓN DEL COMPROBANTE</th>
-
                     <th class="px-3 py-2.5">LOTE / TASAS</th>
-
                     <th class="px-3 py-2.5 text-right">MONTO ORIGEN</th>
-
                     <th class="px-3 py-2.5 text-right">MONTO & MONEDA SOCIO</th>
-
                     <th class="px-3 py-2.5 text-right">EQUIV. USD</th>
-
                   </tr>
-
                 </thead>
-
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-
                   <template x-for="c in comprobantesReporte" :key="c.hash_largo">
-
                     <tr class="hover:bg-slate-800/30 transition-colors">
-
                       <td class="px-3 py-2 align-middle text-slate-400 font-mono whitespace-nowrap" x-text="formatFechaVE(c.timestamp)"></td>
-
                       <td class="px-3 py-2 align-middle font-mono font-bold text-purple-300 whitespace-nowrap" x-text="c.hash_corto"></td>
-
                       <td class="px-3 py-2 align-middle">
-
                         <div class="flex flex-col">
-
                           <span class="font-bold text-slate-200" x-text="c.titular || 'Sin Titular'"></span>
-
                           <span class="text-[9px] text-slate-400" x-text="'Banco: ' + (c.banco || '-') + ' | Moneda: ' + c.moneda"></span>
-
                         </div>
-
                       </td>
-
-
 
                       <!-- COLUMNA LOTE / TASAS CON MOSTRADO DE TASA DE LA MONEDA DEL SOCIO -->
-
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
-
                         <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="c.lote_tasa_asignado || 'N/A'"></span>
-
                         <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + (c.tasa_base || c.tasa_mercado_aplicada || '0')"></span>
-
                         <span class="text-[9px] font-mono font-bold text-emerald-300 block mt-0.5" x-text="'Tasa Socio: ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
-
                       </td>
-
-
 
                       <td class="px-3 py-2 align-middle text-right font-bold text-slate-300 whitespace-nowrap" x-text="formatMonto(c.monto) + ' ' + c.moneda"></td>
-
                       <td class="px-3 py-2 align-middle text-right font-black text-emerald-400 whitespace-nowrap" x-text="formatMonto(obtenerMontoSocioCalculado(c)) + ' ' + obtenerMonedaSocioCalculada(c)"></td>
-
                       <td class="px-3 py-2 align-middle text-right font-bold text-slate-400 whitespace-nowrap" x-text="'$' + formatMonto(c.monto_usd_equivalente)"></td>
-
                     </tr>
-
                   </template>
-
                 </tbody>
-
               </table>
-
             </div>
-
           </div>
-
         </div>
-
       </template>
-
-
 
       <!-- VISTA DIRECTORIO DE SOCIOS -->
-
       <template x-if="vistaActiva === 'directorio'">
-
         <div class="space-y-4">
-
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-
             <div>
-
               <h2 class="text-lg font-bold text-white tracking-wide">Directorio de Socios & Reglas (nombres_fb)</h2>
-
               <p class="text-xs text-slate-400">Directorio centralizado con perfil y configuración integral.</p>
-
             </div>
-
             
-
             <div class="flex items-center gap-2 flex-wrap">
-
               <button @click="abrirConfigGeneral()" class="px-3.5 py-1.5 rounded-xl bg-amber-600/30 text-amber-300 border border-amber-500/50 hover:bg-amber-600/50 text-xs font-bold transition-all shadow-md flex items-center gap-1">
-
                 <span>🌐 Config General</span>
-
               </button>
-
               <button @click="apagarTodosSocios()" class="px-3 py-1.5 rounded-xl bg-rose-600/20 text-rose-300 border border-rose-500/30 text-xs font-bold">🔴 Apagar Todos</button>
-
               <button @click="guardarVigentes()" class="px-3 py-1.5 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-xs font-bold">📌 Guardar Vigentes</button>
-
               <button @click="restaurarVigentes()" class="px-3 py-1.5 rounded-xl bg-emerald-900/40 text-emerald-300 border border-emerald-500/30 text-xs font-bold">📑 Restaurar Vigentes</button>
-
               <button @click="prepararNuevoSocio()" class="px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold">➕ Nuevo Socio</button>
-
             </div>
-
           </div>
-
-
 
           <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
-
             <div class="overflow-x-auto">
-
               <table class="w-full text-xs text-left border-collapse">
-
                 <thead>
-
                   <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px]">
-
                     <th class="px-3 py-2.5">SOCIO & PERFIL</th>
-
                     <th class="px-3 py-2.5">WHATSAPP / ID GRUPO</th>
-
                     <th class="px-3 py-2.5 text-center">ESTADO MAESTRO</th>
-
                     <th class="px-3 py-2.5 text-right">ACCIONES</th>
-
                   </tr>
-
                 </thead>
-
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
-
                     <tr class="hover:bg-slate-800/30 transition-colors" :class="d.activo === false ? 'opacity-50' : ''">
-
                       <td class="px-3 py-3 font-bold text-purple-300">
-
                         <div class="flex flex-col gap-1">
-
                           <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
-
                           <div class="flex items-center gap-1.5 flex-wrap">
-
                             <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[9px] font-mono font-bold" x-text="d.roles || 'SOCIO'"></span>
-
                             <span class="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30" x-text="d.moneda_socio || 'USDT'"></span>
-
                             <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (calcularTallaDinamica(contarPaisesActivos(d))) + ' [' + contarPaisesActivos(d) + ']'"></span>
-
                           </div>
-
                         </div>
-
                       </td>
-
                       <td class="px-3 py-3 font-mono text-slate-400" x-text="d.whatsapp || d.id_grupo"></td>
-
                       <td class="px-3 py-3 text-center">
-
                         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
-
                           <div class="relative inline-flex items-center">
-
                             <input type="checkbox" :checked="d.activo !== false" @change="toggleEstadoSocio(d.nombre, $event.target.checked)" class="sr-only peer">
-
                             <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:bg-emerald-500 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full transition-all"></div>
-
                           </div>
-
                           <span class="text-[10px] font-extrabold w-12 text-left" :class="d.activo !== false ? 'text-emerald-400' : 'text-slate-500'" x-text="d.activo !== false ? 'ACTIVO' : 'INACTIVO'"></span>
-
                         </label>
-
                       </td>
-
                       <td class="px-3 py-3 text-right">
-
                         <div class="flex items-center justify-end gap-1">
-
                           <button @click="abrirModalConfig(d.nombre)" class="px-2.5 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
-
                             <span>⚙️ Configurar</span>
-
                           </button>
-
                           <button @click="borrarSocioDirectorio(d.nombre)" title="Borrar Socio" class="p-1.5 rounded-xl bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 transition-all border border-rose-500/30 active:scale-95">
-
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-
                           </button>
-
                         </div>
-
                       </td>
-
                     </tr>
-
                   </template>
-
                 </tbody>
-
               </table>
-
             </div>
-
           </div>
-
         </div>
-
       </template>
 
-
-
-      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE CON SELECTOR DE TIPO OPERATIVO RESTAURADO -->
-
+      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
-
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
-
           
-
           <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-
             <div class="flex items-center gap-2">
-
               <h3 class="font-bold text-white text-sm">Auditar Comprobante</h3>
-
               <span class="text-xs text-purple-400 font-mono font-bold bg-purple-900/30 px-1.5 rounded" x-text="itemEdicion ? itemEdicion.hash_corto : ''"></span>
-
             </div>
-
             <button @click="modalAbierto = false" class="text-slate-400 hover:text-white text-sm">✕</button>
-
           </div>
-
-
 
           <template x-if="itemEdicion">
-
             <div class="space-y-3">
-
               <div class="grid grid-cols-2 gap-2">
-
                 <div>
-
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Monto</label>
-
                   <input type="number" step="0.01" x-model="itemEdicion.monto" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 font-bold outline-none focus:border-purple-500">
-
                 </div>
-
                 <div>
-
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Moneda</label>
-
                   <select x-model="itemEdicion.moneda" @change="itemEdicion.tipo_manual = getCodigoOperativo(itemEdicion.nombre_socio_1, itemEdicion.moneda)" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase outline-none focus:border-purple-500">
-
                     <template x-for="m in listaMonedas" :key="m">
-
                       <option :value="m" x-text="m"></option>
-
                     </template>
-
                   </select>
-
                 </div>
-
               </div>
 
-
-
               <div class="grid grid-cols-2 gap-2">
-
                 <div>
-
                   <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Socio 1</label>
-
                   <input type="text" x-model="itemEdicion.nombre_socio_1" @input="itemEdicion.tipo_manual = getCodigoOperativo(itemEdicion.nombre_socio_1, itemEdicion.moneda)" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-purple-200 uppercase outline-none focus:border-purple-500">
-
                 </div>
-
                 <div>
-
                   <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Socio 2</label>
-
                   <input type="text" x-model="itemEdicion.nombre_socio_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-200 uppercase outline-none focus:border-purple-500">
-
                 </div>
-
               </div>
 
-
-
-              <!-- SELECTOR DE TIPO OPERATIVO EN AUDITORÍA DE COMPROBANTE -->
-
               <div class="grid grid-cols-2 gap-2">
-
                 <div>
-
                   <label class="block text-[9px] font-bold text-amber-400 uppercase mb-0.5">Tipo Operación (D/P/A/C)</label>
-
                   <select x-model="itemEdicion.tipo_manual" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-bold rounded-lg px-2.5 py-1.5 uppercase outline-none focus:border-amber-500">
-
                     <option value="D">D - Depósito</option>
-
                     <option value="P">P - Pago</option>
-
                     <option value="A">A - Abono</option>
-
                     <option value="C">C - Compra / Venta</option>
-
                   </select>
-
                 </div>
-
-
 
                 <div>
-
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Banco</label>
-
                   <input type="text" x-model="itemEdicion.banco" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase outline-none focus:border-purple-500">
-
                 </div>
-
               </div>
-
-
 
               <div class="grid grid-cols-2 gap-2">
-
                 <div>
-
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Titular</label>
-
                   <input type="text" x-model="itemEdicion.titular" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase outline-none focus:border-purple-500">
-
                 </div>
-
                 <div>
-
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Referencia</label>
-
                   <input type="text" x-model="itemEdicion.referencia" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-purple-500 font-mono">
-
                 </div>
-
               </div>
-
-
 
               <div class="flex items-center justify-between pt-2 border-t border-slate-800">
-
                 <button @click="eliminarComprobante(itemEdicion.hash_largo)" class="px-3 py-1.5 bg-rose-600/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-bold hover:bg-rose-600/40">Eliminar</button>
-
                 <div class="flex gap-2">
-
                   <button @click="modalAbierto = false" class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">Cancelar</button>
-
                   <button @click="guardarCambios()" class="px-3.5 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-500 shadow-lg">Guardar</button>
-
                 </div>
-
               </div>
-
             </div>
-
           </template>
-
         </div>
-
       </div>
-
-
 
       <!-- MODAL 2: CONFIGURACIÓN INTEGRAL DE SOCIO / MATRIZ GENERAL -->
-
       <div x-show="modalConfigSocioAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
-
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-3xl p-4 sm:p-5 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col" @click.away="modalConfigSocioAbierto = false">
-
           
-
           <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
-
             <div class="flex items-center gap-3">
-
               <span class="p-2 rounded-xl bg-purple-900/40 text-purple-300 border border-purple-500/30 text-lg">⚙️</span>
-
               <div>
-
                 <h3 class="font-bold text-white text-base" x-text="socioConfigEdit.nombre === 'GENERAL' ? 'Tablero Matriz General (Remesas)' : 'Configuración Integral del Socio'"></h3>
-
                 <p class="text-xs text-slate-400">Valores calculados en vivo en VET (GMT-4) con el lote <strong class="text-emerald-400" x-text="ultimoLoteId || 'T012'"></strong>.</p>
-
               </div>
-
             </div>
-
             <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
-
           </div>
-
-
-
-          <!-- SELECTORES DE PERFIL Y PAÍS MAESTRO -->
 
           <div class="bg-[#1a1d33] p-3 rounded-xl border border-slate-800 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-
             <div class="flex-1 flex flex-col sm:flex-row items-center gap-2">
-
               <div class="w-full sm:w-1/2">
-
                 <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Perfil Seleccionado</label>
-
                 <select x-model="socioConfigEdit.nombre" @change="cargarSocioParaEditar()" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
-
                   <template x-for="s in socios" :key="s">
-
                     <option :value="s" x-text="s"></option>
-
                   </template>
-
                 </select>
-
               </div>
-
-
-
-              <!-- PAÍS MAESTRO DINÁMICO CUANDO SE EDITA GENERAL -->
 
               <template x-if="socioConfigEdit.nombre === 'GENERAL'">
-
                 <div class="w-full sm:w-1/2">
-
                   <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
-
                   <select x-model="paisMaestroGeneral" class="w-full bg-[#131525] border border-amber-500/50 text-xs text-amber-300 rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-amber-500">
-
                     <template x-for="p in listaPaisesBase" :key="p.code">
-
                       <option :value="p.code" x-text="p.flag + ' ' + p.nombrePais + ' (' + p.code + ')'"></option>
-
                     </template>
-
                   </select>
-
                 </div>
-
               </template>
-
             </div>
-
-
 
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800 shrink-0">
-
               <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-
                 📜 Reglas / Matriz
-
               </button>
-
               <button @click="tabConfigActive = 'addpais'" :class="tabConfigActive === 'addpais' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-
                 ➕ Añadir País
-
               </button>
-
               <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
-
                 👤 Perfil
-
               </button>
-
             </div>
-
           </div>
 
-
-
-          <!-- PANTALLA 1: REGLAS DE MATRIZ Y REMESAS -->
-
+          <!-- PANTALLA 1: REGLAS -->
           <div x-show="tabConfigActive === 'reglas'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-2.5 space-y-2">
-
-            
-
             <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-800/60">
-
               <span class="text-xs font-bold text-slate-300" x-text="socioConfigEdit.nombre === 'GENERAL' ? ('Par Binomio Remesa desde ' + paisMaestroGeneral) : 'Reglas por País'"></span>
-
               <span class="px-2 py-0.5 bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold rounded border border-purple-500/30" x-text="'Talla Auto: ' + calcularTallaDinamica(contarPaisesActivosEdit())"></span>
-
             </div>
-
-
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-
               <template x-for="p in carteleraPaisesEdit" :key="p.code">
-
                 <div class="bg-[#1a1d33] p-2.5 rounded-xl border transition-all space-y-2" :class="p.activo ? 'border-purple-500/50 bg-purple-950/20 shadow-md' : 'border-slate-800 opacity-60'">
-
-                  
-
                   <div class="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
-
                     <label class="flex items-center gap-2 cursor-pointer select-none">
-
                       <input type="checkbox" x-model="p.activo" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600">
-
                       <span class="font-black text-xs text-white" x-text="p.flag + ' ' + p.nombrePais"></span>
-
                     </label>
-
-
-
                     <div class="flex items-center gap-1.5">
-
                       <span class="px-1.5 py-0.5 bg-slate-800 text-purple-300 font-mono text-[9px] font-extrabold rounded" x-text="socioConfigEdit.nombre === 'GENERAL' ? (paisMaestroGeneral + '_' + p.code) : p.code"></span>
-
                     </div>
-
                   </div>
 
-
-
-                  <!-- MODO GENERAL: PAR BINOMIO ÚNICO "REMESA" -->
-
+                  <!-- MODO GENERAL: REMESA -->
                   <template x-if="socioConfigEdit.nombre === 'GENERAL'">
-
                     <div class="bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/30 flex flex-col justify-between space-y-2">
-
                       <div class="flex items-center justify-between border-b border-amber-500/20 pb-1">
-
                         <span class="text-amber-400 font-black text-[10px]" x-text="'BINOMIO ' + paisMaestroGeneral + ' ➔ ' + p.code"></span>
-
                         <span class="text-[8px] text-amber-300 font-sans uppercase">Tasa Resultado:</span>
-
                       </div>
-
-                      
-
                       <div class="text-center py-1.5 bg-[#131525] rounded border border-amber-500/30">
-
                         <span class="font-black text-amber-300 text-base tracking-tight" x-text="formatTasa(calcularTasaSocio(p.code, obtenerFactorRemesaGeneral(p.code)))"></span>
-
                       </div>
-
-
-
                       <div class="flex items-center justify-between gap-2 pt-1">
-
                         <span class="text-[9px] text-slate-400 font-sans uppercase shrink-0">Factor Remesa:</span>
-
                         <input type="number" step="any" :value="obtenerFactorRemesaGeneral(p.code)" @input="guardarFactorRemesaGeneral(p.code, $event.target.value)" placeholder="1.0" class="w-full bg-[#131525] border border-slate-700 rounded px-2 py-1 text-amber-300 font-bold outline-none focus:border-amber-500 text-right font-mono text-xs">
-
                       </div>
-
                     </div>
-
                   </template>
 
-
-
-                  <!-- MODO SOCIO INDIVIDUAL: PAGO Y DEPÓSITO -->
-
+                  <!-- MODO SOCIO INDIVIDUAL -->
                   <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
-
                     <div class="grid grid-cols-2 gap-2 font-mono text-[9px]">
-
-                      
-
-                      <!-- PAGO -->
-
                       <div class="bg-amber-950/40 p-2 rounded-lg border border-amber-500/30 flex flex-col justify-between">
-
                         <div class="flex items-center justify-between border-b border-amber-500/20 pb-1 mb-1">
-
                           <span class="text-amber-400 font-black text-[9px]">PAGO</span>
-
                           <span class="text-[7px] text-amber-300 font-sans uppercase">Tasa Calc:</span>
-
                         </div>
-
                         <div class="text-center py-1 bg-[#131525] rounded border border-amber-500/30 mb-1.5">
-
                           <span class="font-extrabold text-amber-300 text-sm tracking-tight" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['P-' + p.code]))"></span>
-
                         </div>
-
                         <div class="flex items-center justify-between gap-1">
-
                           <span class="text-[8px] text-slate-400 font-sans uppercase shrink-0">Factor:</span>
-
                           <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['P-' + p.code]" placeholder="f_P" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-amber-300 font-bold outline-none text-right">
-
                         </div>
-
                       </div>
-
-
-
-                      <!-- DEPÓSITO -->
 
                       <div class="bg-cyan-950/40 p-2 rounded-lg border border-cyan-500/30 flex flex-col justify-between">
-
                         <div class="flex items-center justify-between border-b border-cyan-500/20 pb-1 mb-1">
-
                           <span class="text-cyan-400 font-black text-[9px]">DEPÓSITO</span>
-
                           <span class="text-[7px] text-cyan-300 font-sans uppercase">Tasa Calc:</span>
-
                         </div>
-
                         <div class="text-center py-1 bg-[#131525] rounded border border-cyan-500/30 mb-1.5">
-
                           <span class="font-extrabold text-cyan-300 text-sm tracking-tight" x-text="formatTasa(calcularTasaSocio(p.code, socioConfigEdit.ajustes['D-' + p.code]))"></span>
-
                         </div>
-
                         <div class="flex items-center justify-between gap-1">
-
                           <span class="text-[8px] text-slate-400 font-sans uppercase shrink-0">Factor:</span>
-
                           <input type="number" step="any" x-model.number="socioConfigEdit.ajustes['D-' + p.code]" placeholder="f_D" class="w-full bg-[#131525] border border-slate-700 rounded px-1.5 py-0.5 text-cyan-300 font-bold outline-none text-right">
-
                         </div>
-
                       </div>
-
-
-
                     </div>
-
                   </template>
 
-
-
                 </div>
-
               </template>
-
             </div>
-
-
-
           </div>
 
-
-
-          <!-- PANTALLA EXCLUSIVA: ➕ AÑADIR PAÍS A LA MATRIZ -->
-
+          <!-- PANTALLA EXCLUSIVA: AÑADIR PAÍS -->
           <div x-show="tabConfigActive === 'addpais'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
-
             <div class="bg-[#1a1d33] p-4 rounded-xl border border-purple-500/30 space-y-3">
-
               <h4 class="font-bold text-white text-sm flex items-center gap-2">
-
                 <span>🌐</span>
-
                 <span>Incorporar Nuevo País o Moneda a la Grilla</span>
-
               </h4>
-
               <p class="text-xs text-slate-400">Agrega una nueva moneda o país a la tabla maestra para que se cruce automáticamente con los factores y carteleras.</p>
-
               
-
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-
                 <div>
-
                   <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre del País</label>
-
                   <input type="text" x-model="nuevoPaisNombreInput" placeholder="Ej: Uruguay" class="w-full bg-[#131525] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 outline-none focus:border-purple-500">
-
                 </div>
-
                 <div>
-
                   <label class="block text-[10px] font-bold text-purple-400 uppercase mb-1">Código / Moneda ISO</label>
-
                   <input type="text" x-model="nuevoPaisMonedaInput" placeholder="Ej: UYU" class="w-full bg-[#131525] border border-slate-700 text-xs text-purple-300 font-mono font-bold rounded-lg px-2.5 py-2 outline-none focus:border-purple-500 uppercase">
-
                 </div>
-
               </div>
-
-
 
               <div class="flex justify-end pt-2">
-
                 <button @click="agregarNuevoPaisAMatriz()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5">
-
                   <span>➕ Insertar en la Matriz</span>
-
                 </button>
-
               </div>
-
             </div>
-
           </div>
-
-
 
           <!-- PANTALLA 2: PERFIL -->
-
           <div x-show="tabConfigActive === 'perfil'" class="overflow-y-auto flex-1 border border-slate-800 rounded-xl bg-[#111322] p-4 space-y-4">
-
             <div class="grid grid-cols-2 gap-3">
-
               <div>
-
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre del Socio / Perfil</label>
-
                 <input type="text" x-model="socioConfigEdit.nombre" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white font-bold rounded-lg px-2.5 py-2 outline-none">
-
               </div>
-
               <div>
-
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rol</label>
-
                 <select x-model="socioConfigEdit.roles" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none">
-
                   <option value="SOCIO">SOCIO</option>
-
                   <option value="MATRIZ_GENERAL">MATRIZ_GENERAL</option>
-
                   <option value="ASESOR">ASESOR</option>
-
                   <option value="GRUPO">GRUPO</option>
-
                   <option value="COMPRAS">COMPRAS</option>
-
                 </select>
-
               </div>
-
             </div>
-
-
 
             <div class="grid grid-cols-2 gap-3">
-
               <div>
-
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Moneda Base Nativa</label>
-
                 <select x-model="socioConfigEdit.moneda_socio" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-bold outline-none">
-
                   <option value="USDT">USDT</option>
-
                   <option value="PEN">PEN</option>
-
                   <option value="COP">COP</option>
-
                   <option value="BRL">BRL</option>
-
                   <option value="VES">VES</option>
-
                   <option value="ARS">ARS</option>
-
                   <option value="EUR">EUR</option>
-
                   <option value="CLP">CLP</option>
-
                   <option value="MXN">MXN</option>
-
                   <option value="ECU">ECU</option>
-
                 </select>
-
               </div>
-
-
 
               <div>
-
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">WhatsApp Remote JID / Teléfono</label>
-
                 <input type="text" x-model="socioConfigEdit.whatsapp" placeholder="Ej: 120363323877732465@g.us" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-2 font-mono outline-none">
-
               </div>
-
             </div>
-
-
 
             <div class="p-3 bg-[#1a1d33] rounded-xl border border-slate-700 flex items-center justify-between">
-
               <div>
-
                 <span class="block text-xs font-bold text-white">Estado de Publicación Automática</span>
-
                 <span class="text-[10px] text-slate-400">Si está inactivo, n8n ignorará este perfil al publicar las tasas.</span>
-
               </div>
-
               <label class="inline-flex items-center gap-2 cursor-pointer select-none">
-
                 <div class="relative inline-flex items-center">
-
                   <input type="checkbox" x-model="socioConfigEdit.activo" class="sr-only peer">
-
                   <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:bg-emerald-500 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full transition-all"></div>
-
                 </div>
-
                 <span class="text-xs font-bold" :class="socioConfigEdit.activo ? 'text-emerald-400' : 'text-slate-500'" x-text="socioConfigEdit.activo ? 'ACTIVO' : 'INACTIVO'"></span>
-
               </label>
-
             </div>
-
           </div>
-
-
 
           <div class="flex items-center justify-between pt-2 border-t border-slate-800 shrink-0">
-
             <span class="text-[10px] text-slate-500">Socio en edición: <strong class="text-white" x-text="socioConfigEdit.nombre || 'Nuevo Socio'"></strong></span>
-
             <div class="flex gap-2">
-
               <button @click="modalConfigSocioAbierto = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancelar</button>
-
               <button @click="guardarConfigSocio()" :disabled="guardandoConfig" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95">💾 Guardar Cambios</button>
-
             </div>
-
           </div>
 
-
-
         </div>
-
       </div>
 
-
-
     </main>
-
   </div>
 
-
-
   <script>
-
     function app() {
-
       return {
-
         vistaActiva: 'comprobantes',
-
         comprobantes: [],
-
         socios: [],
-
         directorio: [],
-
         ultimasTasasMercado: {},
-
         ultimoLoteId: '',
-
         filtroSocio: '',
-
         filtroFecha: '',
-
         filtroHash: '',
-
         soloDuplicados: false,
-
         modalAbierto: false,
-
         itemEdicion: null,
 
-
-
         modalConfigSocioAbierto: false,
-
         tabConfigActive: 'reglas',
-
         guardandoConfig: false,
-
         paisMaestroGeneral: 'PEN',
 
-
-
         nuevoPaisNombreInput: '',
-
         nuevoPaisMonedaInput: '',
 
-
-
         filtroReporteRol: '',
-
         filtroReporteNombre: '',
-
         filtroReporteFechaInicio: '',
-
         filtroReporteFechaFin: '',
-
         filtroReporteDesdeHash: '',
-
         comprobantesReporte: [],
 
-
-
         matrizFactorRemesaT363: {
-
           "USDT":  {"USDT": 1.0, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.9, "ECU": 0.9, "PAN": 0.9, "MXN": 0.9, "BRL": 0.9, "VES": 0.9, "PYG": 0.9, "EUR": 0.9, "DOP": 0.9, "BOB": 0.9, "CRC": 0.9},
-
           "PYUSD": {"USDT": 1.2, "PYUSD": 1.0, "PEN": 1.2, "COP": 1.2, "CLP": 1.2, "ARS": 1.2, "USD": 1.2, "ECU": 1.2, "PAN": 1.2, "MXN": 1.2, "BRL": 1.2, "VES": 1.2, "PYG": 1.2, "EUR": 1.2, "DOP": 1.2, "BOB": 1.2, "CRC": 1.2},
-
           "PEN":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 1.0, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.9, "VES": 0.93, "PYG": 0.9, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85},
-
           "COP":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 1.0, "CLP": 0.9, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.9, "VES": 0.92, "PYG": 0.9, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85},
-
           "CLP":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 1.0, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.9, "VES": 0.92, "PYG": 0.9, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85},
-
           "ARS":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 1.0, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.9, "VES": 0.92, "PYG": 0.9, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85},
-
           "USD":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.85, "COP": 0.85, "CLP": 0.85, "ARS": 0.85, "USD": 1.0, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.85, "VES": 0.85, "PYG": 0.85, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85},
-
           "BRL":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 1.0, "VES": 0.85, "PYG": 0.85, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85},
-
           "VES":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.85, "VES": 1.0, "PYG": 0.85, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85}
-
         },
-
-
 
         socioConfigEdit: {
-
           nombre: '',
-
           roles: 'SOCIO',
-
           moneda_socio: 'USDT',
-
           talla: 'M',
-
           whatsapp: '',
-
           activo: true,
-
           pen: 'A', cop: 'A', clp: 'A', ars: 'A', ves: 'A', brl: 'A', mxn: 'A', pyg: 'A',
-
           dop: 'A', crc: 'A', eur: 'A', cad: 'A', usd: 'A', ecu: 'A', pan: 'A', usdt: 'A',
-
           ajustes: {}
-
         },
-
-
 
         carteleraPaisesEdit: [],
 
-
-
         listaPaisesBase: [
-
           { nombrePais: 'Argentina', code: 'ARS', flag: '🇦🇷' },
-
           { nombrePais: 'Venezuela', code: 'VES', flag: '🇻🇪' },
-
           { nombrePais: 'Peru', code: 'PEN', flag: '🇵🇪' },
-
           { nombrePais: 'Colombia', code: 'COP', flag: '🇨🇴' },
-
           { nombrePais: 'Chile', code: 'CLP', flag: '🇨🇱' },
-
           { nombrePais: 'Brazil', code: 'BRL', flag: '🇧🇷' },
-
           { nombrePais: 'Paraguay', code: 'PYG', flag: '🇵🇾' },
-
           { nombrePais: 'Ecuador', code: 'ECU', flag: '🇪🇨' },
-
           { nombrePais: 'Mexico', code: 'MXN', flag: '🇲🇽' },
-
           { nombrePais: 'Bolivia', code: 'BOB', flag: '🇧🇴' },
-
           { nombrePais: 'Europa', code: 'EUR', flag: '🇪🇺' },
-
           { nombrePais: 'Dominicana', code: 'DOP', flag: '🇩🇴' },
-
           { nombrePais: 'Costa Rica', code: 'CRC', flag: '🇨🇷' },
-
           { nombrePais: 'EEUU-Zelle', code: 'USD', flag: '🇺🇸' },
-
           { nombrePais: 'Panama', code: 'PAN', flag: '🇵🇦' },
-
           { nombrePais: 'Canada', code: 'CAD', flag: '🇨🇦' }
-
         ],
-
-
 
         socioReporteSeleccionado: '',
-
         tasasBaul: {},
-
         cargandoTasas: false,
-
         publicandoTasas: false,
-
         codigoTasaActual: '',
-
         mensajeTasas: '',
-
         notificacionTasas: { mostrar: false, tipo: '', mensaje: '' },
 
-
-
         listaMonedas: [
-
           'ARS', 'VES', 'PEN', 'COP', 'CLP', 'USD', 'USDT', 'EUR', 'BRL', 'MXN',
-
           'ECU', 'DOP', 'BOB', 'CRC', 'CAD', 'PYG', 'PYUSD'
-
         ],
-
-
 
         metricas: { recibidos: 0, iaOk: 0, descartados: 0, duplicados: 0 },
 
-
-
         async init() {
-
           await this.cargarUltimasTasasMercado();
-
           await this.cargarSocios();
-
           await this.cargarDirectorio();
-
           await this.cargarComprobantes();
-
           await this.cargarReportes();
-
         },
 
+        // FILTRADO DINÁMICO EN CASCADA DE NOMBRES SEGÚN EL ROL SELECCIONADO
+        get sociosFiltradosPorRol() {
+          if (!this.filtroReporteRol || this.filtroReporteRol.toUpperCase() === 'TODOS') {
+            return this.socios;
+          }
+          const rolNorm = this.filtroReporteRol.trim().toUpperCase();
+          const sociosDelRol = this.directorio
+            .filter(d => d.roles && d.roles.trim().toUpperCase() === rolNorm)
+            .map(d => d.nombre);
 
+          return sociosDelRol.length > 0 ? sociosDelRol : this.socios;
+        },
 
         // LISTA DE HASHES FILTRADA DINÁMICAMENTE SEGÚN ROL, NOMBRE Y RANGO DE FECHAS
-
         get listaHashesDisponibles() {
-
           let items = this.comprobantes;
 
-
-
           if (this.filtroReporteRol) {
-
             const rolNorm = this.filtroReporteRol.trim().toUpperCase();
-
             items = items.filter(c => 
-
               (c.rol_socio_1 && c.rol_socio_1.trim().toUpperCase() === rolNorm) ||
-
               (c.rol_socio_2 && c.rol_socio_2.trim().toUpperCase() === rolNorm)
-
             );
-
           }
-
-
 
           if (this.filtroReporteNombre) {
-
             const nombreNorm = this.filtroReporteNombre.trim().toUpperCase();
-
             items = items.filter(c => 
-
               (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === nombreNorm) ||
-
               (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === nombreNorm)
-
             );
-
           }
-
-
 
           if (this.filtroReporteFechaInicio) {
-
             const startTs = Math.floor(new Date(this.filtroReporteFechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
-
             if (!isNaN(startTs)) {
-
               items = items.filter(c => c.timestamp >= startTs);
-
             }
-
           }
-
-
 
           if (this.filtroReporteFechaFin) {
-
             const endTs = Math.floor(new Date(this.filtroReporteFechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
-
             if (!isNaN(endTs)) {
-
               items = items.filter(c => c.timestamp <= endTs);
-
             }
-
           }
-
-
 
           const hashes = new Set();
-
           items.forEach(c => {
-
             if (c.hash_corto) hashes.add(c.hash_corto);
-
           });
-
           return Array.from(hashes).sort();
-
         },
-
-
 
         // CÁLCULO DE LA MONEDA Y MONTO BASE NATIVO DEL SOCIO PARA EL REPORTE
-
         get monedaBaseSocioReporte() {
-
           if (!this.filtroReporteNombre) return 'USDT';
-
           const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-
           const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-
           if (reg && reg.moneda_socio) {
-
             return (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio).toUpperCase();
-
           }
-
           return 'USDT';
-
         },
-
-
 
         obtenerMonedaSocioCalculada(c) {
-
           if (this.filtroReporteNombre) {
-
             const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-
             if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-
               return c.moneda_socio_1 || 'USDT';
-
             }
-
             if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-
               return c.moneda_socio_2 || 'USDT';
-
             }
-
           }
-
           return c.moneda_socio_1 || 'USDT';
-
         },
-
-
 
         obtenerMontoSocioCalculado(c) {
-
           if (this.filtroReporteNombre) {
-
             const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-
             if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-
               return c.m1_socio !== undefined ? c.m1_socio : c.monto;
-
             }
-
             if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-
               return c.m2_socio !== undefined ? c.m2_socio : c.monto;
-
             }
-
           }
-
           return c.m1_socio !== undefined ? c.m1_socio : c.monto;
-
         },
-
-
-
-        // OBTENER TASA APLICADA AL SOCIO EN EL COMPROBANTE
 
         obtenerTasaSocioCalculada(c) {
-
           if (this.filtroReporteNombre) {
-
             const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-
             if (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === socioNorm) {
-
               return c.tasa_1 || c.tasa_base || 1.0;
-
             }
-
             if (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === socioNorm) {
-
               return c.tasa_2 || c.tasa_base || 1.0;
-
             }
-
           }
-
           return c.tasa_1 || c.tasa_base || 1.0;
-
         },
-
-
 
         get totalMontoSocioReporte() {
-
           return this.comprobantesReporte.reduce((acc, c) => acc + (parseFloat(this.obtenerMontoSocioCalculado(c)) || 0), 0);
-
         },
-
-
 
         abrirConfigGeneral() {
-
           this.socioConfigEdit.nombre = 'GENERAL';
-
           this.paisMaestroGeneral = 'PEN';
-
           this.cargarSocioParaEditar();
-
           this.tabConfigActive = 'reglas';
-
           this.modalConfigSocioAbierto = true;
-
         },
-
-
 
         agregarNuevoPaisAMatriz() {
-
           if (!this.nuevoPaisMonedaInput) {
-
             alert('Ingresa el código ISO o símbolo de la moneda.');
-
             return;
-
           }
-
           const code = this.nuevoPaisMonedaInput.trim().toUpperCase();
-
           const name = this.nuevoPaisNombreInput.trim() || code;
 
-
-
           if (!this.listaPaisesBase.some(p => p.code === code)) {
-
             this.listaPaisesBase.push({ nombrePais: name, code: code, flag: '🌐' });
-
           }
-
-
 
           if (!this.carteleraPaisesEdit.some(p => p.code === code)) {
-
             this.carteleraPaisesEdit.push({
-
               nombrePais: name,
-
               code: code,
-
               flag: '🌐',
-
               activo: true
-
             });
-
           }
-
-
 
           this.nuevoPaisNombreInput = '';
-
           this.nuevoPaisMonedaInput = '';
-
           this.tabConfigActive = 'reglas';
-
         },
-
-
 
         obtenerFactorRemesaGeneral(destinoCode) {
-
           const orig = this.paisMaestroGeneral.toUpperCase();
-
           const dest = destinoCode.toUpperCase();
-
           const clave = `REM-${orig}_${dest}`;
-
           if (this.socioConfigEdit.ajustes && this.socioConfigEdit.ajustes[clave] !== undefined) {
-
             return this.socioConfigEdit.ajustes[clave];
-
           }
-
           return this.matrizFactorRemesaT363[orig]?.[dest] ?? 0.90;
-
         },
-
-
 
         guardarFactorRemesaGeneral(destinoCode, valor) {
-
           const orig = this.paisMaestroGeneral.toUpperCase();
-
           const dest = destinoCode.toUpperCase();
-
           const clave = `REM-${orig}_${dest}`;
-
           if (!this.socioConfigEdit.ajustes) this.socioConfigEdit.ajustes = {};
-
           this.socioConfigEdit.ajustes[clave] = parseFloat(valor) || 0.90;
-
         },
-
-
 
         async cargarReportes() {
-
           const params = new URLSearchParams();
-
           if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
-
           if (this.filtroReporteNombre) params.append('socio', this.filtroReporteNombre);
-
           if (this.filtroReporteFechaInicio) params.append('fechaInicio', this.filtroReporteFechaInicio);
-
           if (this.filtroReporteFechaFin) params.append('fechaFin', this.filtroReporteFechaFin);
-
           if (this.filtroReporteDesdeHash) params.append('desdeHash', this.filtroReporteDesdeHash);
 
-
-
           try {
-
             const res = await fetch(`/api/reportes?${params.toString()}`);
-
             if (res.ok) {
-
               this.comprobantesReporte = await res.json();
-
             }
-
           } catch (err) {
-
             console.error("Error al cargar reportes:", err);
-
           }
-
         },
-
-
 
         async reenviarTasas(idTasa = null) {
-
           try {
-
             const res = await fetch('/api/tasas/reenviar', {
-
               method: 'POST',
-
               headers: { 'Content-Type': 'application/json' },
-
               body: JSON.stringify({ id_tasa: idTasa || this.codigoTasaActual || this.ultimoLoteId })
-
             });
-
             const data = await res.json();
-
             alert(data.message || 'Reenvío solicitado');
-
           } catch (err) {
-
             console.error("Error reenviando tasas:", err);
-
           }
-
         },
-
-
 
         async apagarTodosSocios() {
-
           if (!confirm('¿Deseas apagar la publicación para TODOS los socios (excepto general)?')) return;
-
           try {
-
             const res = await fetch('/api/socios/desactivar-todos', { method: 'PATCH' });
-
             if (res.ok) {
-
               await this.cargarDirectorio();
-
             }
-
           } catch (err) {
-
             console.error("Error apagar todos:", err);
-
           }
-
         },
-
-
 
         async guardarVigentes() {
-
           try {
-
             const res = await fetch('/api/socios/guardar-vigentes', { method: 'POST' });
-
             const data = await res.json();
-
             alert(data.message);
-
           } catch (err) {
-
             console.error("Error guardando vigentes:", err);
-
           }
-
         },
-
-
 
         async restaurarVigentes() {
-
           try {
-
             const res = await fetch('/api/socios/restaurar-vigentes', { method: 'POST' });
-
             const data = await res.json();
-
             alert(data.message);
-
             await this.cargarDirectorio();
-
           } catch (err) {
-
             console.error("Error restaurando vigentes:", err);
-
           }
-
         },
-
-
 
         async toggleEstadoSocio(nombre, nuevoEstado) {
-
           try {
-
             const res = await fetch(`/api/socios/${encodeURIComponent(nombre)}/estado`, {
-
               method: 'PATCH',
-
               headers: { 'Content-Type': 'application/json' },
-
               body: JSON.stringify({ activo: nuevoEstado })
-
             });
 
-
-
             if (res.ok) {
-
               await this.cargarDirectorio();
-
             }
-
           } catch (err) {
-
             console.error("Error cambiando estado:", err);
-
           }
-
         },
-
-
 
         async cargarUltimasTasasMercado() {
-
           try {
-
             const res = await fetch('/api/tasas/ultimas');
-
             if (res.ok) {
-
               const data = await res.json();
-
               this.ultimasTasasMercado = data.tasas || {};
-
               this.ultimoLoteId = data.id_tasa || '';
-
             }
-
           } catch (err) {
-
             console.error("Error cargando ultimas tasas mercado:", err);
-
           }
-
         },
-
-
 
         contarPaisesActivos(socioObj) {
-
           if (!socioObj) return 0;
-
           const cp = typeof socioObj.cartelera_paises === 'string' ? JSON.parse(socioObj.cartelera_paises) : (socioObj.cartelera_paises || []);
-
           return cp.filter(item => item.activo).length;
-
         },
-
-
 
         calcularTallaDinamica(conteo) {
-
           if (conteo <= 3) return 'S';
-
           if (conteo <= 6) return 'M';
-
           return 'L';
-
         },
-
-
 
         contarPaisesActivosEdit() {
-
           return this.carteleraPaisesEdit.filter(p => p.activo).length;
-
         },
 
-
-
         calcularTasaSocio(monedaCode, factor) {
-
           if (!factor) return 0;
-
           const f = Math.abs(parseFloat(factor) || 0);
 
-
-
           let monedaBaseSocio = (this.socioConfigEdit.moneda_socio || 'USDT').toUpperCase();
-
           if (this.socioConfigEdit.nombre === 'GENERAL') {
-
             monedaBaseSocio = this.paisMaestroGeneral.toUpperCase();
-
           }
-
-
 
           const tasaBaseDestino = parseFloat(this.ultimasTasasMercado[monedaCode.toUpperCase()] || 1.0);
 
-
-
           let tasaBaseSocio = 1.0;
-
           if (!['USD', 'USDT', 'PYUSD'].includes(monedaBaseSocio)) {
-
             tasaBaseSocio = parseFloat(this.ultimasTasasMercado[monedaBaseSocio] || 1.0);
-
           }
-
-
 
           if (tasaBaseSocio <= 0) tasaBaseSocio = 1.0;
 
-
-
           return (tasaBaseDestino / tasaBaseSocio) * f;
-
         },
-
-
 
         prepararNuevoSocio() {
-
           const factoresDefault = {
-
             "P-USDT": 1.0,   "D-USDT": 1.0,
-
             "P-PYUSD": 0.8,  "D-PYUSD": 1.2,
-
             "P-PEN": 0.976,  "D-PEN": 1.026,
-
             "P-COP": 0.976,  "D-COP": 1.030,
-
             "P-CLP": 0.962,  "D-CLP": 1.042,
-
             "P-ARS": 0.962,  "D-ARS": 1.042,
-
             "P-VES": 0.976,  "D-VES": 1.026,
-
             "P-BRL": 0.952,  "D-BRL": 1.053,
-
             "P-MXN": 0.943,  "D-MXN": 1.064,
-
             "P-PYG": 0.962,  "D-PYG": 1.042,
-
             "P-EUR": 0.926,  "D-EUR": 1.087,
-
             "P-USD": 0.930,  "D-USD": 1.087,
-
             "P-ECU": 0.940,  "D-ECU": 1.064,
-
             "P-DOP": 0.943,  "D-DOP": 1.064,
-
             "P-CRC": 0.943,  "D-CRC": 1.064,
-
             "P-CAD": 0.962,  "D-CAD": 1.042,
-
             "P-BOB": 0.926,  "D-BOB": 1.087
-
           };
-
-
 
           this.socioConfigEdit = {
-
             nombre: 'NUEVO_SOCIO',
-
             roles: 'SOCIO',
-
             moneda_socio: 'USDT',
-
             talla: 'M',
-
             whatsapp: '',
-
             activo: true,
-
             pen: 'A', cop: 'A', clp: 'A', ars: 'A', ves: 'A', brl: 'A', mxn: 'A', pyg: 'A',
-
             dop: 'A', crc: 'A', eur: 'A', cad: 'A', usd: 'A', ecu: 'A', pan: 'A', usdt: 'A',
-
             ajustes: factoresDefault
-
           };
 
-
-
           this.carteleraPaisesEdit = this.listaPaisesBase.map(pb => ({
-
             ...pb,
-
             activo: true
-
           }));
 
-
-
           this.tabConfigActive = 'perfil';
-
           this.modalConfigSocioAbierto = true;
-
         },
-
-
 
         async borrarSocioDirectorio(nombre) {
-
           if (!nombre) return;
-
           if (!confirm(`¿Estás seguro de borrar permanentemente al socio "${nombre}" del directorio?`)) return;
 
-
-
           try {
-
             const res = await fetch(`/api/directorio/${encodeURIComponent(nombre)}`, {
-
               method: 'DELETE'
-
             });
 
-
-
             if (res.ok) {
-
               this.modalConfigSocioAbierto = false;
-
               await this.cargarDirectorio();
-
               await this.cargarSocios();
-
             }
-
           } catch (err) {
-
             console.error("Error borrando socio:", err);
-
           }
-
         },
-
-
 
         async cargarComprobantes() {
-
           const params = new URLSearchParams();
-
           if (this.filtroSocio) params.append('socio', this.filtroSocio);
-
           if (this.filtroFecha) params.append('fechaInicio', this.filtroFecha);
-
           if (this.filtroHash) params.append('hash', this.filtroHash);
-
           params.append('soloDuplicados', this.soloDuplicados ? 'true' : 'false');
 
-
-
           try {
-
             const res = await fetch(`/api/comprobantes?${params.toString()}`);
-
             if (res.ok) {
-
               this.comprobantes = await res.json();
-
               this.calcularMetricas();
-
             }
-
           } catch (err) {
-
             console.error("Error al cargar comprobantes:", err);
-
           }
-
         },
-
-
 
         async cargarSocios() {
-
           try {
-
             const res = await fetch('/api/socios');
-
             if (res.ok) this.socios = (await res.json()).map(s => s.nombre);
-
           } catch (err) {
-
             console.error("Error al cargar socios:", err);
-
           }
-
         },
-
-
 
         async cargarDirectorio() {
-
           try {
-
             const res = await fetch('/api/directorio');
-
             if (res.ok) this.directorio = await res.json();
-
           } catch (err) {
-
             console.error("Error al cargar directorio:", err);
-
           }
-
         },
-
-
 
         abrirModalConfig(nombre = '') {
-
           this.socioConfigEdit.nombre = nombre || (this.socios[0] || '');
-
           this.cargarSocioParaEditar();
-
           this.tabConfigActive = 'reglas';
-
           this.modalConfigSocioAbierto = true;
-
         },
 
-
-
         cargarSocioParaEditar() {
-
           if (!this.socioConfigEdit.nombre) return;
-
           const socioNorm = this.socioConfigEdit.nombre.trim().toUpperCase();
-
           const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
 
-
-
           if (reg) {
-
             this.socioConfigEdit.roles = reg.roles || (socioNorm === 'GENERAL' ? 'MATRIZ_GENERAL' : 'SOCIO');
-
             this.socioConfigEdit.moneda_socio = (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio) || 'USDT';
-
             this.socioConfigEdit.whatsapp = reg.whatsapp || '';
-
             this.socioConfigEdit.activo = reg.activo !== false;
 
-
-
             ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'].forEach(m => {
-
               this.socioConfigEdit[m] = reg[m] || 'A';
-
             });
-
-
 
             this.socioConfigEdit.ajustes = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
 
-
-
             const cp = typeof reg.cartelera_paises === 'string' ? JSON.parse(reg.cartelera_paises) : (reg.cartelera_paises || []);
-
             
-
             this.carteleraPaisesEdit = this.listaPaisesBase.map(pb => {
-
               const ex = cp.find(item => item.moneda === pb.code || item.pais === pb.nombrePais);
-
               return {
-
                 ...pb,
-
                 activo: ex ? !!ex.activo : true
-
               };
-
             });
-
-
 
             this.socioConfigEdit.talla = this.calcularTallaDinamica(this.contarPaisesActivosEdit());
-
           }
-
         },
-
-
 
         async guardarConfigSocio() {
-
           if (!this.socioConfigEdit.nombre) return;
-
           this.guardandoConfig = true;
 
-
-
           try {
-
             const payload = {
-
               ...this.socioConfigEdit,
-
               talla: this.calcularTallaDinamica(this.contarPaisesActivosEdit()),
-
               cartelera_paises: this.carteleraPaisesEdit.map((p, idx) => ({
-
                 pais: p.nombrePais,
-
                 moneda: p.code,
-
                 activo: p.activo,
-
                 orden: idx + 1
-
               }))
-
             };
-
-
 
             const res = await fetch('/api/socios/config', {
-
               method: 'POST',
-
               headers: { 'Content-Type': 'application/json' },
-
               body: JSON.stringify(payload)
-
             });
 
-
-
             if (res.ok) {
-
               this.modalConfigSocioAbierto = false;
-
               await this.cargarDirectorio();
-
               await this.cargarSocios();
-
               await this.cargarComprobantes();
-
             } else {
-
               alert('Error al guardar la configuración.');
-
             }
-
           } catch (err) {
-
             console.error("Error guardando socio:", err);
-
           } finally {
-
             this.guardandoConfig = false;
-
           }
-
         },
-
-
 
         async consultarApiHoo() {
-
           this.cargandoTasas = true;
-
           this.mensajeTasas = 'Conectando con la API oficial de Hoo...';
 
-
-
           try {
-
             const res = await fetch('/api/tasas/fetch-hoo');
-
             const contentType = res.headers.get('content-type');
-
             if (!contentType || !contentType.includes('application/json')) {
-
               throw new Error(`Servidor devolvió HTML (${res.status}). Revisa '/api/tasas/fetch-hoo' en server.js.`);
-
             }
 
-
-
             const data = await res.json();
-
-
 
             if (data && data.success && data.rates && Object.keys(data.rates).length > 0) {
-
               this.tasasBaul = data.rates;
-
               this.mensajeTasas = '';
-
             } else {
-
               this.mensajeTasas = 'El motor v4 de Hoo aún está inicializando sus datos.';
-
             }
-
           } catch (err) {
-
             console.error('Error al consultar la API:', err);
-
             this.mensajeTasas = `Error: ${err.message}`;
-
-          } finally {
-
+          } fontAlly {
             this.cargandoTasas = false;
-
           }
-
         },
 
-
-
         async publicarTasaOficial() {
-
           if (Object.keys(this.tasasBaul).length === 0 || this.publicandoTasas) return;
 
-
-
           this.publicandoTasas = true;
-
           this.notificacionTasas = { mostrar: false, tipo: '', mensaje: '' };
 
-
-
           try {
-
             const res = await fetch('/api/tasas/publicar', {
-
               method: 'POST',
-
               headers: { 'Content-Type': 'application/json' },
-
               body: JSON.stringify({
-
                 id_tasa: this.codigoTasaActual || null,
-
                 tasas: this.tasasBaul
-
               })
-
             });
 
-
-
             const contentType = res.headers.get('content-type');
-
             if (!contentType || !contentType.includes('application/json')) {
-
               throw new Error(`El servidor respondió con HTML (${res.status}). Revisa '/api/tasas/publicar' en server.js.`);
-
             }
-
-
 
             const data = await res.json();
 
-
-
             if (res.ok && data.success) {
-
               this.codigoTasaActual = data.id_tasa;
-
               this.notificacionTasas = {
-
                 mostrar: true,
-
                 tipo: 'exito',
-
                 mensaje: `¡Lote ${data.id_tasa} publicado a producción con éxito!`
-
               };
-
               await this.cargarUltimasTasasMercado();
-
               await this.cargarComprobantes();
-
             } else {
-
               this.notificacionTasas = {
-
                 mostrar: true,
-
                 tipo: 'error',
-
                 mensaje: `Error en servidor: ${data.error || data.message || 'Fallo al guardar'}`
-
               };
-
             }
-
           } catch (err) {
-
             console.error("Error publicando tasa:", err);
-
             this.notificacionTasas = {
-
               mostrar: true,
-
               tipo: 'error',
-
               mensaje: `${err.message}`
-
             };
-
           } finally {
-
             this.publicandoTasas = false;
-
           }
-
         },
-
-
 
         getCodigoOperativo(nombreSocio, moneda) {
-
           if (!nombreSocio || !moneda || !this.directorio.length) return null;
-
           const socioNorm = nombreSocio.trim().toUpperCase();
-
           const monedaNorm = moneda.trim().toUpperCase();
-
           const registroSocio = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-
           if (!registroSocio) return null;
-
           const codigo = registroSocio[monedaNorm] || registroSocio[monedaNorm.toLowerCase()];
-
           return codigo ? codigo.toUpperCase() : null;
-
         },
-
-
 
         claseInsignia(codigo) {
-
           if (!codigo) return 'hidden';
-
           const mapa = {
-
             'D': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-cyan-900/50',
-
             'P': 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-amber-900/50',
-
             'A': 'bg-[#10b981]/20 text-emerald-300 border-emerald-500/40 shadow-emerald-900/50',
-
             'C': 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-purple-900/50'
-
           };
-
           return mapa[codigo] || 'bg-slate-500/20 text-slate-300 border-slate-500/40';
-
         },
-
-
 
         obtenerPrimeraPalabra(texto) {
-
           if (!texto) return '-';
-
           const str = String(texto).trim();
-
           if (!str) return '-';
-
           return str.split(/\s+/)[0];
-
         },
-
-
 
         calcularMetricas() {
-
           this.metricas.recibidos = this.comprobantes.length;
-
           this.metricas.iaOk = this.comprobantes.filter(c => c.procesado_ia).length;
-
           this.metricas.descartados = 0;
-
           this.metricas.duplicados = this.comprobantes.filter(c => c.conteo > 1).length;
-
         },
-
-
 
         abrirModal(item) {
-
           this.itemEdicion = { 
-
             ...item, 
-
             tipo_manual: this.getCodigoOperativo(item.nombre_socio_1, item.moneda) || 'A' 
-
           };
-
           this.modalAbierto = true;
-
         },
-
-
 
         async guardarCambios() {
-
           try {
-
             const res = await fetch(`/api/comprobantes/${this.itemEdicion.hash_largo}`, {
-
               method: 'PUT',
-
               headers: { 'Content-Type': 'application/json' },
-
               body: JSON.stringify(this.itemEdicion)
-
             });
-
             if (res.ok) {
-
               this.modalAbierto = false;
-
               await this.cargarComprobantes();
-
             }
-
           } catch (err) {
-
             console.error("Error al guardar cambios:", err);
-
           }
-
         },
-
-
 
         async eliminarComprobante(hash_largo) {
-
           if (!confirm('¿Deseas eliminar este comprobante de la tabla maestra?')) return;
-
           try {
-
             const res = await fetch(`/api/comprobantes/${hash_largo}`, { method: 'DELETE' });
-
             if (res.ok) {
-
               this.modalAbierto = false;
-
               await this.cargarComprobantes();
-
             }
-
           } catch (err) {
-
             console.error("Error al eliminar comprobante:", err);
-
           }
-
         },
-
-
 
         formatMonto(val) {
-
           if (val === null || val === undefined || isNaN(val)) return '0.00';
-
           return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
         },
-
-
 
         formatTasa(val) {
-
           if (val === null || val === undefined || isNaN(val)) return '-';
-
           const v = Math.abs(parseFloat(val) || 0);
-
           if (v === 0) return '0';
-
           if (v > 499.99) {
-
             return Math.trunc(v).toString();
-
           } else if (v < 10) {
-
             if (v < 1) {
-
               const magnitud = Math.floor(Math.log10(v));
-
               const f = Math.pow(10, 2 - magnitud);
-
               return (Math.trunc(v * f) / f).toString();
-
             }
-
             return (Math.trunc(v * 1000) / 1000).toString();
-
           } else {
-
             return (Math.trunc(v * 100) / 100).toFixed(2);
-
           }
-
         },
-
-
 
         formatFecha(ts) {
-
           if (!ts) return '-';
-
           const date = new Date(ts * 1000);
-
           return date.toLocaleString('es-VE', { 
-
             timeZone: 'America/Caracas', 
-
             day: '2-digit', month: '2-digit', year: 'numeric',
-
             hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
-
           });
-
         },
 
-
-
         formatFechaVE(ts) {
-
           return this.formatFecha(ts);
-
         }
-
       };
-
     }
-
   </script>
-
 </body>
-
 </html>
