@@ -306,9 +306,6 @@
                               <template x-if="item.m1_socio !== undefined">
                                 <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: ' + formatMonto(item.m1_socio) + ' ' + item.moneda_socio_1"></span>
                               </template>
-                              <template x-if="item.m1_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_1)">
-                                <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m1_usdt) + ' USD)'"></span>
-                              </template>
                             </div>
                           </div>
 
@@ -321,9 +318,6 @@
                                 </template>
                                 <template x-if="item.m2_socio !== undefined">
                                   <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: ' + formatMonto(item.m2_socio) + ' ' + item.moneda_socio_2"></span>
-                                </template>
-                                <template x-if="item.m2_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_2)">
-                                  <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m2_usdt) + ' USD)'"></span>
                                 </template>
                               </div>
                             </div>
@@ -338,7 +332,6 @@
               </table>
             </div>
           </div>
-
         </div>
       </template>
 
@@ -353,7 +346,7 @@
             </div>
           </div>
 
-          <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN -->
+          <!-- BLOQUE 1: TASAS EN PRODUCCIÓN -->
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-3 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <div class="flex items-center gap-2">
@@ -486,7 +479,7 @@
             </div>
           </div>
 
-          <!-- CARDS DE MÉTRICAS CON SALDO ANTERIOR Y NUEVO SALDO -->
+          <!-- CARDS DE MÉTRICAS -->
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div class="bg-[#131525] p-4 rounded-xl border border-slate-800 shadow-lg">
               <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Sujeto / Entidad Auditada</p>
@@ -736,7 +729,6 @@
                     <option value="C">C - Compra / Venta</option>
                   </select>
                 </div>
-
                 <div>
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Banco</label>
                   <input type="text" x-model="itemEdicion.banco" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase outline-none focus:border-purple-500">
@@ -792,7 +784,6 @@
                 </select>
               </div>
 
-              <!-- PAÍS MAESTRO DINÁMICO CUANDO SE EDITA GENERAL -->
               <template x-if="socioConfigEdit.nombre === 'GENERAL'">
                 <div class="w-full sm:w-1/2">
                   <label class="block text-[10px] font-bold text-amber-400 uppercase mb-1">País Maestro (Origen)</label>
@@ -1019,6 +1010,7 @@
         tabConfigActive: 'reglas',
         guardandoConfig: false,
         paisMaestroGeneral: 'PEN',
+
         saldoAnteriorManual: 0.00,
 
         nuevoPaisNombreInput: '',
@@ -1042,20 +1034,6 @@
           "BRL":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 1.0, "VES": 0.85, "PYG": 0.85, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85},
           "VES":   {"USDT": 0.9, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.85, "ECU": 0.85, "PAN": 0.85, "MXN": 0.85, "BRL": 0.85, "VES": 1.0, "PYG": 0.85, "EUR": 0.85, "DOP": 0.85, "BOB": 0.85, "CRC": 0.85}
         },
-
-        socioConfigEdit: {
-          nombre: '',
-          roles: 'SOCIO',
-          moneda_socio: 'USDT',
-          talla: 'M',
-          whatsapp: '',
-          activo: true,
-          pen: 'A', cop: 'A', clp: 'A', ars: 'A', ves: 'A', brl: 'A', mxn: 'A', pyg: 'A',
-          dop: 'A', crc: 'A', eur: 'A', cad: 'A', usd: 'A', ecu: 'A', pan: 'A', usdt: 'A',
-          ajustes: {}
-        },
-
-        carteleraPaisesEdit: [],
 
         listaPaisesBase: [
           { nombrePais: 'Argentina', code: 'ARS', flag: '🇦🇷' },
@@ -1082,7 +1060,6 @@
         ],
 
         async init() {
-          // EJECUCIÓN AISLADA PARA EVITAR BLOQUEOS SI ALGÚN ENDPOINT TARDA O FALLA
           await this.cargarUltimasTasasMercado().catch(e => console.error(e));
           await this.cargarSocios().catch(e => console.error(e));
           await this.cargarDirectorio().catch(e => console.error(e));
@@ -1582,7 +1559,6 @@
           }
         },
 
-        // ALGORITMO DE TRUNCADO MATEMÁTICO IDÉNTICO A N8N
         truncarTasaOficial(valor) {
           const num = Math.abs(parseFloat(valor) || 0);
           if (num === 0) return '0';
