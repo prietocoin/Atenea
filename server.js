@@ -867,10 +867,6 @@ app.post('/api/socios/config', async (req, res) => {
   }
 });
 
-// Inyección del módulo de reportes
-const reportesRouter = require('./reportes');
-app.use(reportesRouter);
-
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
