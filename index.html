@@ -971,7 +971,6 @@
           
           <!-- HEADER COMPROBANTE RESPONSIVO -->
           <div class="flex flex-col sm:flex-row sm:items-start justify-between border-b border-emerald-800/20 pb-3 gap-2 shrink-0 relative">
-            <!-- Botón Cerrar Flotante en Móvil -->
             <button @click="modalVistaPreviaAbierto = false" class="absolute top-0 right-0 sm:hidden text-slate-500 hover:text-slate-800 text-base font-bold">✕</button>
 
             <div class="pr-6 sm:pr-0">
@@ -1025,46 +1024,6 @@
             <div class="bg-[#dcf0d8] border border-emerald-700/40 rounded-xl px-3 sm:px-5 py-1.5 sm:py-2.5 text-right flex items-center gap-2 sm:gap-4 shrink-0">
               <span class="text-[10px] sm:text-xs font-bold text-emerald-950 uppercase">Nuevo saldo</span>
               <span class="text-lg sm:text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoReporte)"></span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-          <!-- TABLA ESTILO PLANTILLA CON TRUNCADO OFICIAL DE TASAS -->
-          <div class="overflow-y-auto flex-1 space-y-2 pr-1">
-            <div class="grid grid-cols-12 font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[11px]">
-              <div class="col-span-2">Fecha</div>
-              <div class="col-span-8">Descripcion</div>
-              <div class="col-span-2 text-right">Saldos</div>
-            </div>
-
-            <template x-for="c in comprobantesReporte" :key="c.hash_largo">
-              <div class="grid grid-cols-12 border-b border-dashed border-slate-300 py-1.5 items-center text-[11px]">
-                <div class="col-span-2 text-slate-700" x-text="formatFechaVE(c.timestamp).split(',')[0]"></div>
-                <div class="col-span-8 text-slate-800 pr-2 leading-relaxed">
-                  <span class="font-bold text-emerald-800" x-text="'[' + (c.hash_corto || 'OP') + ']'"></span>
-                  <span x-text="'Monto: ' + formatMonto(c.monto) + ', '"></span>
-                  <span x-text="'Titular: ' + (c.titular || '-') + ', '"></span>
-                  <span x-text="'Banco: ' + (c.banco || '-') + ', '"></span>
-                  <span x-text="'Moneda: ' + c.moneda + ', '"></span>
-                  <span x-text="'Tasa(' + (c.lote_tasa_asignado || 'T360') + '): ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
-                </div>
-                <div class="col-span-2 text-right font-bold text-slate-900" x-text="formatMonto(obtenerMontoSocioCalculado(c))"></div>
-              </div>
-            </template>
-          </div>
-
-          <!-- FOOTER: NUEVO SALDO & LOGO FUNDABLOCK -->
-          <div class="flex items-end justify-between border-t border-emerald-800/20 pt-4 shrink-0">
-            <div class="flex items-center gap-2">
-              <img src="/logo.svg" class="w-6 h-6 object-contain" alt="FB">
-              <span class="font-bold text-slate-800 text-sm">Fundablock</span>
-            </div>
-
-            <div class="bg-[#dcf0d8] border border-emerald-700/40 rounded-xl px-5 py-2.5 text-right flex items-center gap-4">
-              <span class="text-xs font-bold text-emerald-950">Nuevo saldo</span>
-              <span class="text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoReporte)"></span>
             </div>
           </div>
 
