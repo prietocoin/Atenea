@@ -34,13 +34,10 @@ function aplicarReglaPrecision(val) {
 
   let res = 0;
   if (vRound > 499.99) {
-    // > 499.99: Sin decimales (Truncado entero puro)
     res = Math.trunc(vRound);
   } else if (vRound > 0.99) {
-    // > 0.99 y <= 499.99: 2 decimales (Truncado puro)
     res = Math.trunc(vRound * 100) / 100;
   } else {
-    // < 1: 3 cifras significativas (Truncado puro)
     const magnitud = Math.floor(Math.log10(vRound));
     const factor = Math.pow(10, 2 - magnitud);
     res = Math.trunc(vRound * factor) / factor;
@@ -169,11 +166,9 @@ async function sincronizarComprobantesAuditadosFisico() {
       const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
       const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
 
-      // 1. Socio 1 dicta imperativamente el tipo
       let tipoOp1 = (r.tipo_op_s1 || 'D').trim().toUpperCase();
       if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
 
-      // 2. Socio 2 hereda exactamente el mismo tipo
       let tipoOp2 = tipoOp1;
 
       const aj1 = typeof r.ajustes_socio_1 === 'string' ? JSON.parse(r.ajustes_socio_1) : (r.ajustes_socio_1 || {});
@@ -185,7 +180,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
       const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
 
-      // 3. SOCIO 1: TRUNCADO ESTRICTO DE TASA Y MONTO
+      // SOCIO 1
       const tasaBaseSocio1 = parseFloat(r.tasa_base_socio_1) || 1.0;
       const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
       const tasa1Signed = tasaCross1 * factor1;
@@ -197,7 +192,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const m1Socio = aplicarReglaPrecision(m1Raw);
       const m1Usdt = tasaBaseSocio1 > 0 ? aplicarReglaPrecision(m1Socio / tasaBaseSocio1) : m1Socio;
 
-      // 4. SOCIO 2: TRUNCADO ESTRICTO DE TASA Y MONTO
+      // SOCIO 2
       const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
       const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
       const tasa2Signed = tasaCross2 * factor2;
@@ -530,11 +525,12 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER QUE RETORNA LOS DATOS FÍSICOS TRUNCADOS PUKOS DE POSTGRESQL
+// HANDLER CENTRALIZADO CON ORDEN CRONOLÓGICO ASCENDENTE PARA REPORTES
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
     const targetSocio = (socio || nombre || '').trim();
+    const esReporte = req.originalUrl.includes('reportes');
 
     let query = `
       SELECT 
@@ -627,7 +623,8 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    query += ` ORDER BY timestamp_comprobante DESC;`;
+    // ORDENA DE MENOS A MÁS (ASC) PARA REPORTES Y DE MÁS A MENOS (DESC) PARA COMPROBANTES
+    query += esReporte ? ` ORDER BY timestamp_comprobante ASC;` : ` ORDER BY timestamp_comprobante DESC;`;
 
     const { rows } = await pool.query(query, values);
 
