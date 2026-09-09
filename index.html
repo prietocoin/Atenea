@@ -592,16 +592,18 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-                  <!-- EXCLUIR GENERAL DE LA TABLA VISIBLE DEL DIRECTORIO -->
-                  <template x-for="d in directorio.filter(item => item.nombre && item.nombre.trim().toUpperCase() !== 'GENERAL')" :key="d.id_grupo || d.nombre">
+                  <!-- MOSTRAR TODOS LOS REGISTROS INCLUYENDO GENERAL -->
+                  <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors" :class="d.activo === false ? 'opacity-50' : ''">
                       <td class="px-3 py-3 font-bold text-purple-300">
                         <div class="flex flex-col gap-1">
-                          <span class="font-black text-purple-300 text-xs uppercase" x-text="d.nombre || '-'"></span>
+                          <span class="font-black text-xs uppercase" :class="d.nombre === 'GENERAL' ? 'text-amber-300' : 'text-purple-300'" x-text="d.nombre || '-'"></span>
                           <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 text-[9px] font-mono font-bold" x-text="d.roles || 'SOCIO'"></span>
                             <span class="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30" x-text="d.moneda_socio || 'USDT'"></span>
-                            <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (calcularTallaDinamica(contarPaisesActivos(d))) + ' [' + contarPaisesActivos(d) + ']'"></span>
+                            <template x-if="d.nombre !== 'GENERAL'">
+                              <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="'Talla: ' + (calcularTallaDinamica(contarPaisesActivos(d))) + ' [' + contarPaisesActivos(d) + ']'"></span>
+                            </template>
                           </div>
                         </div>
                       </td>
@@ -609,10 +611,10 @@
                       <td class="px-3 py-3 text-center">
                         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                           <div class="relative inline-flex items-center">
-                            <input type="checkbox" :checked="d.activo !== false" @change="toggleEstadoSocio(d.nombre, $event.target.checked)" class="sr-only peer">
+                            <input type="checkbox" :checked="d.activo !== false" :disabled="d.nombre === 'GENERAL'" @change="toggleEstadoSocio(d.nombre, $event.target.checked)" class="sr-only peer">
                             <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:bg-emerald-500 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full transition-all"></div>
                           </div>
-                          <span class="text-[10px] font-extrabold w-12 text-left" :class="d.activo !== false ? 'text-emerald-400' : 'text-slate-500'" x-text="d.activo !== false ? 'ACTIVO' : 'INACTIVO'"></span>
+                          <span class="text-[10px] font-extrabold w-16 text-left" :class="d.activo !== false ? 'text-emerald-400' : 'text-slate-500'" x-text="d.nombre === 'GENERAL' ? 'SIEMPRE ACTIVO' : (d.activo !== false ? 'ACTIVO' : 'INACTIVO')"></span>
                         </label>
                       </td>
                       <td class="px-3 py-3 text-right">
@@ -620,9 +622,11 @@
                           <button @click="abrirModalConfig(d.nombre)" class="px-2.5 py-1.5 bg-purple-900/40 text-purple-300 hover:bg-purple-600/50 border border-purple-500/40 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1">
                             <span>⚙️ Configurar</span>
                           </button>
-                          <button @click="borrarSocioDirectorio(d.nombre)" title="Borrar Socio" class="p-1.5 rounded-xl bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 transition-all border border-rose-500/30 active:scale-95">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                          </button>
+                          <template x-if="d.nombre !== 'GENERAL'">
+                            <button @click="borrarSocioDirectorio(d.nombre)" title="Borrar Socio" class="p-1.5 rounded-xl bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 transition-all border border-rose-500/30 active:scale-95">
+                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                          </template>
                         </div>
                       </td>
                     </tr>
@@ -784,10 +788,10 @@
                   <div class="flex items-center justify-end pb-1">
                     <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                       <div class="relative inline-flex items-center">
-                        <input type="checkbox" x-model="socioConfigEdit.activo" class="sr-only peer">
+                        <input type="checkbox" x-model="socioConfigEdit.activo" :disabled="socioConfigEdit.nombre === 'GENERAL'" class="sr-only peer">
                         <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:bg-emerald-500 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 peer-checked:after:translate-x-full transition-all"></div>
                       </div>
-                      <span class="text-xs font-bold" :class="socioConfigEdit.activo ? 'text-emerald-400' : 'text-slate-500'" x-text="socioConfigEdit.activo ? 'ACTIVO' : 'INACTIVO'"></span>
+                      <span class="text-xs font-bold" :class="socioConfigEdit.activo ? 'text-emerald-400' : 'text-slate-500'" x-text="socioConfigEdit.nombre === 'GENERAL' ? 'SIEMPRE ACTIVO' : (socioConfigEdit.activo ? 'ACTIVO' : 'INACTIVO')"></span>
                     </label>
                   </div>
                 </div>
@@ -1404,11 +1408,14 @@
             const res = await fetch(`/api/reportes?${params.toString()}`);
             if (res.ok) {
               const data = await res.json();
+              let filtrados = [];
               if (this.filtroReporteNombre) {
-                this.comprobantesReporte = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
+                filtrados = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
               } else {
-                this.comprobantesReporte = data.filter(c => parseFloat(c.monto || 0) !== 0);
+                filtrados = data.filter(c => parseFloat(c.monto || 0) !== 0);
               }
+              // Ordenamiento estricto cronológico ascendente (de menos a más por timestamp)
+              this.comprobantesReporte = filtrados.sort((a, b) => (parseInt(a.timestamp) || 0) - (parseInt(b.timestamp) || 0));
             }
           } catch (err) {
             console.error("Error al cargar reportes:", err);
@@ -1635,7 +1642,7 @@
             this.socioConfigEdit.roles = reg.roles || (socioNorm === 'GENERAL' ? 'MATRIZ_GENERAL' : 'SOCIO');
             this.socioConfigEdit.moneda_socio = (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio) || 'USDT';
             this.socioConfigEdit.whatsapp = reg.whatsapp || '';
-            this.socioConfigEdit.activo = reg.activo !== false;
+            this.socioConfigEdit.activo = socioNorm === 'GENERAL' ? true : (reg.activo !== false);
 
             const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
             const valSaldo = aj.saldo_anterior !== undefined ? aj.saldo_anterior : reg.saldo_anterior;
@@ -1670,8 +1677,11 @@
             const saldoVal = parseFloat(this.socioConfigEdit.saldo_anterior) || 0;
             this.socioConfigEdit.ajustes.saldo_anterior = saldoVal;
 
+            const isGeneral = this.socioConfigEdit.nombre.trim().toUpperCase() === 'GENERAL';
+
             const payload = {
               ...this.socioConfigEdit,
+              activo: isGeneral ? true : !!this.socioConfigEdit.activo,
               saldo_anterior: saldoVal,
               talla: this.calcularTallaDinamica(this.contarPaisesActivosEdit()),
               cartelera_paises: this.carteleraPaisesEdit.map((p, idx) => ({
@@ -1843,42 +1853,6 @@
           }
         },
 
-async cargarReportes() {
-          const params = new URLSearchParams();
-          if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
-          if (this.filtroReporteNombre) params.append('socio', this.filtroReporteNombre);
-          if (this.filtroReporteFechaInicio) params.append('fechaInicio', this.filtroReporteFechaInicio);
-          if (this.filtroReporteFechaFin) params.append('fechaFin', this.filtroReporteFechaFin);
-          if (this.filtroReporteDesdeHash) params.append('desdeHash', this.filtroReporteDesdeHash);
-
-          if (this.filtroReporteNombre) {
-            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
-            const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-            if (reg) {
-              const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
-              const valSaldo = aj.saldo_anterior !== undefined ? aj.saldo_anterior : reg.saldo_anterior;
-              this.saldoAnteriorReporte = valSaldo !== undefined && valSaldo !== null ? parseFloat(valSaldo) : 0;
-            }
-          }
-
-          try {
-            const res = await fetch(`/api/reportes?${params.toString()}`);
-            if (res.ok) {
-              const data = await res.json();
-              let filtrados = [];
-              if (this.filtroReporteNombre) {
-                filtrados = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
-              } else {
-                filtrados = data.filter(c => parseFloat(c.monto || 0) !== 0);
-              }
-              // Ordenamiento estricto cronológico ascendente (de menos a más por timestamp)
-              this.comprobantesReporte = filtrados.sort((a, b) => (parseInt(a.timestamp) || 0) - (parseInt(b.timestamp) || 0));
-            }
-          } catch (err) {
-            console.error("Error al cargar reportes:", err);
-          }
-        },
-        
         async eliminarComprobante(hash_largo) {
           if (!confirm('¿Deseas eliminar este comprobante de la tabla maestra?')) return;
           try {
