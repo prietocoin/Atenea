@@ -1843,6 +1843,42 @@
           }
         },
 
+async cargarReportes() {
+          const params = new URLSearchParams();
+          if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
+          if (this.filtroReporteNombre) params.append('socio', this.filtroReporteNombre);
+          if (this.filtroReporteFechaInicio) params.append('fechaInicio', this.filtroReporteFechaInicio);
+          if (this.filtroReporteFechaFin) params.append('fechaFin', this.filtroReporteFechaFin);
+          if (this.filtroReporteDesdeHash) params.append('desdeHash', this.filtroReporteDesdeHash);
+
+          if (this.filtroReporteNombre) {
+            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+            const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+            if (reg) {
+              const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
+              const valSaldo = aj.saldo_anterior !== undefined ? aj.saldo_anterior : reg.saldo_anterior;
+              this.saldoAnteriorReporte = valSaldo !== undefined && valSaldo !== null ? parseFloat(valSaldo) : 0;
+            }
+          }
+
+          try {
+            const res = await fetch(`/api/reportes?${params.toString()}`);
+            if (res.ok) {
+              const data = await res.json();
+              let filtrados = [];
+              if (this.filtroReporteNombre) {
+                filtrados = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
+              } else {
+                filtrados = data.filter(c => parseFloat(c.monto || 0) !== 0);
+              }
+              // Ordenamiento estricto cronológico ascendente (de menos a más por timestamp)
+              this.comprobantesReporte = filtrados.sort((a, b) => (parseInt(a.timestamp) || 0) - (parseInt(b.timestamp) || 0));
+            }
+          } catch (err) {
+            console.error("Error al cargar reportes:", err);
+          }
+        },
+        
         async eliminarComprobante(hash_largo) {
           if (!confirm('¿Deseas eliminar este comprobante de la tabla maestra?')) return;
           try {
