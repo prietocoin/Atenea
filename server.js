@@ -166,9 +166,11 @@ async function sincronizarComprobantesAuditadosFisico() {
       const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
       const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
 
+      // 1. Socio 1 dicta imperativamente el tipo
       let tipoOp1 = (r.tipo_op_s1 || 'D').trim().toUpperCase();
       if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
 
+      // 2. Socio 2 hereda exactamente el mismo tipo
       let tipoOp2 = tipoOp1;
 
       const aj1 = typeof r.ajustes_socio_1 === 'string' ? JSON.parse(r.ajustes_socio_1) : (r.ajustes_socio_1 || {});
@@ -180,7 +182,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
       const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
 
-      // SOCIO 1
+      // 3. SOCIO 1: TRUNCADO ESTRICTO DE TASA Y MONTO
       const tasaBaseSocio1 = parseFloat(r.tasa_base_socio_1) || 1.0;
       const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
       const tasa1Signed = tasaCross1 * factor1;
@@ -192,7 +194,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const m1Socio = aplicarReglaPrecision(m1Raw);
       const m1Usdt = tasaBaseSocio1 > 0 ? aplicarReglaPrecision(m1Socio / tasaBaseSocio1) : m1Socio;
 
-      // SOCIO 2
+      // 4. SOCIO 2: TRUNCADO ESTRICTO DE TASA Y MONTO
       const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
       const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
       const tasa2Signed = tasaCross2 * factor2;
@@ -525,7 +527,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER CENTRALIZADO CON ORDEN CRONOLÓGICO ASCENDENTE PARA REPORTES
+// HANDLER QUE RETORNA LOS DATOS FÍSICOS TRUNCADOS
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -623,7 +625,6 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
-    // ORDENA DE MENOS A MÁS (ASC) PARA REPORTES Y DE MÁS A MENOS (DESC) PARA COMPROBANTES
     query += esReporte ? ` ORDER BY timestamp_comprobante ASC;` : ` ORDER BY timestamp_comprobante DESC;`;
 
     const { rows } = await pool.query(query, values);
@@ -725,10 +726,11 @@ app.get('/api/reportes/filtros', async (req, res) => {
   }
 });
 
+// PUT CON ACTUALIZACIÓN DE TIPO DE OPERACIÓN Y RE-SINCRONIZACIÓN FÍSICA
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
     const { hash_largo } = req.params;
-    const { monto, moneda, banco, referencia, titular, nombre_socio_1, nombre_socio_2 } = req.body;
+    const { monto, moneda, banco, referencia, titular, nombre_socio_1, nombre_socio_2, tipo_manual, tasa_1, tasa_2 } = req.body;
 
     const queryMaster = `
       UPDATE comprobantes_fb
@@ -752,10 +754,24 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
       );
     }
 
+    // Actualiza la regla del Socio 1 en nombres_fb para la columna de esa moneda
+    const targetMoneda = (moneda || (rows[0] ? rows[0].moneda : '') || '').toLowerCase().trim();
+    const validCols = ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'];
+
+    if (tipo_manual && nombre_socio_1 && validCols.includes(targetMoneda)) {
+      const updateRuleQuery = `
+        UPDATE nombres_fb 
+        SET ${targetMoneda} = $1 
+        WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2));
+      `;
+      await pool.query(updateRuleQuery, [tipo_manual.toUpperCase().trim(), nombre_socio_1.trim()]);
+    }
+
     await sincronizarComprobantesAuditadosFisico();
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {
+    console.error('Error en PUT /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
