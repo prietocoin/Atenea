@@ -76,14 +76,20 @@
     <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 p-3 md:p-6 overflow-x-hidden flex flex-col">
       
-      <!-- VISTA COMPROBANTES -->
+      <!-- VISTA COMPROBANTES CON SALDO EDITABLE, FILTROS JERÁRQUICOS Y HASHES DINÁMICOS -->
       <template x-if="vistaActiva === 'comprobantes'">
         <div class="space-y-4 flex-1 flex flex-col">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
-            <h2 class="text-lg font-bold text-white tracking-wide">Gestión De Comprobantes & IA</h2>
-            <div class="flex items-center gap-2">
-              <button @click="cargarComprobantes()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/60 active:scale-95">
+            <div>
+              <h2 class="text-lg font-bold text-white tracking-wide">Gestión De Comprobantes & IA</h2>
+              <p class="text-xs text-slate-400">Auditoría centralizada con saldos en vivo, tasas editables y filtrado inteligente.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button @click="cargarComprobantes()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/60 active:scale-95" title="Actualizar">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              </button>
+              <button @click="modalVistaPreviaAbierto = true" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg flex items-center gap-1.5">
+                📄 Vista Previa
               </button>
               <span class="px-2.5 py-1 rounded-xl bg-purple-900/40 text-purple-300 text-xs font-semibold border border-purple-500/30">
                 <span x-text="comprobantes.length"></span> ítems
@@ -91,20 +97,94 @@
             </div>
           </div>
 
-          <!-- FILTROS COMPROBANTES -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
-            <select x-model="filtroSocio" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none">
-              <option value="">Todos los Socios</option>
-              <template x-for="s in socios" :key="s">
-                <option :value="s" x-text="s"></option>
-              </template>
-            </select>
-            <input type="date" x-model="filtroFecha" @change="cargarComprobantes()" class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none" />
-            <input type="text" x-model="filtroHash" @input.debounce.300ms="cargarComprobantes()" placeholder="Buscar Hash..." class="bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none" />
-            <label class="flex items-center gap-2 px-2.5 py-1.5 bg-[#1a1d33] border border-slate-700/80 rounded-lg cursor-pointer text-xs text-slate-300">
-              <input type="checkbox" x-model="soloDuplicados" @change="cargarComprobantes()" class="rounded bg-slate-800 border-slate-600 text-purple-600">
-              <span>Duplicados (>1)</span>
-            </label>
+          <!-- CARDS DE MÉTRICAS OPERATIVAS CON SALDO ANTERIOR EDITABLE Y SALDO ACTUAL CALCULADO -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 shrink-0">
+            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
+              <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Sujeto / Entidad Auditada</p>
+              <p class="text-base font-black text-white mt-1 truncate" x-text="filtroSocio || filtroReporteNombre || 'Todas las entidades'"></p>
+            </div>
+
+            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comprobantes Filtrados</p>
+              <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantes.length + ' operados'"></p>
+            </div>
+
+            <!-- SALDO ANTERIOR (EDITABLE EN TIEMPO REAL) -->
+            <div class="bg-[#131525] p-3 rounded-xl border border-amber-500/40 shadow-lg">
+              <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Saldo Anterior (Editable)</p>
+              <div class="flex items-center gap-1.5 mt-1">
+                <input type="number" step="0.01" x-model.number="saldoAnteriorReporte" class="w-full bg-[#1a1d33] border border-amber-500/50 rounded-lg px-2 py-0.5 text-amber-300 font-black text-base outline-none focus:border-amber-400">
+                <span class="text-xs font-bold text-amber-400 shrink-0" x-text="monedaBaseSocioComprobantes"></span>
+              </div>
+            </div>
+
+            <!-- MOVIMIENTO FILTRADO EN EL PERÍODO -->
+            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
+              <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Movimiento Filtrado</p>
+              <p class="text-base font-black mt-1" :class="totalMontoSocioComprobantes < 0 ? 'text-rose-400' : 'text-emerald-400'" x-text="formatMonto(totalMontoSocioComprobantes) + ' ' + monedaBaseSocioComprobantes"></p>
+            </div>
+
+            <!-- SALDO ACTUAL (CÁLCULO EN VIVO: SALDO ANTERIOR + MOVIMIENTO) -->
+            <div class="bg-[#131525] p-3 rounded-xl border bg-emerald-950/20 shadow-lg" :class="nuevoSaldoComprobantes < 0 ? 'border-rose-500/50' : 'border-emerald-500/50'">
+              <p class="text-[10px] font-bold uppercase tracking-widest" :class="nuevoSaldoComprobantes < 0 ? 'text-rose-300' : 'text-emerald-300'">Saldo Actual (Total)</p>
+              <p class="text-base font-black mt-1" :class="nuevoSaldoComprobantes < 0 ? 'text-rose-400' : 'text-emerald-300'" x-text="formatMonto(nuevoSaldoComprobantes) + ' ' + monedaBaseSocioComprobantes"></p>
+            </div>
+          </div>
+
+          <!-- BARRA DE FILTROS COMPLEMENTADA (ROL, SOCIO, FECHAS, DESDE HASH X Y BÚSQUEDA) -->
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
+            <div>
+              <label class="block text-[9px] font-bold text-emerald-400 uppercase mb-0.5">1. Rol</label>
+              <select x-model="filtroReporteRol" @change="cargarComprobantes()" class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none">
+                <option value="">Todos los Roles</option>
+                <option value="SOCIO">SOCIO</option>
+                <option value="ASESOR">ASESOR</option>
+                <option value="GRUPO">GRUPO</option>
+                <option value="COMPRAS">COMPRAS</option>
+                <option value="MATRIZ_GENERAL">MATRIZ_GENERAL</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">2. Socio / Entidad</label>
+              <select x-model="filtroSocio" @change="filtroReporteNombre = filtroSocio; cargarComprobantes()" class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none">
+                <option value="">Todos los Socios</option>
+                <template x-for="s in sociosFiltradosPorRol" :key="s">
+                  <option :value="s" x-text="s"></option>
+                </template>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">3. Fecha Inicio</label>
+              <input type="date" x-model="filtroFecha" @change="cargarComprobantes()" class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">4. Fecha Fin</label>
+              <input type="date" x-model="filtroFechaFin" @change="cargarComprobantes()" class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-bold text-amber-400 uppercase mb-0.5">5. Desde Hash X</label>
+              <select x-model="filtroReporteDesdeHash" @change="cargarComprobantes()" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-mono font-bold rounded-lg px-2 py-1.5 outline-none">
+                <option value="">NINGUNO (TODOS)</option>
+                <template x-for="h in listaHashesDisponibles" :key="h">
+                  <option :value="h" x-text="h"></option>
+                </template>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <div class="flex-1">
+                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Buscar Hash</label>
+                <input type="text" x-model="filtroHash" @input.debounce.300ms="cargarComprobantes()" placeholder="Buscar Hash..." class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none" />
+              </div>
+              <label class="flex items-center gap-1 px-2 py-2 bg-[#1a1d33] border border-slate-700/80 rounded-lg cursor-pointer text-[10px] text-slate-300 mt-3 shrink-0">
+                <input type="checkbox" x-model="soloDuplicados" @change="cargarComprobantes()" class="rounded bg-slate-800 border-slate-600 text-purple-600">
+                <span>Dup</span>
+              </label>
+            </div>
           </div>
 
           <!-- 📱 VISTA MÓVIL COMPROBANTES -->
@@ -209,7 +289,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO COMPROBANTES -->
+          <!-- 💻 VISTA ESCRITORIO COMPROBANTES CON CAMPOS DE TASAS EDITABLES Y EDICIÓN COMPLETA -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -240,7 +320,7 @@
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-1">
                           <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 font-mono text-[10px] border border-purple-500/30 font-bold" x-text="item.hash_corto"></span>
-                          <button @click="abrirModal(item)" class="p-1 rounded text-slate-400 hover:text-purple-300 hover:bg-purple-900/40 transition-all">
+                          <button @click="abrirModal(item)" class="p-1 rounded text-slate-400 hover:text-purple-300 hover:bg-purple-900/40 transition-all" title="Auditar / Editar Transacción">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           </button>
                         </div>
@@ -286,14 +366,17 @@
 
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1.5">
+                          <!-- SOCIO 1 Y TASA 1 EDITABLE -->
                           <div class="flex flex-col">
-                            <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
+                            <div class="flex items-center justify-between gap-1">
+                              <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
+                              <button @click="abrirModal(item)" class="text-[9px] text-purple-400 hover:text-purple-200 font-mono font-bold bg-purple-950/60 px-1 py-0.2 rounded border border-purple-500/30">
+                                <span x-text="'T1: ' + formatTasa(item.tasa_1)"></span> ✏️
+                              </button>
+                            </div>
                             <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
-                              <template x-if="item.tasa_1">
-                                <span class="text-purple-400 font-bold" x-text="'T1: ' + formatTasa(item.tasa_1) + ' ' + (item.moneda !== item.moneda_socio_1 ? item.moneda + '/' + item.moneda_socio_1 : '')"></span>
-                              </template>
                               <template x-if="item.m1_socio !== undefined">
-                                <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: ' + formatMonto(item.m1_socio) + ' ' + item.moneda_socio_1"></span>
+                                <span class="text-emerald-300 font-black bg-purple-950/70 px-1 rounded border border-purple-500/30" x-text="'M1: ' + formatMonto(item.m1_socio) + ' ' + (item.moneda_socio_1 || 'USDT')"></span>
                               </template>
                               <template x-if="item.m1_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_1)">
                                 <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m1_usdt) + ' USD)'"></span>
@@ -301,15 +384,18 @@
                             </div>
                           </div>
 
+                          <!-- SOCIO 2 (INCLUYENDO CHASAN) Y TASA 2 EDITABLE -->
                           <template x-if="item.nombre_socio_2">
                             <div class="flex flex-col border-t border-slate-800/60 pt-1">
-                              <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
+                              <div class="flex items-center justify-between gap-1">
+                                <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
+                                <button @click="abrirModal(item)" class="text-[9px] text-pink-400 hover:text-pink-200 font-mono font-bold bg-pink-950/60 px-1 py-0.2 rounded border border-pink-500/30">
+                                  <span x-text="'T2: ' + formatTasa(item.tasa_2)"></span> ✏️
+                                </button>
+                              </div>
                               <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
-                                <template x-if="item.tasa_2">
-                                  <span class="text-pink-400 font-bold" x-text="'T2: ' + formatTasa(item.tasa_2) + ' ' + (item.moneda !== item.moneda_socio_2 ? item.moneda + '/' + item.moneda_socio_2 : '')"></span>
-                                </template>
                                 <template x-if="item.m2_socio !== undefined">
-                                  <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: ' + formatMonto(item.m2_socio) + ' ' + item.moneda_socio_2"></span>
+                                  <span class="text-emerald-300 font-black bg-pink-950/70 px-1 rounded border border-pink-500/30" x-text="'M2: ' + formatMonto(item.m2_socio) + ' ' + (item.moneda_socio_2 || 'USDT')"></span>
                                 </template>
                                 <template x-if="item.m2_usdt !== undefined && !['USD','USDT','PYUSD'].includes(item.moneda_socio_2)">
                                   <span class="text-slate-400 font-bold text-[8px]" x-text="'(≈ $' + formatMonto(item.m2_usdt) + ' USD)'"></span>
@@ -638,7 +724,7 @@
         </div>
       </template>
 
-      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE CON TASAS Y FACTORES VISIBLES -->
+      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE CON TASAS Y FACTORES EDITABLES (SOCIO 1 Y SOCIO 2 / CHASAN) -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -673,19 +759,20 @@
                   <input type="text" x-model="itemEdicion.nombre_socio_1" @input="itemEdicion.tipo_manual = getCodigoOperativo(itemEdicion.nombre_socio_1, itemEdicion.moneda)" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-purple-200 uppercase outline-none focus:border-purple-500">
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Socio 2</label>
+                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Socio 2 (Ej: CHASAN)</label>
                   <input type="text" x-model="itemEdicion.nombre_socio_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-200 uppercase outline-none focus:border-purple-500">
                 </div>
               </div>
 
+              <!-- EDICIÓN HABILITADA Y SOBREESCRITURA DE TASAS DE AMBOS SOCIOS -->
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Tasa Socio 1</label>
-                  <input type="number" step="any" x-model="itemEdicion.tasa_1" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold outline-none focus:border-purple-500">
+                  <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Número / Valor Tasa 1</label>
+                  <input type="number" step="any" x-model="itemEdicion.tasa_1" placeholder="Ej: 3.37" class="w-full bg-[#1a1d33] border border-purple-500/50 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold outline-none focus:border-purple-400">
                 </div>
                 <div>
-                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Tasa Socio 2</label>
-                  <input type="number" step="any" x-model="itemEdicion.tasa_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-300 font-mono font-bold outline-none focus:border-purple-500">
+                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Número / Valor Tasa 2</label>
+                  <input type="number" step="any" x-model="itemEdicion.tasa_2" placeholder="Ej: -3.3" class="w-full bg-[#1a1d33] border border-pink-500/50 rounded-lg px-2.5 py-1.5 text-xs text-pink-300 font-mono font-bold outline-none focus:border-pink-400">
                 </div>
               </div>
 
@@ -995,7 +1082,7 @@
             <button @click="modalVistaPreviaAbierto = false" class="absolute top-0 right-0 sm:hidden text-slate-500 hover:text-slate-800 text-base font-bold">✕</button>
 
             <div class="pr-6 sm:pr-0">
-              <h1 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroReporteNombre || 'SOCIO')"></h1>
+              <h1 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroSocio || filtroReporteNombre || 'SOCIO')"></h1>
               <div class="text-[11px] sm:text-xs text-emerald-950 font-bold mt-1">
                 <span>Saldo anterior:</span>
                 <span class="font-black text-xs sm:text-sm ml-1" x-text="formatMonto(saldoAnteriorReporte)"></span>
@@ -1019,7 +1106,7 @@
               <div class="w-16 sm:w-24 shrink-0 text-right">Saldos</div>
             </div>
 
-            <template x-for="c in comprobantesReporte" :key="c.hash_largo">
+            <template x-for="c in (comprobantesReporte.length ? comprobantesReporte : comprobantes)" :key="c.hash_largo">
               <div class="flex items-start border-b border-dashed border-slate-300 py-1.5 text-[10px] sm:text-[11px]">
                 <div class="w-16 sm:w-24 shrink-0 text-slate-700 font-bold leading-tight" x-text="formatFechaVE(c.timestamp).split(',')[0]"></div>
                 <div class="flex-1 text-slate-800 px-1 leading-relaxed break-words">
@@ -1045,7 +1132,7 @@
 
             <div class="bg-[#dcf0d8] border border-emerald-700/40 rounded-xl px-3 sm:px-5 py-1.5 sm:py-2.5 text-right flex items-center gap-2 sm:gap-4 shrink-0">
               <span class="text-[10px] sm:text-xs font-bold text-emerald-950 uppercase">Nuevo saldo</span>
-              <span class="text-lg sm:text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoReporte)"></span>
+              <span class="text-lg sm:text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoReporte || nuevoSaldoComprobantes)"></span>
             </div>
           </div>
 
@@ -1066,6 +1153,7 @@
         ultimoLoteId: '',
         filtroSocio: '',
         filtroFecha: '',
+        filtroFechaFin: '',
         filtroHash: '',
         soloDuplicados: false,
         modalAbierto: false,
@@ -1159,14 +1247,36 @@
           await this.cargarReportes();
         },
 
+        get totalMontoSocioComprobantes() {
+          if (!this.comprobantes || !this.comprobantes.length) return 0;
+          return this.comprobantes.reduce((acc, c) => acc + (parseFloat(this.obtenerMontoSocioCalculado(c)) || 0), 0);
+        },
+
+        get nuevoSaldoComprobantes() {
+          const saldoAnt = parseFloat(this.saldoAnteriorReporte) || 0;
+          return saldoAnt + this.totalMontoSocioComprobantes;
+        },
+
+        get monedaBaseSocioComprobantes() {
+          const target = this.filtroSocio || this.filtroReporteNombre;
+          if (!target) return 'USDT';
+          const socioNorm = target.trim().toUpperCase();
+          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+          if (reg && reg.moneda_socio) {
+            return (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio).toUpperCase();
+          }
+          return 'USDT';
+        },
+
         get nuevoSaldoReporte() {
           const saldoAnt = parseFloat(this.saldoAnteriorReporte) || 0;
           return saldoAnt + this.totalMontoSocioReporte;
         },
 
         get jidSocioReporte() {
-          if (!this.filtroReporteNombre) return '';
-          const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+          const target = this.filtroReporteNombre || this.filtroSocio;
+          if (!target) return '';
+          const socioNorm = target.trim().toUpperCase();
           const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
           return reg ? (reg.whatsapp || reg.id_grupo || '') : '';
         },
@@ -1183,7 +1293,7 @@
             };
           }
 
-          const socioNorm = (this.filtroReporteNombre || '').trim().toUpperCase();
+          const socioNorm = (this.filtroSocio || this.filtroReporteNombre || '').trim().toUpperCase();
           let esSocio1 = true;
           let tasaAplicada = c.tasa_1 !== undefined && c.tasa_1 !== null ? parseFloat(c.tasa_1) : (c.tasa_base || 1.0);
           let montoBase = c.m1_socio !== undefined ? parseFloat(c.m1_socio) : parseFloat(c.monto);
@@ -1226,13 +1336,13 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                socio: this.filtroReporteNombre,
+                socio: this.filtroReporteNombre || this.filtroSocio,
                 remoteJid: jid,
                 saldoAnterior: this.saldoAnteriorReporte,
-                movimiento: this.totalMontoSocioReporte,
-                nuevoSaldo: this.nuevoSaldoReporte,
-                moneda: this.monedaBaseSocioReporte,
-                comprobantes: this.comprobantesReporte
+                movimiento: this.totalMontoSocioReporte || this.totalMontoSocioComprobantes,
+                nuevoSaldo: this.nuevoSaldoReporte || this.nuevoSaldoComprobantes,
+                moneda: this.monedaBaseSocioReporte || this.monedaBaseSocioComprobantes,
+                comprobantes: this.comprobantesReporte.length ? this.comprobantesReporte : this.comprobantes
               })
             });
 
@@ -1273,23 +1383,25 @@
             );
           }
 
-          if (this.filtroReporteNombre) {
-            const nombreNorm = this.filtroReporteNombre.trim().toUpperCase();
+          if (this.filtroSocio || this.filtroReporteNombre) {
+            const nombreNorm = (this.filtroSocio || this.filtroReporteNombre).trim().toUpperCase();
             items = items.filter(c => 
               (c.nombre_socio_1 && c.nombre_socio_1.trim().toUpperCase() === nombreNorm) ||
               (c.nombre_socio_2 && c.nombre_socio_2.trim().toUpperCase() === nombreNorm)
             );
           }
 
-          if (this.filtroReporteFechaInicio) {
-            const startTs = Math.floor(new Date(this.filtroReporteFechaInicio.trim() + 'T00:00:00-04:00').getTime() / 1000);
+          if (this.filtroFecha || this.filtroReporteFechaInicio) {
+            const fIn = this.filtroFecha || this.filtroReporteFechaInicio;
+            const startTs = Math.floor(new Date(fIn.trim() + 'T00:00:00-04:00').getTime() / 1000);
             if (!isNaN(startTs)) {
               items = items.filter(c => c.timestamp >= startTs);
             }
           }
 
-          if (this.filtroReporteFechaFin) {
-            const endTs = Math.floor(new Date(this.filtroReporteFechaFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
+          if (this.filtroFechaFin || this.filtroReporteFechaFin) {
+            const fFin = this.filtroFechaFin || this.filtroReporteFechaFin;
+            const endTs = Math.floor(new Date(fFin.trim() + 'T23:59:59-04:00').getTime() / 1000);
             if (!isNaN(endTs)) {
               items = items.filter(c => c.timestamp <= endTs);
             }
@@ -1303,8 +1415,9 @@
         },
 
         get monedaBaseSocioReporte() {
-          if (!this.filtroReporteNombre) return 'USDT';
-          const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+          const target = this.filtroReporteNombre || this.filtroSocio;
+          if (!target) return 'USDT';
+          const socioNorm = target.trim().toUpperCase();
           const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
           if (reg && reg.moneda_socio) {
             return (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio).toUpperCase();
@@ -1319,7 +1432,7 @@
         },
 
         obtenerMontoSocioCalculado(c) {
-          if (c.monto_socio_final !== undefined) return parseFloat(c.monto_socio_final) || 0;
+          if (c.monto_socio_final !== undefined && (this.filtroSocio || this.filtroReporteNombre)) return parseFloat(c.monto_socio_final) || 0;
           const info = this.obtenerInformacionSocioOperacion(c);
           return info.montoCalculado;
         },
@@ -1389,13 +1502,14 @@
         async cargarReportes() {
           const params = new URLSearchParams();
           if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
-          if (this.filtroReporteNombre) params.append('socio', this.filtroReporteNombre);
-          if (this.filtroReporteFechaInicio) params.append('fechaInicio', this.filtroReporteFechaInicio);
-          if (this.filtroReporteFechaFin) params.append('fechaFin', this.filtroReporteFechaFin);
+          if (this.filtroReporteNombre || this.filtroSocio) params.append('socio', this.filtroReporteNombre || this.filtroSocio);
+          if (this.filtroReporteFechaInicio || this.filtroFecha) params.append('fechaInicio', this.filtroReporteFechaInicio || this.filtroFecha);
+          if (this.filtroReporteFechaFin || this.filtroFechaFin) params.append('fechaFin', this.filtroReporteFechaFin || this.filtroFechaFin);
           if (this.filtroReporteDesdeHash) params.append('desdeHash', this.filtroReporteDesdeHash);
 
-          if (this.filtroReporteNombre) {
-            const socioNorm = this.filtroReporteNombre.trim().toUpperCase();
+          const target = this.filtroReporteNombre || this.filtroSocio;
+          if (target) {
+            const socioNorm = target.trim().toUpperCase();
             const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
             if (reg) {
               const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
@@ -1409,12 +1523,11 @@
             if (res.ok) {
               const data = await res.json();
               let filtrados = [];
-              if (this.filtroReporteNombre) {
+              if (target) {
                 filtrados = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
               } else {
                 filtrados = data.filter(c => parseFloat(c.monto || 0) !== 0);
               }
-              // Ordenamiento estricto cronológico ascendente (de menos a más por timestamp)
               this.comprobantesReporte = filtrados.sort((a, b) => (parseInt(a.timestamp) || 0) - (parseInt(b.timestamp) || 0));
             }
           } catch (err) {
@@ -1580,9 +1693,22 @@
         async cargarComprobantes() {
           const params = new URLSearchParams();
           if (this.filtroSocio) params.append('socio', this.filtroSocio);
+          if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
           if (this.filtroFecha) params.append('fechaInicio', this.filtroFecha);
+          if (this.filtroFechaFin) params.append('fechaFin', this.filtroFechaFin);
+          if (this.filtroReporteDesdeHash) params.append('desdeHash', this.filtroReporteDesdeHash);
           if (this.filtroHash) params.append('hash', this.filtroHash);
           params.append('soloDuplicados', this.soloDuplicados ? 'true' : 'false');
+
+          if (this.filtroSocio) {
+            const socioNorm = this.filtroSocio.trim().toUpperCase();
+            const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
+            if (reg) {
+              const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
+              const valSaldo = aj.saldo_anterior !== undefined ? aj.saldo_anterior : reg.saldo_anterior;
+              this.saldoAnteriorReporte = valSaldo !== undefined && valSaldo !== null ? parseFloat(valSaldo) : 0;
+            }
+          }
 
           try {
             const res = await fetch(`/api/comprobantes?${params.toString()}`);
@@ -1847,6 +1973,7 @@
             if (res.ok) {
               this.modalAbierto = false;
               await this.cargarComprobantes();
+              await this.cargarReportes();
             }
           } catch (err) {
             console.error("Error al guardar cambios:", err);
@@ -1860,6 +1987,7 @@
             if (res.ok) {
               this.modalAbierto = false;
               await this.cargarComprobantes();
+              await this.cargarReportes();
             }
           } catch (err) {
             console.error("Error al eliminar comprobante:", err);
