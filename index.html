@@ -52,21 +52,11 @@
             Baúl & Cartelera Tasas
           </button>
 
-          <button @click="vistaActiva = 'reportes'" :class="vistaActiva === 'reportes' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
-            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            Reportes & Resumen
-          </button>
-
           <div class="pt-4 space-y-1">
             <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Base de Datos & Matriz</p>
             <button @click="vistaActiva = 'directorio'" :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
               <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
               Directorio (nombres_fb)
-            </button>
-
-            <button @click="abrirConfigGeneral()" :class="modalConfigSocioAbierto && socioConfigEdit.nombre === 'GENERAL' ? 'bg-amber-500/30 text-amber-300 border border-amber-500/60 shadow-lg' : 'text-slate-400 hover:bg-amber-500/10 hover:text-amber-300'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all border border-transparent">
-              <span class="text-amber-400">🌐</span>
-              Matriz General (Remesas)
             </button>
           </div>
         </nav>
@@ -289,7 +279,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO COMPROBANTES CON CAMPOS DE TASAS EDITABLES Y EDICIÓN COMPLETA -->
+          <!-- 💻 VISTA ESCRITORIO COMPROBANTES CON LOTE DE TASA VISIBLE Y EDICIÓN RÁPIDA -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -347,7 +337,9 @@
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-1.5">
                           <template x-if="item.lote_tasa_asignado">
-                            <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[10px] font-mono font-bold border border-purple-500/30" x-text="item.lote_tasa_asignado"></span>
+                            <button @click="abrirModal(item)" class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 hover:bg-purple-800/60 text-[10px] font-mono font-bold border border-purple-500/30 transition-colors" title="Cambiar Número de Tasa / Lote">
+                              <span x-text="item.lote_tasa_asignado"></span> ✏️
+                            </button>
                           </template>
                           <template x-if="item.tipo_op">
                             <button @click="abrirModal(item)" :class="claseInsignia(item.tipo_op)" class="px-1.5 py-0.5 rounded text-[10px] font-black border uppercase hover:opacity-80">
@@ -366,13 +358,11 @@
 
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex flex-col gap-1.5">
-                          <!-- SOCIO 1 Y TASA 1 EDITABLE -->
+                          <!-- SOCIO 1 Y SU VALOR DE TASA APLICADA -->
                           <div class="flex flex-col">
                             <div class="flex items-center justify-between gap-1">
                               <span class="font-bold text-purple-300 text-[11px]" x-text="item.nombre_socio_1 || '-'"></span>
-                              <button @click="abrirModal(item)" class="text-[9px] text-purple-400 hover:text-purple-200 font-mono font-bold bg-purple-950/60 px-1 py-0.2 rounded border border-purple-500/30">
-                                <span x-text="'T1: ' + formatTasa(item.tasa_1)"></span> ✏️
-                              </button>
+                              <span class="text-[9px] text-purple-400 font-mono font-bold bg-purple-950/60 px-1 py-0.2 rounded border border-purple-500/30" x-text="'T1: ' + formatTasa(item.tasa_1)"></span>
                             </div>
                             <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
                               <template x-if="item.m1_socio !== undefined">
@@ -384,14 +374,12 @@
                             </div>
                           </div>
 
-                          <!-- SOCIO 2 (INCLUYENDO CHASAN) Y TASA 2 EDITABLE -->
+                          <!-- SOCIO 2 (INCLUYENDO CHASAN) Y SU VALOR DE TASA APLICADA -->
                           <template x-if="item.nombre_socio_2">
                             <div class="flex flex-col border-t border-slate-800/60 pt-1">
                               <div class="flex items-center justify-between gap-1">
                                 <span class="font-bold text-pink-300 text-[11px]" x-text="item.nombre_socio_2"></span>
-                                <button @click="abrirModal(item)" class="text-[9px] text-pink-400 hover:text-pink-200 font-mono font-bold bg-pink-950/60 px-1 py-0.2 rounded border border-pink-500/30">
-                                  <span x-text="'T2: ' + formatTasa(item.tasa_2)"></span> ✏️
-                                </button>
+                                <span class="text-[9px] text-pink-400 font-mono font-bold bg-pink-950/60 px-1 py-0.2 rounded border border-pink-500/30" x-text="'T2: ' + formatTasa(item.tasa_2)"></span>
                               </div>
                               <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono mt-0.5">
                                 <template x-if="item.m2_socio !== undefined">
@@ -492,160 +480,6 @@
         </div>
       </template>
 
-      <!-- VISTA REPORTES CON SALDO ANTERIOR EDITABLE, SALDO ACTUAL Y VISTA PREVIA IMPRIMIBLE -->
-      <template x-if="vistaActiva === 'reportes'">
-        <div class="space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-bold text-white tracking-wide">Resumen de Operaciones & Reportes</h2>
-              <p class="text-xs text-slate-400">Filtrado ordenado jerárquicamente por Rol, Nombre, Rango de Fechas (GMT-4 VET) y Hash.</p>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <button @click="cargarReportes()" class="px-4 py-2 bg-purple-600/30 text-purple-300 border border-purple-500/50 rounded-xl text-xs font-bold hover:bg-purple-600/50 shadow-md">
-                🔍 Aplicar Filtros de Reporte
-              </button>
-              <button @click="modalVistaPreviaAbierto = true" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all shadow-lg flex items-center gap-1.5">
-                📄 Vista Previa de Reporte
-              </button>
-            </div>
-          </div>
-
-          <!-- BARRA DE FILTROS EN ORDEN DE JERARQUÍA EXACTO -->
-          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5 bg-[#131525] p-3 rounded-2xl border border-slate-800 shadow-xl">
-            
-            <!-- 1. FILTRO ROL (JERARQUÍA 1) -->
-            <div>
-              <label class="block text-[9px] font-bold text-emerald-400 uppercase mb-1">1. Rol (Separación Aritmética)</label>
-              <select x-model="filtroReporteRol" @change="filtroReporteNombre = ''; cargarReportes()" class="w-full bg-[#1a1d33] border border-emerald-500/50 text-xs text-emerald-300 font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-500">
-                <option value="">Todos los Roles</option>
-                <option value="SOCIO">SOCIO</option>
-                <option value="ASESOR">ASESOR</option>
-                <option value="GRUPO">GRUPO</option>
-                <option value="COMPRAS">COMPRAS</option>
-                <option value="MATRIZ_GENERAL">MATRIZ_GENERAL</option>
-              </select>
-            </div>
-
-            <!-- 2. FILTRO NOMBRE / SOCIO (JERARQUÍA 2 - EN CASCADA CON ROL) -->
-            <div>
-              <label class="block text-[9px] font-bold text-purple-400 uppercase mb-1">2. Nombre (Socio/Grupo/Asesor)</label>
-              <select x-model="filtroReporteNombre" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 font-bold outline-none focus:border-purple-500">
-                <option value="">Todos los Nombres</option>
-                <template x-for="s in sociosFiltradosPorRol" :key="s">
-                  <option :value="s" x-text="s"></option>
-                </template>
-              </select>
-            </div>
-
-            <!-- 3. FECHA INICIO (GMT-4 VET) -->
-            <div>
-              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">3. Fecha Inicio (GMT-4 VET)</label>
-              <input type="date" x-model="filtroReporteFechaInicio" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500" />
-            </div>
-
-            <!-- 4. FECHA FIN (GMT-4 VET) -->
-            <div>
-              <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">4. Fecha Fin (GMT-4 VET)</label>
-              <input type="date" x-model="filtroReporteFechaFin" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500" />
-            </div>
-
-            <!-- 5. SELECTOR DE HASHES FILTRADOS SEGÚN EL SOCIO Y FECHA -->
-            <div>
-              <label class="block text-[9px] font-bold text-amber-400 uppercase mb-1">5. Desde Hash X en Adelante</label>
-              <select x-model="filtroReporteDesdeHash" @change="cargarReportes()" class="w-full bg-[#1a1d33] border border-amber-500/50 text-xs text-amber-300 font-mono font-bold rounded-lg px-2.5 py-1.5 outline-none focus:border-amber-500">
-                <option value="">NINGUNO (TODOS)</option>
-                <template x-for="h in listaHashesDisponibles" :key="h">
-                  <option :value="h" x-text="h"></option>
-                </template>
-              </select>
-            </div>
-
-          </div>
-
-          <!-- CARDS DE MÉTRICAS CON SALDO ANTERIOR EDITABLE Y SALDO ACTUAL CALCULADO -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
-              <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Sujeto / Entidad Auditada</p>
-              <p class="text-base font-black text-white mt-1 truncate" x-text="filtroReporteNombre || 'Todas las entidades'"></p>
-            </div>
-
-            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comprobantes Filtrados</p>
-              <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantesReporte.length + ' operados'"></p>
-            </div>
-
-            <!-- SALDO ANTERIOR (EDITABLE O AUTOCARGADO DEL PERFIL) -->
-            <div class="bg-[#131525] p-3 rounded-xl border border-amber-500/40 shadow-lg">
-              <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Saldo Anterior (Editable)</p>
-              <div class="flex items-center gap-1.5 mt-1">
-                <input type="number" step="0.01" x-model.number="saldoAnteriorReporte" class="w-full bg-[#1a1d33] border border-amber-500/50 rounded-lg px-2 py-0.5 text-amber-300 font-black text-base outline-none focus:border-amber-400">
-                <span class="text-xs font-bold text-amber-400 shrink-0" x-text="monedaBaseSocioReporte"></span>
-              </div>
-            </div>
-
-            <!-- MOVIMIENTO FILTRADO EN EL PERÍODO -->
-            <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
-              <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Movimiento Filtrado</p>
-              <p class="text-base font-black mt-1" :class="totalMontoSocioReporte < 0 ? 'text-rose-400' : 'text-emerald-400'" x-text="formatMonto(totalMontoSocioReporte) + ' ' + monedaBaseSocioReporte"></p>
-            </div>
-
-            <!-- SALDO ACTUAL (TOTAL CÁLCULO EN VIVO) -->
-            <div class="bg-[#131525] p-3 rounded-xl border bg-emerald-950/20 shadow-lg" :class="nuevoSaldoReporte < 0 ? 'border-rose-500/50' : 'border-emerald-500/50'">
-              <p class="text-[10px] font-bold uppercase tracking-widest" :class="nuevoSaldoReporte < 0 ? 'text-rose-300' : 'text-emerald-300'">Saldo Actual (Total)</p>
-              <p class="text-base font-black mt-1" :class="nuevoSaldoReporte < 0 ? 'text-rose-400' : 'text-emerald-300'" x-text="formatMonto(nuevoSaldoReporte) + ' ' + monedaBaseSocioReporte"></p>
-            </div>
-          </div>
-
-          <!-- TABLA DE MOVIMIENTOS CON TASA Y MONEDA SOCIO DEBIDAMENTE MOSTRADAS -->
-          <div class="bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl">
-            <div class="p-3 border-b border-slate-800 bg-[#171a2e] flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-300 uppercase">Detalle de Operaciones Filtradas</span>
-              <span class="text-[10px] text-purple-400 font-mono font-bold">Zona Horaria: VET (GMT-4)</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr class="text-slate-400 border-b border-slate-800 bg-[#111322] uppercase font-bold text-[10px]">
-                    <th class="px-3 py-2.5">FECHA/HORA (VET)</th>
-                    <th class="px-3 py-2.5">HASH</th>
-                    <th class="px-3 py-2.5">DESCRIPCIÓN DEL COMPROBANTE</th>
-                    <th class="px-3 py-2.5">LOTE / TASAS</th>
-                    <th class="px-3 py-2.5 text-right">MONTO ORIGEN</th>
-                    <th class="px-3 py-2.5 text-right">MONTO & MONEDA SOCIO</th>
-                    <th class="px-3 py-2.5 text-right">EQUIV. USD</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-                  <template x-for="c in comprobantesReporte" :key="c.hash_largo">
-                    <tr class="hover:bg-slate-800/30 transition-colors">
-                      <td class="px-3 py-2 align-middle text-slate-400 font-mono whitespace-nowrap" x-text="formatFechaVE(c.timestamp)"></td>
-                      <!-- COLUMNA HASH CON FORMATO [TIPO-HASH] -->
-                      <td class="px-3 py-2 align-middle font-mono font-bold text-purple-300 whitespace-nowrap" x-text="obtenerEtiquetaHash(c)"></td>
-                      <td class="px-3 py-2 align-middle">
-                        <div class="flex flex-col">
-                          <span class="font-bold text-slate-200" x-text="c.titular || 'Sin Titular'"></span>
-                          <span class="text-[9px] text-slate-400" x-text="'Banco: ' + (c.banco || '-') + ' | Moneda: ' + c.moneda"></span>
-                        </div>
-                      </td>
-
-                      <td class="px-3 py-2 align-middle whitespace-nowrap">
-                        <span class="px-1.5 py-0.5 rounded bg-purple-900/40 text-purple-300 text-[9px] font-mono font-bold border border-purple-500/30" x-text="c.lote_tasa_asignado || 'N/A'"></span>
-                        <span class="text-[9px] text-slate-400 font-mono block mt-0.5" x-text="'Base: ' + (c.tasa_base || c.tasa_mercado_aplicada || '0')"></span>
-                        <span class="text-[9px] font-mono font-bold text-emerald-300 block mt-0.5" x-text="'Tasa Socio: ' + formatTasa(obtenerTasaSocioCalculada(c))"></span>
-                      </td>
-
-                      <td class="px-3 py-2 align-middle text-right font-bold text-slate-300 whitespace-nowrap" x-text="formatMonto(c.monto) + ' ' + c.moneda"></td>
-                      <td class="px-3 py-2 align-middle text-right font-black whitespace-nowrap" :class="obtenerMontoSocioCalculado(c) < 0 ? 'text-rose-400' : 'text-emerald-400'" x-text="formatMonto(obtenerMontoSocioCalculado(c)) + ' ' + obtenerMonedaSocioCalculada(c)"></td>
-                      <td class="px-3 py-2 align-middle text-right font-bold text-slate-400 whitespace-nowrap" x-text="'$' + formatMonto(c.monto_usd_equivalente)"></td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </template>
-
       <!-- VISTA DIRECTORIO DE SOCIOS -->
       <template x-if="vistaActiva === 'directorio'">
         <div class="space-y-4">
@@ -724,7 +558,7 @@
         </div>
       </template>
 
-      <!-- MODAL 1: AUDITORÍA DE COMPROBANTE CON TASAS Y FACTORES EDITABLES (SOCIO 1 Y SOCIO 2 / CHASAN) -->
+      <!-- MODAL 1: AUDITAR COMPROBANTE - EDICIÓN DEL NÚMERO DE TASA / LOTE ASIGNADO (EJ: T014) -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -733,11 +567,17 @@
               <h3 class="font-bold text-white text-sm">Auditar Comprobante</h3>
               <span class="text-xs text-purple-400 font-mono font-bold bg-purple-900/30 px-1.5 rounded" x-text="itemEdicion ? itemEdicion.hash_corto : ''"></span>
             </div>
-            <button @click="modalAbierto = false" class="text-slate-400 hover:text-white text-sm">✕</button>
+            <button type="button" @click="modalAbierto = false" class="text-slate-400 hover:text-white text-sm">✕</button>
           </div>
 
           <template x-if="itemEdicion">
             <div class="space-y-3">
+              <!-- NÚMERO / CÓDIGO DE TASA / LOTE ASIGNADO (EDITABLE) -->
+              <div>
+                <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Número de Tasa / Lote (Ej: T014)</label>
+                <input type="text" x-model="itemEdicion.lote_tasa_asignado" placeholder="Ej: T014" class="w-full bg-[#1a1d33] border border-purple-500/50 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold uppercase outline-none focus:border-purple-400">
+              </div>
+
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Monto</label>
@@ -761,18 +601,6 @@
                 <div>
                   <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Socio 2 (Ej: CHASAN)</label>
                   <input type="text" x-model="itemEdicion.nombre_socio_2" class="w-full bg-[#1a1d33] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-pink-200 uppercase outline-none focus:border-purple-500">
-                </div>
-              </div>
-
-              <!-- EDICIÓN HABILITADA Y SOBREESCRITURA DE TASAS DE AMBOS SOCIOS -->
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Número / Valor Tasa 1</label>
-                  <input type="number" step="any" x-model="itemEdicion.tasa_1" placeholder="Ej: 3.37" class="w-full bg-[#1a1d33] border border-purple-500/50 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold outline-none focus:border-purple-400">
-                </div>
-                <div>
-                  <label class="block text-[9px] font-bold text-pink-400 uppercase mb-0.5">Número / Valor Tasa 2</label>
-                  <input type="number" step="any" x-model="itemEdicion.tasa_2" placeholder="Ej: -3.3" class="w-full bg-[#1a1d33] border border-pink-500/50 rounded-lg px-2.5 py-1.5 text-xs text-pink-300 font-mono font-bold outline-none focus:border-pink-400">
                 </div>
               </div>
 
@@ -805,10 +633,10 @@
               </div>
 
               <div class="flex items-center justify-between pt-2 border-t border-slate-800">
-                <button @click="eliminarComprobante(itemEdicion.hash_largo)" class="px-3 py-1.5 bg-rose-600/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-bold hover:bg-rose-600/40">Eliminar</button>
+                <button type="button" @click="eliminarComprobante(itemEdicion.hash_largo)" class="px-3 py-1.5 bg-rose-600/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-bold hover:bg-rose-600/40 active:scale-95">Eliminar</button>
                 <div class="flex gap-2">
-                  <button @click="modalAbierto = false" class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold">Cancelar</button>
-                  <button @click="guardarCambios()" class="px-3.5 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-500 shadow-lg">Guardar</button>
+                  <button type="button" @click="modalAbierto = false" class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold active:scale-95">Cancelar</button>
+                  <button type="button" @click="guardarCambios()" class="px-3.5 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-500 shadow-lg active:scale-95">Guardar</button>
                 </div>
               </div>
             </div>
@@ -829,7 +657,7 @@
                 <p class="text-xs text-slate-400">Valores calculados en vivo en VET (GMT-4) con el lote <strong class="text-emerald-400" x-text="ultimoLoteId || 'T012'"></strong>.</p>
               </div>
             </div>
-            <button @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
+            <button type="button" @click="modalConfigSocioAbierto = false" class="text-slate-400 hover:text-white text-base">✕</button>
           </div>
 
           <!-- CONTROL DE MATRIZ GENERAL Y SOCIOS CON CAMPO SALDO ANTERIOR VISIBLE AL INICIO -->
@@ -887,14 +715,14 @@
 
             <!-- NAVEGACIÓN DE PESTAÑAS DEL MODAL -->
             <div class="flex items-center gap-1 bg-[#131525] p-1 rounded-lg border border-slate-800 shrink-0">
-              <button @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+              <button type="button" @click="tabConfigActive = 'reglas'" :class="tabConfigActive === 'reglas' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
                 📜 Reglas / Matriz
               </button>
-              <button @click="tabConfigActive = 'addpais'" :class="tabConfigActive === 'addpais' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+              <button type="button" @click="tabConfigActive = 'addpais'" :class="tabConfigActive === 'addpais' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
                 ➕ Añadir País
               </button>
               <template x-if="socioConfigEdit.nombre !== 'GENERAL'">
-                <button @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
+                <button type="button" @click="tabConfigActive = 'perfil'" :class="tabConfigActive === 'perfil' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'" class="px-3 py-1.5 rounded text-xs font-bold transition-all">
                   👤 Perfil
                 </button>
               </template>
@@ -997,7 +825,7 @@
               </div>
 
               <div class="flex justify-end pt-2">
-                <button @click="agregarNuevoPaisAMatriz()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5">
+                <button type="button" @click="agregarNuevoPaisAMatriz()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5">
                   <span>➕ Insertar en la Matriz</span>
                 </button>
               </div>
@@ -1065,8 +893,8 @@
           <div class="flex items-center justify-between pt-2 border-t border-slate-800 shrink-0">
             <span class="text-[10px] text-slate-500">Socio en edición: <strong class="text-white" x-text="socioConfigEdit.nombre || 'Nuevo Socio'"></strong></span>
             <div class="flex gap-2">
-              <button @click="modalConfigSocioAbierto = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancelar</button>
-              <button @click="guardarConfigSocio()" :disabled="guardandoConfig" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95">💾 Guardar Cambios</button>
+              <button type="button" @click="modalConfigSocioAbierto = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold">Cancelar</button>
+              <button type="button" @click="guardarConfigSocio()" :disabled="guardandoConfig" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95">💾 Guardar Cambios</button>
             </div>
           </div>
 
@@ -1079,7 +907,7 @@
           
           <!-- HEADER COMPROBANTE RESPONSIVO -->
           <div class="flex flex-col sm:flex-row sm:items-start justify-between border-b border-emerald-800/20 pb-3 gap-2 shrink-0 relative">
-            <button @click="modalVistaPreviaAbierto = false" class="absolute top-0 right-0 sm:hidden text-slate-500 hover:text-slate-800 text-base font-bold">✕</button>
+            <button type="button" @click="modalVistaPreviaAbierto = false" class="absolute top-0 right-0 sm:hidden text-slate-500 hover:text-slate-800 text-base font-bold">✕</button>
 
             <div class="pr-6 sm:pr-0">
               <h1 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroSocio || filtroReporteNombre || 'SOCIO')"></h1>
@@ -1090,11 +918,11 @@
             </div>
 
             <div class="flex items-center gap-2 mt-1 sm:mt-0">
-              <button @click="enviarReporteWhatsApp()" :disabled="enviandoReporte" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-[11px] sm:text-xs transition-all flex items-center gap-1.5 shadow shrink-0">
+              <button type="button" @click="enviarReporteWhatsApp()" :disabled="enviandoReporte" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-[11px] sm:text-xs transition-all flex items-center gap-1.5 shadow shrink-0">
                 <span>📲 Enviar a WhatsApp</span>
               </button>
               <img src="/logo.svg" class="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0" alt="Logo">
-              <button @click="modalVistaPreviaAbierto = false" class="hidden sm:block text-slate-500 hover:text-slate-800 text-lg font-bold ml-1">✕</button>
+              <button type="button" @click="modalVistaPreviaAbierto = false" class="hidden sm:block text-slate-500 hover:text-slate-800 text-lg font-bold ml-1">✕</button>
             </div>
           </div>
 
@@ -1957,15 +1785,15 @@
           this.itemEdicion = { 
             ...item, 
             tipo_manual: item.tipo_op || this.getCodigoOperativo(item.nombre_socio_1, item.moneda) || 'D',
-            tasa_1: item.tasa_1 !== undefined ? item.tasa_1 : item.tasa_base,
-            tasa_2: item.tasa_2 !== undefined ? item.tasa_2 : item.tasa_base
+            lote_tasa_asignado: item.lote_tasa_asignado || 'T360'
           };
           this.modalAbierto = true;
         },
 
         async guardarCambios() {
+          if (!this.itemEdicion || !this.itemEdicion.hash_largo) return;
           try {
-            const res = await fetch(`/api/comprobantes/${this.itemEdicion.hash_largo}`, {
+            const res = await fetch(`/api/comprobantes/${encodeURIComponent(this.itemEdicion.hash_largo)}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(this.itemEdicion)
@@ -1974,23 +1802,34 @@
               this.modalAbierto = false;
               await this.cargarComprobantes();
               await this.cargarReportes();
+            } else {
+              const errData = await res.json().catch(() => ({}));
+              alert('Error al guardar: ' + (errData.error || errData.message || 'Fallo en servidor'));
             }
           } catch (err) {
             console.error("Error al guardar cambios:", err);
+            alert('Error de conexión al guardar cambios.');
           }
         },
 
         async eliminarComprobante(hash_largo) {
+          if (!hash_largo) return;
           if (!confirm('¿Deseas eliminar este comprobante de la tabla maestra?')) return;
           try {
-            const res = await fetch(`/api/comprobantes/${hash_largo}`, { method: 'DELETE' });
+            const res = await fetch(`/api/comprobantes/${encodeURIComponent(hash_largo)}`, { 
+              method: 'DELETE' 
+            });
             if (res.ok) {
               this.modalAbierto = false;
               await this.cargarComprobantes();
               await this.cargarReportes();
+            } else {
+              const errData = await res.json().catch(() => ({}));
+              alert('Error al eliminar: ' + (errData.error || errData.message || 'Fallo en servidor'));
             }
           } catch (err) {
             console.error("Error al eliminar comprobante:", err);
+            alert('Error de conexión al eliminar comprobante.');
           }
         },
 
