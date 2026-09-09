@@ -22,7 +22,7 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// REGLA UNIVERSAL DE TRUNCADO ESTRICTO (CORTE DE DÍGITOS SIN REDONDEAR)
+// REGLA UNIVERSAL DE TRUNCADO ESTRICTO
 function aplicarReglaPrecision(val) {
   if (val === null || val === undefined || isNaN(val) || val === 0) return 0;
   const num = parseFloat(val);
@@ -166,11 +166,9 @@ async function sincronizarComprobantesAuditadosFisico() {
       const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
       const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
 
-      // 1. Socio 1 dicta imperativamente el tipo
       let tipoOp1 = (r.tipo_op_s1 || 'D').trim().toUpperCase();
       if (!['D', 'P', 'A', 'C'].includes(tipoOp1)) tipoOp1 = 'D';
 
-      // 2. Socio 2 hereda exactamente el mismo tipo
       let tipoOp2 = tipoOp1;
 
       const aj1 = typeof r.ajustes_socio_1 === 'string' ? JSON.parse(r.ajustes_socio_1) : (r.ajustes_socio_1 || {});
@@ -182,7 +180,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const f2Val = parseFloat(aj2[`${tipoOp2}-${monOrig}`]);
       const factor2 = !isNaN(f2Val) ? f2Val : 1.0;
 
-      // 3. SOCIO 1: TRUNCADO ESTRICTO DE TASA Y MONTO
+      // SOCIO 1
       const tasaBaseSocio1 = parseFloat(r.tasa_base_socio_1) || 1.0;
       const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
       const tasa1Signed = tasaCross1 * factor1;
@@ -194,7 +192,7 @@ async function sincronizarComprobantesAuditadosFisico() {
       const m1Socio = aplicarReglaPrecision(m1Raw);
       const m1Usdt = tasaBaseSocio1 > 0 ? aplicarReglaPrecision(m1Socio / tasaBaseSocio1) : m1Socio;
 
-      // 4. SOCIO 2: TRUNCADO ESTRICTO DE TASA Y MONTO
+      // SOCIO 2
       const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
       const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
       const tasa2Signed = tasaCross2 * factor2;
@@ -353,7 +351,26 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('✅ Tabla física comprobantes_auditados_fb lista.');
+
+    // GARANTIZAR QUE GENERAL EXISTA EN NOMBRES_FB Y ESTÉ SIEMPRE ACTIVO EN POSTGRESQL
+    const checkGen = await pool.query(`SELECT nombre FROM nombres_fb WHERE UPPER(TRIM(nombre)) = 'GENERAL';`);
+    if (checkGen.rows.length > 0) {
+      await pool.query(`UPDATE nombres_fb SET activo = TRUE WHERE UPPER(TRIM(nombre)) = 'GENERAL';`);
+    } else {
+      await pool.query(`
+        INSERT INTO nombres_fb (
+          id_grupo, nombre, roles, moneda_socio, talla, whatsapp, activo,
+          pen, cop, clp, ars, ves, brl, mxn, pyg, usd, ecu, eur, usdt,
+          cartelera_paises, ajustes
+        ) VALUES (
+          'GRP_GENERAL', 'GENERAL', 'MATRIZ_GENERAL', 'USDT', 'L', '120363421142957552@g.us', TRUE,
+          'D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'A',
+          '[]'::jsonb, '{}'::jsonb
+        );
+      `);
+    }
+
+    console.log('✅ Tabla física comprobantes_auditados_fb y perfil GENERAL listos.');
     await sincronizarComprobantesAuditadosFisico();
   } catch (err) {
     console.error('⚠️ Error al inicializar esquema en PostgreSQL:', err.message);
@@ -501,6 +518,7 @@ app.post('/api/tasas/reenviar', async (req, res) => {
 app.patch('/api/socios/desactivar-todos', async (req, res) => {
   try {
     await pool.query(`UPDATE nombres_fb SET activo = FALSE WHERE UPPER(TRIM(nombre)) != 'GENERAL';`);
+    await pool.query(`UPDATE nombres_fb SET activo = TRUE WHERE UPPER(TRIM(nombre)) = 'GENERAL';`);
     await sincronizarComprobantesAuditadosFisico();
     res.json({ success: true, message: 'Todos los socios desactivados correctamente.' });
   } catch (err) {
@@ -520,6 +538,7 @@ app.post('/api/socios/guardar-vigentes', async (req, res) => {
 app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   try {
     await pool.query(`UPDATE nombres_fb SET activo = COALESCE(recordar_activo, FALSE);`);
+    await pool.query(`UPDATE nombres_fb SET activo = TRUE WHERE UPPER(TRIM(nombre)) = 'GENERAL';`);
     await sincronizarComprobantesAuditadosFisico();
     res.json({ success: true, message: 'Socios vigentes restaurados correctamente.' });
   } catch (err) {
@@ -527,7 +546,6 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
   }
 });
 
-// HANDLER QUE RETORNA LOS DATOS FÍSICOS TRUNCADOS
 const getComprobantesHandler = async (req, res) => {
   try {
     const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
@@ -670,7 +688,6 @@ app.get('/api/cola', getComprobantesHandler);
 app.get('/api/reportes', getComprobantesHandler);
 app.get('/api/reportes/operaciones', getComprobantesHandler);
 
-// ENDPOINT DINÁMICO DE FILTROS EN CASCADA
 app.get('/api/reportes/filtros', async (req, res) => {
   try {
     const { rol } = req.query;
@@ -726,11 +743,10 @@ app.get('/api/reportes/filtros', async (req, res) => {
   }
 });
 
-// PUT CON ACTUALIZACIÓN DE TIPO DE OPERACIÓN Y RE-SINCRONIZACIÓN FÍSICA
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
     const { hash_largo } = req.params;
-    const { monto, moneda, banco, referencia, titular, nombre_socio_1, nombre_socio_2, tipo_manual, tasa_1, tasa_2 } = req.body;
+    const { monto, moneda, banco, referencia, titular, nombre_socio_1, nombre_socio_2, tipo_manual } = req.body;
 
     const queryMaster = `
       UPDATE comprobantes_fb
@@ -754,7 +770,6 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
       );
     }
 
-    // Actualiza la regla del Socio 1 en nombres_fb para la columna de esa moneda
     const targetMoneda = (moneda || (rows[0] ? rows[0].moneda : '') || '').toLowerCase().trim();
     const validCols = ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'];
 
@@ -797,10 +812,12 @@ app.patch('/api/socios/:nombre/estado', async (req, res) => {
   try {
     const { nombre } = req.params;
     const { activo } = req.body;
+    const isGeneral = nombre.trim().toUpperCase() === 'GENERAL';
+    const estadoActivo = isGeneral ? true : activo;
 
     const { rows } = await pool.query(
       `UPDATE nombres_fb SET activo = $1 WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2)) RETURNING nombre, activo;`,
-      [activo, nombre]
+      [estadoActivo, nombre]
     );
 
     if (rows.length === 0) {
@@ -836,7 +853,7 @@ app.get('/api/socios', async (req, res) => {
 app.get('/api/directorio', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT * FROM nombres_fb WHERE UPPER(TRIM(nombre)) != 'GENERAL' ORDER BY nombre ASC;"
+      "SELECT * FROM nombres_fb ORDER BY nombre ASC;"
     );
     res.json(rows);
   } catch (err) {
@@ -848,6 +865,10 @@ app.delete('/api/directorio/:nombre', async (req, res) => {
   try {
     const { nombre } = req.params;
     if (!nombre) return res.status(400).json({ error: 'Nombre de socio requerido.' });
+
+    if (nombre.trim().toUpperCase() === 'GENERAL') {
+      return res.status(400).json({ error: 'No se puede eliminar el perfil GENERAL.' });
+    }
 
     const { rows } = await pool.query(
       `DELETE FROM nombres_fb WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1)) RETURNING *;`,
@@ -875,6 +896,9 @@ app.post('/api/socios/config', async (req, res) => {
     }
 
     const socioNombre = nombre.trim();
+    const isGeneral = socioNombre.toUpperCase() === 'GENERAL';
+    const estadoActivo = isGeneral ? true : (activo ?? true);
+
     const cpArray = (cartelera_paises && cartelera_paises.length > 0) 
       ? cartelera_paises 
       : [
@@ -913,9 +937,9 @@ app.post('/api/socios/config', async (req, res) => {
         RETURNING *;
       `;
       const updateRes = await pool.query(updateQuery, [
-        roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, 
+        roles || (isGeneral ? 'MATRIZ_GENERAL' : 'SOCIO'), moneda_socio || 'USDT', tallaCalculada, 
         whatsapp || checkRes.rows[0].whatsapp || '',
-        activo ?? true, valSaldo,
+        estadoActivo, valSaldo,
         pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
         dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'D', ecu || 'D', pan || 'D', usdt || 'A',
         jsonCartelera, jsonAjustes, socioNombre
@@ -933,8 +957,8 @@ app.post('/api/socios/config', async (req, res) => {
         RETURNING *;
       `;
       const insertRes = await pool.query(insertQuery, [
-        idGrupo, socioNombre, roles || 'SOCIO', moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
-        activo ?? true, valSaldo,
+        idGrupo, socioNombre, roles || (isGeneral ? 'MATRIZ_GENERAL' : 'SOCIO'), moneda_socio || 'USDT', tallaCalculada, whatsapp || '',
+        estadoActivo, valSaldo,
         pen || 'D', cop || 'D', clp || 'D', ars || 'D', ves || 'D', brl || 'D', mxn || 'D', pyg || 'D',
         dop || 'D', crc || 'D', eur || 'D', cad || 'D', usd || 'D', ecu || 'D', pan || 'D', usdt || 'A',
         jsonCartelera, jsonAjustes
