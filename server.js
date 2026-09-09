@@ -52,7 +52,7 @@ function calcularTallaAutomatica(conteo) {
   return 'L';
 }
 
-// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL CON TRUNCADO PURO
+// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL CON TRUNCADO PURO Y LOTE MANUAL
 async function sincronizarComprobantesAuditadosFisico() {
   try {
     const rawQuery = `
@@ -87,7 +87,7 @@ async function sincronizarComprobantesAuditadosFisico() {
         c.nombre_socio_2,
         c.url_imagen,
         COALESCE(c.conteo, 1) AS conteo,
-        COALESCE(lr.id_tasa, (SELECT id_tasa FROM primer_lote), 'T360') AS lote_tasa_asignado,
+        COALESCE(c.lote_tasa_manual, lr.id_tasa, (SELECT id_tasa FROM primer_lote), 'T360') AS lote_tasa_asignado,
         
         COALESCE(
           mt.tasa_base, 
@@ -152,10 +152,10 @@ async function sincronizarComprobantesAuditadosFisico() {
       LEFT JOIN lotes_rangos lr ON c.timestamp >= lr.t_inicio AND (lr.t_fin IS NULL OR c.timestamp < lr.t_fin)
       LEFT JOIN nombres_fb n1 ON UPPER(TRIM(n1.nombre)) = UPPER(TRIM(c.nombre_socio_1))
       LEFT JOIN nombres_fb n2 ON UPPER(TRIM(n2.nombre)) = UPPER(TRIM(c.nombre_socio_2))
-      LEFT JOIN mercado_tasas mt ON mt.id_tasa = lr.id_tasa AND mt.moneda = UPPER(f.moneda)
+      LEFT JOIN mercado_tasas mt ON mt.id_tasa = COALESCE(c.lote_tasa_manual, lr.id_tasa) AND mt.moneda = UPPER(f.moneda)
       LEFT JOIN mercado_tasas mt_primer ON mt_primer.id_tasa = (SELECT id_tasa FROM primer_lote) AND mt_primer.moneda = UPPER(f.moneda)
-      LEFT JOIN mercado_tasas mt_s1 ON mt_s1.id_tasa = lr.id_tasa AND mt_s1.moneda = CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n1.moneda_socio, 'USDT')) END
-      LEFT JOIN mercado_tasas mt_s2 ON mt_s2.id_tasa = lr.id_tasa AND mt_s2.moneda = CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n2.moneda_socio, 'USDT')) END
+      LEFT JOIN mercado_tasas mt_s1 ON mt_s1.id_tasa = COALESCE(c.lote_tasa_manual, lr.id_tasa) AND mt_s1.moneda = CASE WHEN UPPER(COALESCE(n1.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n1.moneda_socio, 'USDT')) END
+      LEFT JOIN mercado_tasas mt_s2 ON mt_s2.id_tasa = COALESCE(c.lote_tasa_manual, lr.id_tasa) AND mt_s2.moneda = CASE WHEN UPPER(COALESCE(n2.moneda_socio, 'USDT')) = 'USD' THEN 'USDT' ELSE UPPER(COALESCE(n2.moneda_socio, 'USDT')) END
       WHERE c.estado != 'DESCARTADO';
     `;
 
@@ -313,6 +313,8 @@ async function initDB() {
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS saldo_anterior NUMERIC(18, 2) DEFAULT 0.00;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS cartelera_paises JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE nombres_fb ADD COLUMN IF NOT EXISTS ajustes JSONB DEFAULT '{}'::jsonb;
+
+      ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS lote_tasa_manual VARCHAR(50);
     `);
 
     await pool.query(`
@@ -743,68 +745,154 @@ app.get('/api/reportes/filtros', async (req, res) => {
   }
 });
 
+// ENDPOINT PUT CON UPSERT Y EDICIÓN DE NÚMERO DE TASA/LOTE
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
     const { hash_largo } = req.params;
-    const { monto, moneda, banco, referencia, titular, nombre_socio_1, nombre_socio_2, tipo_manual } = req.body;
+    const { 
+      monto, moneda, banco, referencia, titular, 
+      nombre_socio_1, nombre_socio_2, tipo_manual, 
+      lote_tasa_asignado, lote_tasa 
+    } = req.body;
 
-    const queryMaster = `
-      UPDATE comprobantes_fb
-      SET monto = $1, moneda = $2, banco = $3, referencia = $4, titular = $5, procesado_ia = TRUE
-      WHERE hash_largo = $6 RETURNING *;
-    `;
+    const targetHash = (hash_largo || '').trim();
+    const codigoTasa = lote_tasa_asignado || lote_tasa || null;
 
-    const { rows } = await pool.query(queryMaster, [
+    await pool.query(`
+      INSERT INTO comprobantes_fb (hash_largo, monto, moneda, banco, referencia, titular, procesado_ia)
+      VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+      ON CONFLICT (hash_largo) DO UPDATE SET
+        monto = EXCLUDED.monto,
+        moneda = EXCLUDED.moneda,
+        banco = EXCLUDED.banco,
+        referencia = EXCLUDED.referencia,
+        titular = EXCLUDED.titular,
+        procesado_ia = TRUE;
+    `, [
+      targetHash,
       monto !== undefined && monto !== '' ? parseFloat(monto) : null,
       moneda || null,
       banco ? banco.toUpperCase() : null,
       referencia || null,
-      titular ? titular.toUpperCase() : null,
-      hash_largo
+      titular ? titular.toUpperCase() : null
     ]);
 
-    if (nombre_socio_1 !== undefined || nombre_socio_2 !== undefined) {
-      await pool.query(
-        `UPDATE cola_fb SET nombre_socio_1 = $1, nombre_socio_2 = $2 WHERE hash_largo = $3;`,
-        [nombre_socio_1 || null, nombre_socio_2 || null, hash_largo]
-      );
-    }
+    await pool.query(`ALTER TABLE cola_fb ADD COLUMN IF NOT EXISTS lote_tasa_manual VARCHAR(50);`);
 
-    const targetMoneda = (moneda || (rows[0] ? rows[0].moneda : '') || '').toLowerCase().trim();
+    await pool.query(`
+      UPDATE cola_fb 
+      SET nombre_socio_1 = $1, 
+          nombre_socio_2 = $2,
+          lote_tasa_manual = COALESCE($3, lote_tasa_manual)
+      WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($4));
+    `, [
+      nombre_socio_1 || null, 
+      nombre_socio_2 || null, 
+      codigoTasa,
+      targetHash
+    ]);
+
+    const targetMoneda = (moneda || '').toLowerCase().trim();
     const validCols = ['pen','cop','clp','ars','ves','brl','mxn','pyg','dop','crc','eur','cad','usd','ecu','pan','usdt'];
 
     if (tipo_manual && nombre_socio_1 && validCols.includes(targetMoneda)) {
-      const updateRuleQuery = `
+      await pool.query(`
         UPDATE nombres_fb 
         SET ${targetMoneda} = $1 
         WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($2));
-      `;
-      await pool.query(updateRuleQuery, [tipo_manual.toUpperCase().trim(), nombre_socio_1.trim()]);
+      `, [tipo_manual.toUpperCase().trim(), nombre_socio_1.trim()]);
     }
 
     await sincronizarComprobantesAuditadosFisico();
 
-    res.json({ success: true, data: rows[0] });
+    res.json({ success: true, message: 'Comprobante actualizado correctamente' });
   } catch (err) {
     console.error('Error en PUT /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+// ENDPOINT DELETE LIMPIO MULTITABLA
 app.delete('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
     const { hash_largo } = req.params;
-    const { rows } = await pool.query(`DELETE FROM comprobantes_fb WHERE hash_largo = $1 RETURNING *;`, [hash_largo]);
+    const targetHash = (hash_largo || '').trim();
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Comprobante no encontrado' });
-    }
+    await pool.query(`DELETE FROM comprobantes_fb WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($1));`, [targetHash]);
+    await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($1));`, [targetHash]);
+    await pool.query(`DELETE FROM comprobantes_auditados_fb WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($1));`, [targetHash]);
 
-    await pool.query(`UPDATE cola_fb SET estado = 'DESCARTADO' WHERE hash_largo = $1;`, [hash_largo]);
     await sincronizarComprobantesAuditadosFisico();
-    res.json({ success: true, message: 'Comprobante eliminado' });
+
+    res.json({ success: true, message: 'Comprobante eliminado con éxito' });
   } catch (err) {
+    console.error('Error en DELETE /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ENDPOINTS DE ADMINISTRACIÓN DE COLA (RAW) CON CLAVE ATENEA
+app.get('/api/admin/cola', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (adminKey !== 'ATENEA') {
+    return res.status(401).json({ success: false, error: 'Clave de administración inválida.' });
+  }
+
+  try {
+    const { rows } = await pool.query(`
+      SELECT hash_largo, hash_corto, timestamp, nombre_socio_1, nombre_socio_2, conteo, estado, url_imagen
+      FROM cola_fb
+      ORDER BY timestamp DESC
+      LIMIT 100;
+    `);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.put('/api/admin/cola/:hash_largo', async (req, res) => {
+  const { adminKey, nombre_socio_1, nombre_socio_2, estado, conteo } = req.body;
+  if (adminKey !== 'ATENEA') {
+    return res.status(401).json({ success: false, error: 'Clave de administración inválida.' });
+  }
+
+  try {
+    const { hash_largo } = req.params;
+    await pool.query(`
+      UPDATE cola_fb
+      SET nombre_socio_1 = $1,
+          nombre_socio_2 = $2,
+          estado = COALESCE($3, estado),
+          conteo = COALESCE($4, conteo)
+      WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($5));
+    `, [nombre_socio_1 || null, nombre_socio_2 || null, estado || 'PROCESADO', conteo || 1, hash_largo]);
+
+    await sincronizarComprobantesAuditadosFisico();
+    res.json({ success: true, message: 'Registro de cola actualizado correctamente.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/admin/cola/:hash_largo', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
+  if (adminKey !== 'ATENEA') {
+    return res.status(401).json({ success: false, error: 'Clave de administración inválida.' });
+  }
+
+  try {
+    const { hash_largo } = req.params;
+    const targetHash = hash_largo.trim();
+
+    await pool.query(`DELETE FROM comprobantes_fb WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($1));`, [targetHash]);
+    await pool.query(`DELETE FROM comprobantes_auditados_fb WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($1));`, [targetHash]);
+    await pool.query(`DELETE FROM cola_fb WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($1));`, [targetHash]);
+
+    await sincronizarComprobantesAuditadosFisico();
+    res.json({ success: true, message: 'Registro eliminado permanentemente de todas las tablas.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
