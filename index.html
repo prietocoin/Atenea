@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Atenea Panel - Gestión de Comprobantes & Reportes</title>
+  <title>Atenea Panel - Gestión de Comprobantes & Auditoría</title>
   
   <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <link rel="shortcut icon" href="/logo.svg">
@@ -57,6 +57,11 @@
             <button @click="vistaActiva = 'directorio'" :class="vistaActiva === 'directorio' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all">
               <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
               Directorio (nombres_fb)
+            </button>
+
+            <button @click="solicitarAccesoAdmin()" :class="vistaActiva === 'admin_cola' ? 'bg-rose-600/30 text-rose-300 border border-rose-500/50 shadow-lg' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs transition-all border border-transparent">
+              <span class="text-rose-400">🔐</span>
+              Gestión Cola (Admin)
             </button>
           </div>
         </nav>
@@ -558,6 +563,70 @@
         </div>
       </template>
 
+      <!-- VISTA ADMIN COLA MINIMALISTA -->
+      <template x-if="vistaActiva === 'admin_cola'">
+        <div class="space-y-4 flex-1 flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="text-lg font-bold text-rose-400 tracking-wide flex items-center gap-2">
+                <span>🔐</span>
+                <span>Consola Administrativa Cola FB (RAW)</span>
+              </h2>
+              <p class="text-xs text-slate-400">Edición forzada y depuración directa sobre registros no procesados o fallidos (1X).</p>
+            </div>
+            <button @click="cargarColaAdmin()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700">
+              🔄 Refrescar Cola
+            </button>
+          </div>
+
+          <div class="bg-[#131525] rounded-xl border border-rose-900/40 overflow-hidden shadow-xl flex-1">
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-800 bg-[#171a2e] uppercase font-bold text-[10px]">
+                    <th class="px-3 py-2.5">HASH CORTO</th>
+                    <th class="px-3 py-2.5">SOCIO 1</th>
+                    <th class="px-3 py-2.5">SOCIO 2</th>
+                    <th class="px-3 py-2.5 text-center">CONTEO</th>
+                    <th class="px-3 py-2.5 text-center">ESTADO</th>
+                    <th class="px-3 py-2.5 text-right">ACCIONES ADMIN</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-mono text-[11px]">
+                  <template x-for="item in colaAdminList" :key="item.hash_largo">
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                      <td class="px-3 py-2 font-bold text-purple-300" x-text="item.hash_corto"></td>
+                      <td class="px-3 py-2">
+                        <input type="text" x-model="item.nombre_socio_1" class="bg-[#1a1d33] border border-slate-700 rounded px-2 py-0.5 text-xs text-white uppercase outline-none focus:border-purple-500">
+                      </td>
+                      <td class="px-3 py-2">
+                        <input type="text" x-model="item.nombre_socio_2" class="bg-[#1a1d33] border border-slate-700 rounded px-2 py-0.5 text-xs text-pink-300 uppercase outline-none focus:border-pink-500">
+                      </td>
+                      <td class="px-3 py-2 text-center">
+                        <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold" x-text="'x' + item.conteo"></span>
+                      </td>
+                      <td class="px-3 py-2 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="item.estado === 'DESCARTADO' ? 'bg-rose-950 text-rose-400' : 'bg-emerald-950 text-emerald-300'" x-text="item.estado || 'PROCESADO'"></span>
+                      </td>
+                      <td class="px-3 py-2 text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                          <button @click="guardarItemColaAdmin(item)" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white font-sans font-bold text-[10px] rounded-lg shadow">
+                            💾 Guardar
+                          </button>
+                          <button @click="eliminarItemColaAdmin(item.hash_largo)" class="px-2.5 py-1 bg-rose-600/30 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-sans font-bold text-[10px] rounded-lg">
+                            🗑️ Borrar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <!-- MODAL 1: AUDITAR COMPROBANTE - EDICIÓN DEL NÚMERO DE TASA / LOTE ASIGNADO (EJ: T014) -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
@@ -1006,6 +1075,9 @@
         modalVistaPreviaAbierto: false,
         enviandoReporte: false,
 
+        claveAdmin: '',
+        colaAdminList: [],
+
         matrizFactorRemesaT363: {
           "USDT":  {"USDT": 1.0, "PYUSD": 1.2, "PEN": 0.9, "COP": 0.9, "CLP": 0.9, "ARS": 0.9, "USD": 0.9, "ECU": 0.9, "PAN": 0.9, "MXN": 0.9, "BRL": 0.9, "VES": 0.9, "PYG": 0.9, "EUR": 0.9, "DOP": 0.9, "BOB": 0.9, "CRC": 0.9},
           "PYUSD": {"USDT": 1.2, "PYUSD": 1.0, "PEN": 1.2, "COP": 1.2, "CLP": 1.2, "ARS": 1.2, "USD": 1.2, "ECU": 1.2, "PAN": 1.2, "MXN": 1.2, "BRL": 1.2, "VES": 1.2, "PYG": 1.2, "EUR": 1.2, "DOP": 1.2, "BOB": 1.2, "CRC": 1.2},
@@ -1073,6 +1145,85 @@
           await this.cargarDirectorio();
           await this.cargarComprobantes();
           await this.cargarReportes();
+        },
+
+        async solicitarAccesoAdmin() {
+          if (this.claveAdmin === 'ATENEA') {
+            this.vistaActiva = 'admin_cola';
+            await this.cargarColaAdmin();
+            return;
+          }
+
+          const pass = prompt('Ingresa la clave de administración:');
+          if (pass === 'ATENEA') {
+            this.claveAdmin = 'ATENEA';
+            this.vistaActiva = 'admin_cola';
+            await this.cargarColaAdmin();
+          } else if (pass !== null) {
+            alert('Clave incorrecta.');
+          }
+        },
+
+        async cargarColaAdmin() {
+          try {
+            const res = await fetch('/api/admin/cola', {
+              headers: { 'x-admin-key': this.claveAdmin }
+            });
+            const data = await res.json();
+            if (data.success) {
+              this.colaAdminList = data.data;
+            } else {
+              alert(data.error || 'Error al cargar la cola');
+            }
+          } catch (err) {
+            console.error('Error cargando cola admin:', err);
+          }
+        },
+
+        async guardarItemColaAdmin(item) {
+          try {
+            const res = await fetch(`/api/admin/cola/${encodeURIComponent(item.hash_largo)}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                adminKey: this.claveAdmin,
+                nombre_socio_1: item.nombre_socio_1,
+                nombre_socio_2: item.nombre_socio_2,
+                estado: item.estado,
+                conteo: item.conteo
+              })
+            });
+            const data = await res.json();
+            if (data.success) {
+              alert('✅ Registro de cola actualizado.');
+              await this.cargarComprobantes();
+            } else {
+              alert('⚠️ Error: ' + data.error);
+            }
+          } catch (err) {
+            console.error('Error guardando en admin:', err);
+          }
+        },
+
+        async eliminarItemColaAdmin(hash_largo) {
+          if (!confirm('¿Seguro que deseas eliminar este registro RAW permanentemente?')) return;
+          try {
+            const res = await fetch(`/api/admin/cola/${encodeURIComponent(hash_largo)}`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ adminKey: this.claveAdmin })
+            });
+            const data = await res.json();
+            if (data.success) {
+              alert('🗑️ Registro eliminado de la base de datos.');
+              await this.cargarColaAdmin();
+              await this.cargarComprobantes();
+            } else {
+              alert('⚠️ Error: ' + data.error);
+            }
+          } catch (err) {
+            console.error('Error borrando en admin:', err);
+          }
         },
 
         get totalMontoSocioComprobantes() {
@@ -1801,7 +1952,7 @@
             if (res.ok) {
               this.modalAbierto = false;
               await this.cargarComprobantes();
-              await this.cargarReportes();
+              if (this.vistaActiva === 'admin_cola') await this.cargarColaAdmin();
             } else {
               const errData = await res.json().catch(() => ({}));
               alert('Error al guardar: ' + (errData.error || errData.message || 'Fallo en servidor'));
@@ -1822,7 +1973,7 @@
             if (res.ok) {
               this.modalAbierto = false;
               await this.cargarComprobantes();
-              await this.cargarReportes();
+              if (this.vistaActiva === 'admin_cola') await this.cargarColaAdmin();
             } else {
               const errData = await res.json().catch(() => ({}));
               alert('Error al eliminar: ' + (errData.error || errData.message || 'Fallo en servidor'));
