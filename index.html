@@ -96,7 +96,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 shrink-0">
             <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
               <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Sujeto / Entidad Auditada</p>
-              <p class="text-base font-black text-white mt-1 truncate" x-text="filtroSocio || filtroReporteNombre || 'Todas las entidades'"></p>
+              <p class="text-base font-black text-white mt-1 truncate" x-text="filtroSocio || 'Todas las entidades'"></p>
             </div>
 
             <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
@@ -142,7 +142,7 @@
 
             <div>
               <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">2. Socio / Entidad</label>
-              <select x-model="filtroSocio" @change="filtroReporteNombre = filtroSocio; cargarComprobantes()" class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none">
+              <select x-model="filtroSocio" @change="cargarComprobantes()" class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none">
                 <option value="">Todos los Socios</option>
                 <template x-for="s in sociosFiltradosPorRol" :key="s">
                   <option :value="s" x-text="s"></option>
@@ -995,7 +995,7 @@
             </div>
           </div>
 
-          <!-- TABLA FLEXIBLE CON FORMATO [TIPO-HASH] (Ej: [P-7a110fc]) -->
+          <!-- TABLA QUE RESPETA 100% LOS COMPROBANTES FILTRADOS EN PANTALLA -->
           <div class="overflow-y-auto flex-1 space-y-2 pr-1">
             <div class="flex items-center font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[10px] sm:text-[11px]">
               <div class="w-16 sm:w-24 shrink-0">Fecha</div>
@@ -1003,7 +1003,7 @@
               <div class="w-16 sm:w-24 shrink-0 text-right">Saldos</div>
             </div>
 
-            <template x-for="c in (comprobantesReporte.length ? comprobantesReporte : comprobantes)" :key="c.hash_largo">
+            <template x-for="c in comprobantes" :key="c.hash_largo">
               <div class="flex items-start border-b border-dashed border-slate-300 py-1.5 text-[10px] sm:text-[11px]">
                 <div class="w-16 sm:w-24 shrink-0 text-slate-700 font-bold leading-tight" x-text="formatFechaVE(c.timestamp).split(',')[0]"></div>
                 <div class="flex-1 text-slate-800 px-1 leading-relaxed break-words">
@@ -1029,7 +1029,7 @@
 
             <div class="bg-[#dcf0d8] border border-emerald-700/40 rounded-xl px-3 sm:px-5 py-1.5 sm:py-2.5 text-right flex items-center gap-2 sm:gap-4 shrink-0">
               <span class="text-[10px] sm:text-xs font-bold text-emerald-950 uppercase">Nuevo saldo</span>
-              <span class="text-lg sm:text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoReporte || nuevoSaldoComprobantes)"></span>
+              <span class="text-lg sm:text-2xl font-black text-slate-900" x-text="formatMonto(nuevoSaldoComprobantes)"></span>
             </div>
           </div>
 
@@ -1144,7 +1144,6 @@
           await this.cargarSocios();
           await this.cargarDirectorio();
           await this.cargarComprobantes();
-          await this.cargarReportes();
         },
 
         async solicitarAccesoAdmin() {
@@ -1247,13 +1246,8 @@
           return 'USDT';
         },
 
-        get nuevoSaldoReporte() {
-          const saldoAnt = parseFloat(this.saldoAnteriorReporte) || 0;
-          return saldoAnt + this.totalMontoSocioReporte;
-        },
-
         get jidSocioReporte() {
-          const target = this.filtroReporteNombre || this.filtroSocio;
+          const target = this.filtroSocio || this.filtroReporteNombre;
           if (!target) return '';
           const socioNorm = target.trim().toUpperCase();
           const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
@@ -1315,13 +1309,13 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                socio: this.filtroReporteNombre || this.filtroSocio,
+                socio: this.filtroSocio || this.filtroReporteNombre,
                 remoteJid: jid,
                 saldoAnterior: this.saldoAnteriorReporte,
-                movimiento: this.totalMontoSocioReporte || this.totalMontoSocioComprobantes,
-                nuevoSaldo: this.nuevoSaldoReporte || this.nuevoSaldoComprobantes,
-                moneda: this.monedaBaseSocioReporte || this.monedaBaseSocioComprobantes,
-                comprobantes: this.comprobantesReporte.length ? this.comprobantesReporte : this.comprobantes
+                movimiento: this.totalMontoSocioComprobantes,
+                nuevoSaldo: this.nuevoSaldoComprobantes,
+                moneda: this.monedaBaseSocioComprobantes,
+                comprobantes: this.comprobantes
               })
             });
 
@@ -1393,17 +1387,6 @@
           return Array.from(hashes).sort();
         },
 
-        get monedaBaseSocioReporte() {
-          const target = this.filtroReporteNombre || this.filtroSocio;
-          if (!target) return 'USDT';
-          const socioNorm = target.trim().toUpperCase();
-          const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-          if (reg && reg.moneda_socio) {
-            return (reg.moneda_socio === 'USD' ? 'USDT' : reg.moneda_socio).toUpperCase();
-          }
-          return 'USDT';
-        },
-
         obtenerMonedaSocioCalculada(c) {
           if (c.moneda_socio_final) return c.moneda_socio_final;
           const info = this.obtenerInformacionSocioOperacion(c);
@@ -1420,10 +1403,6 @@
           if (c.tasa_socio_final !== undefined) return parseFloat(c.tasa_socio_final) || 0;
           const info = this.obtenerInformacionSocioOperacion(c);
           return info.tasaCalculada;
-        },
-
-        get totalMontoSocioReporte() {
-          return this.comprobantesReporte.reduce((acc, c) => acc + (parseFloat(this.obtenerMontoSocioCalculado(c)) || 0), 0);
         },
 
         abrirConfigGeneral() {
@@ -1476,42 +1455,6 @@
           const clave = `REM-${orig}_${dest}`;
           if (!this.socioConfigEdit.ajustes) this.socioConfigEdit.ajustes = {};
           this.socioConfigEdit.ajustes[clave] = parseFloat(valor) || 0.90;
-        },
-
-        async cargarReportes() {
-          const params = new URLSearchParams();
-          if (this.filtroReporteRol) params.append('rol', this.filtroReporteRol);
-          if (this.filtroReporteNombre || this.filtroSocio) params.append('socio', this.filtroReporteNombre || this.filtroSocio);
-          if (this.filtroReporteFechaInicio || this.filtroFecha) params.append('fechaInicio', this.filtroReporteFechaInicio || this.filtroFecha);
-          if (this.filtroReporteFechaFin || this.filtroFechaFin) params.append('fechaFin', this.filtroReporteFechaFin || this.filtroFechaFin);
-          if (this.filtroReporteDesdeHash) params.append('desdeHash', this.filtroReporteDesdeHash);
-
-          const target = this.filtroReporteNombre || this.filtroSocio;
-          if (target) {
-            const socioNorm = target.trim().toUpperCase();
-            const reg = this.directorio.find(d => d.nombre && d.nombre.trim().toUpperCase() === socioNorm);
-            if (reg) {
-              const aj = typeof reg.ajustes === 'string' ? JSON.parse(reg.ajustes) : (reg.ajustes || {});
-              const valSaldo = aj.saldo_anterior !== undefined ? aj.saldo_anterior : reg.saldo_anterior;
-              this.saldoAnteriorReporte = valSaldo !== undefined && valSaldo !== null ? parseFloat(valSaldo) : 0;
-            }
-          }
-
-          try {
-            const res = await fetch(`/api/reportes?${params.toString()}`);
-            if (res.ok) {
-              const data = await res.json();
-              let filtrados = [];
-              if (target) {
-                filtrados = data.filter(c => (c.conteo > 1 || c.nombre_socio_2) && parseFloat(c.monto || 0) !== 0);
-              } else {
-                filtrados = data.filter(c => parseFloat(c.monto || 0) !== 0);
-              }
-              this.comprobantesReporte = filtrados.sort((a, b) => (parseInt(a.timestamp) || 0) - (parseInt(b.timestamp) || 0));
-            }
-          } catch (err) {
-            console.error("Error al cargar reportes:", err);
-          }
         },
 
         async reenviarTasas(idTasa = null) {
@@ -1808,7 +1751,6 @@
               await this.cargarDirectorio();
               await this.cargarSocios();
               await this.cargarComprobantes();
-              await this.cargarReportes();
             } else {
               alert('Error al guardar la configuración.');
             }
