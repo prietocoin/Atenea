@@ -563,7 +563,7 @@ app.post('/api/socios/restaurar-vigentes', async (req, res) => {
 
 const getComprobantesHandler = async (req, res) => {
   try {
-    const { socio, nombre, fechaInicio, fechaFin, desdeHash, hash, rol, soloDuplicados } = req.query;
+    const { socio, nombre, fechaInicio, fechaFin, desdeHash, hastaHash, hash, rol, soloDuplicados } = req.query;
     const targetSocio = (socio || nombre || '').trim();
     const esReporte = req.originalUrl.includes('reportes');
 
@@ -645,6 +645,7 @@ const getComprobantesHandler = async (req, res) => {
       }
     }
 
+    // FILTRO DESDE HASH X
     if (desdeHash && desdeHash.trim()) {
       const hashRes = await pool.query(
         `SELECT timestamp_comprobante FROM comprobantes_auditados_fb WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
@@ -653,6 +654,20 @@ const getComprobantesHandler = async (req, res) => {
       if (hashRes.rows.length > 0) {
         const hashTs = hashRes.rows[0].timestamp_comprobante;
         query += ` AND timestamp_comprobante >= $${paramIndex}`;
+        values.push(hashTs);
+        paramIndex++;
+      }
+    }
+
+    // FILTRO HASTA HASH Y
+    if (hastaHash && hastaHash.trim()) {
+      const hashRes = await pool.query(
+        `SELECT timestamp_comprobante FROM comprobantes_auditados_fb WHERE hash_corto = $1 OR hash_largo = $1 LIMIT 1;`,
+        [hastaHash.trim()]
+      );
+      if (hashRes.rows.length > 0) {
+        const hashTs = hashRes.rows[0].timestamp_comprobante;
+        query += ` AND timestamp_comprobante <= $${paramIndex}`;
         values.push(hashTs);
         paramIndex++;
       }
