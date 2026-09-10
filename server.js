@@ -46,7 +46,7 @@ function aplicarReglaPrecisionTasa(val) {
   return signo * res;
 }
 
-// REGLA DE TRUNCADO EXCLUSIVA PARA MONTOS (2 DECIMALES SIEMPRE, SIN VOLVERSE ENTERO)
+// REGLA EXCLUSIVA PARA MONTOS (CONSERVA SIEMPRE 2 DECIMALES EXACTOS)
 function aplicarPrecisionMonto(val) {
   if (val === null || val === undefined || isNaN(val) || val === 0) return 0;
   const num = parseFloat(val);
@@ -65,7 +65,7 @@ function calcularTallaAutomatica(conteo) {
   return 'L';
 }
 
-// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL
+// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL CON PERSISTENCIA DE TIMESTAMP Y LOTE MANUAL
 async function sincronizarComprobantesAuditadosFisico() {
   try {
     const rawQuery = `
@@ -758,18 +758,19 @@ app.get('/api/reportes/filtros', async (req, res) => {
   }
 });
 
-// ENDPOINT PUT CON UPSERT Y EDICIÓN DE NÚMERO DE TASA/LOTE
+// ENDPOINT PUT CON SOBREESCRITURA DE TIMESTAMP EN COLA_FB Y LOTE MANUAL
 app.put('/api/comprobantes/:hash_largo', async (req, res) => {
   try {
     const { hash_largo } = req.params;
     const { 
       monto, moneda, banco, referencia, titular, 
       nombre_socio_1, nombre_socio_2, tipo_manual, 
-      lote_tasa_asignado, lote_tasa 
+      lote_tasa_asignado, lote_tasa, timestamp 
     } = req.body;
 
     const targetHash = (hash_largo || '').trim();
     const codigoTasa = lote_tasa_asignado || lote_tasa || null;
+    const newTimestamp = timestamp ? parseInt(timestamp) : null;
 
     await pool.query(`
       INSERT INTO comprobantes_fb (hash_largo, monto, moneda, banco, referencia, titular, procesado_ia)
@@ -796,12 +797,14 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
       UPDATE cola_fb 
       SET nombre_socio_1 = $1, 
           nombre_socio_2 = $2,
-          lote_tasa_manual = COALESCE($3, lote_tasa_manual)
-      WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($4));
+          lote_tasa_manual = COALESCE($3, lote_tasa_manual),
+          timestamp = COALESCE($4, timestamp)
+      WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($5));
     `, [
       nombre_socio_1 || null, 
       nombre_socio_2 || null, 
       codigoTasa,
+      newTimestamp,
       targetHash
     ]);
 
@@ -818,7 +821,7 @@ app.put('/api/comprobantes/:hash_largo', async (req, res) => {
 
     await sincronizarComprobantesAuditadosFisico();
 
-    res.json({ success: true, message: 'Comprobante actualizado correctamente' });
+    res.json({ success: true, message: 'Comprobante y fecha/hora actualizados correctamente' });
   } catch (err) {
     console.error('Error en PUT /api/comprobantes:', err.message);
     res.status(500).json({ error: err.message });
@@ -865,7 +868,7 @@ app.get('/api/admin/cola', async (req, res) => {
 });
 
 app.put('/api/admin/cola/:hash_largo', async (req, res) => {
-  const { adminKey, nombre_socio_1, nombre_socio_2, estado, conteo } = req.body;
+  const { adminKey, nombre_socio_1, nombre_socio_2, estado, conteo, timestamp } = req.body;
   if (adminKey !== 'ATENEA') {
     return res.status(401).json({ success: false, error: 'Clave de administración inválida.' });
   }
@@ -877,9 +880,17 @@ app.put('/api/admin/cola/:hash_largo', async (req, res) => {
       SET nombre_socio_1 = $1,
           nombre_socio_2 = $2,
           estado = COALESCE($3, estado),
-          conteo = COALESCE($4, conteo)
-      WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($5));
-    `, [nombre_socio_1 || null, nombre_socio_2 || null, estado || 'PROCESADO', conteo || 1, hash_largo]);
+          conteo = COALESCE($4, conteo),
+          timestamp = COALESCE($5, timestamp)
+      WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($6));
+    `, [
+      nombre_socio_1 || null, 
+      nombre_socio_2 || null, 
+      estado || 'PROCESADO', 
+      conteo || 1, 
+      timestamp ? parseInt(timestamp) : null,
+      hash_largo
+    ]);
 
     await sincronizarComprobantesAuditadosFisico();
     res.json({ success: true, message: 'Registro de cola actualizado correctamente.' });
