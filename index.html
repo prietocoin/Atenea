@@ -126,7 +126,7 @@
             </div>
           </div>
 
-          <!-- BARRA DE FILTROS COMPLEMENTADA CON ORDENAMIENTO (ROL, SOCIO, FECHAS, HASH X, ORDEN Y BÚSQUEDA) -->
+          <!-- BARRA DE FILTROS COMPLEMENTADA CON ORDENAMIENTO -->
           <div class="grid grid-cols-2 sm:grid-cols-7 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
             <div>
               <label class="block text-[9px] font-bold text-emerald-400 uppercase mb-0.5">1. Rol</label>
@@ -170,7 +170,6 @@
               </select>
             </div>
 
-            <!-- SELECTOR DE ORDENAMIENTO -->
             <div>
               <label class="block text-[9px] font-bold text-cyan-400 uppercase mb-0.5">6. Ordenar Por</label>
               <select x-model="filtroOrden" class="w-full bg-[#1a1d33] border border-cyan-500/50 text-xs text-cyan-300 font-bold rounded-lg px-2 py-1.5 outline-none focus:border-cyan-400">
@@ -296,7 +295,7 @@
             </template>
           </div>
 
-          <!-- 💻 VISTA ESCRITORIO COMPROBANTES CON LOTE DE TASA VISIBLE Y EDICIÓN RÁPIDA -->
+          <!-- 💻 VISTA ESCRITORIO COMPROBANTES -->
           <div class="hidden md:flex flex-col bg-[#131525] rounded-xl border border-slate-800 overflow-hidden shadow-xl flex-1 max-h-[calc(100vh-170px)]">
             <div class="overflow-x-auto overflow-y-auto flex-1">
               <table class="w-full text-xs text-left border-collapse">
@@ -346,7 +345,7 @@
                             <span class="text-[9px] font-bold text-slate-400" x-text="'≈ $' + formatMonto(item.monto_usd_equivalente) + ' USD'"></span>
                           </template>
                           <template x-if="item.tasa_base || item.tasa_mercado_aplicada">
-                            <span class="text-[8px] font-mono text-slate-500 mt-0.5" x-text="'Base: ' + (item.tasa_base || item.tasa_mercado_aplicada)"></span>
+                            <span class="text-[8px] font-mono text-slate-500 mt-0.5" x-text="'Base: ' + formatTasa(item.tasa_base || item.tasa_mercado_aplicada)"></span>
                           </template>
                         </div>
                       </td>
@@ -391,7 +390,7 @@
                             </div>
                           </div>
 
-                          <!-- SOCIO 2 (INCLUYENDO CHASAN) Y SU VALOR DE TASA APLICADA -->
+                          <!-- SOCIO 2 Y SU VALOR DE TASA APLICADA -->
                           <template x-if="item.nombre_socio_2">
                             <div class="flex flex-col border-t border-slate-800/60 pt-1">
                               <div class="flex items-center justify-between gap-1">
@@ -433,7 +432,7 @@
             </div>
           </div>
 
-          <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN (TABLA MERCADO) -->
+          <!-- BLOQUE 1: GUÍA DE TASAS ACTIVAS EN PRODUCCIÓN -->
           <div class="bg-[#131525] p-4 rounded-2xl border border-slate-800 space-y-3 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <div class="flex items-center gap-2">
@@ -529,7 +528,6 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-                  <!-- MOSTRAR TODOS LOS REGISTROS INCLUYENDO GENERAL -->
                   <template x-for="d in directorio" :key="d.id_grupo || d.nombre">
                     <tr class="hover:bg-slate-800/30 transition-colors" :class="d.activo === false ? 'opacity-50' : ''">
                       <td class="px-3 py-3 font-bold text-purple-300">
@@ -639,7 +637,7 @@
         </div>
       </template>
 
-      <!-- MODAL 1: AUDITAR COMPROBANTE - EDICIÓN DEL NÚMERO DE TASA / LOTE ASIGNADO (EJ: T014) -->
+      <!-- MODAL 1: AUDITAR COMPROBANTE -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -653,7 +651,6 @@
 
           <template x-if="itemEdicion">
             <div class="space-y-3">
-              <!-- NÚMERO / CÓDIGO DE TASA / LOTE ASIGNADO (EDITABLE) -->
               <div>
                 <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Número de Tasa / Lote (Ej: T014)</label>
                 <input type="text" x-model="itemEdicion.lote_tasa_asignado" placeholder="Ej: T014" class="w-full bg-[#1a1d33] border border-purple-500/50 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold uppercase outline-none focus:border-purple-400">
@@ -1967,49 +1964,42 @@
           }
         },
 
-        // REGLA UNIVERSAL DE TRUNCADO ESTRICTO DE MONTO
+        // REGLA PARA MONTOS: CONSERVA SIEMPRE SUS 2 DECIMALES EXACTOS
         formatMonto(val) {
-          if (val === null || val === undefined || isNaN(val) || val === '') return '0';
+          if (val === null || val === undefined || isNaN(val) || val === '') return '0.00';
           const num = parseFloat(val);
-          if (num === 0) return '0';
+          if (num === 0) return '0.00';
 
           const signoStr = num < 0 ? '-' : '';
           const v = Math.abs(num);
           const vRound = Math.round(v * 1e8) / 1e8;
+          const vTrunc = Math.trunc((vRound + 0.0000001) * 100) / 100;
 
-          if (vRound > 499.99) {
-            const resNum = Math.trunc(vRound);
-            return signoStr + resNum.toLocaleString('en-US');
-          } else if (vRound > 0.99) {
-            const resNum = Math.trunc(vRound * 100) / 100;
-            return signoStr + resNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          } else {
-            const magnitud = Math.floor(Math.log10(vRound));
-            const factor = Math.pow(10, 2 - magnitud);
-            const resNum = Math.trunc(vRound * factor) / factor;
-            return signoStr + resNum.toString();
-          }
+          const parts = vTrunc.toFixed(2).split('.');
+          const integerPart = Number(parts[0]).toLocaleString('en-US');
+          return `${signoStr}${integerPart}.${parts[1]}`;
         },
 
-        // REGLA UNIVERSAL DE TRUNCADO ESTRICTO DE TASA
+        // REGLA EXCLUSIVA PARA TASAS (TRUNCADO ESTRICTO)
         formatTasa(val) {
           if (val === null || val === undefined || isNaN(val) || val === '') return '-';
           const num = parseFloat(val);
-          if (isNaN(num) || num === 0) return num === 0 ? '0' : '-';
+          if (isNaN(num) || num === 0) return '0';
 
           const signoStr = num < 0 ? '-' : '';
           const v = Math.abs(num);
           const vRound = Math.round(v * 1e8) / 1e8;
 
-          if (vRound > 499.99) {
-            return signoStr + Math.trunc(vRound).toLocaleString('en-US');
-          } else if (vRound > 0.99) {
-            const resNum = Math.trunc(vRound * 100) / 100;
+          if (vRound > 99.99) {
+            const resNum = Math.trunc(vRound);
+            return signoStr + resNum.toLocaleString('en-US');
+          } else if (vRound >= 10.0) {
+            const resNum = Math.trunc((vRound + 0.0000001) * 100) / 100;
             return signoStr + resNum.toFixed(2).replace(/\.?0+$/, "");
           } else {
             const magnitud = Math.floor(Math.log10(vRound));
             const factor = Math.pow(10, 2 - magnitud);
-            const resNum = Math.trunc(vRound * factor) / factor;
+            const resNum = Math.trunc((vRound + 0.0000001) * factor) / factor;
             return signoStr + resNum.toString();
           }
         },
