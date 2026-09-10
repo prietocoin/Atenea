@@ -87,7 +87,7 @@
                 📄 Vista Previa
               </button>
               <span class="px-2.5 py-1 rounded-xl bg-purple-900/40 text-purple-300 text-xs font-semibold border border-purple-500/30">
-                <span x-text="comprobantes.length"></span> ítems
+                <span x-text="comprobantesFiltradosYOrdenados.length"></span> ítems
               </span>
             </div>
           </div>
@@ -101,7 +101,7 @@
 
             <div class="bg-[#131525] p-3 rounded-xl border border-slate-800 shadow-lg">
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Comprobantes Filtrados</p>
-              <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantes.length + ' operados'"></p>
+              <p class="text-base font-black text-purple-300 mt-1" x-text="comprobantesFiltradosYOrdenados.length + ' operados'"></p>
             </div>
 
             <!-- SALDO ANTERIOR (EDITABLE EN TIEMPO REAL) -->
@@ -126,8 +126,8 @@
             </div>
           </div>
 
-          <!-- BARRA DE FILTROS COMPLEMENTADA (ROL, SOCIO, FECHAS, DESDE HASH X Y BÚSQUEDA) -->
-          <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
+          <!-- BARRA DE FILTROS COMPLEMENTADA CON ORDENAMIENTO (ROL, SOCIO, FECHAS, HASH X, ORDEN Y BÚSQUEDA) -->
+          <div class="grid grid-cols-2 sm:grid-cols-7 gap-2 bg-[#131525] p-2.5 rounded-xl border border-slate-800 shrink-0">
             <div>
               <label class="block text-[9px] font-bold text-emerald-400 uppercase mb-0.5">1. Rol</label>
               <select x-model="filtroReporteRol" @change="cargarComprobantes()" class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none">
@@ -170,10 +170,22 @@
               </select>
             </div>
 
+            <!-- SELECTOR DE ORDENAMIENTO -->
+            <div>
+              <label class="block text-[9px] font-bold text-cyan-400 uppercase mb-0.5">6. Ordenar Por</label>
+              <select x-model="filtroOrden" class="w-full bg-[#1a1d33] border border-cyan-500/50 text-xs text-cyan-300 font-bold rounded-lg px-2 py-1.5 outline-none focus:border-cyan-400">
+                <option value="fecha_desc">📅 Fecha: Recientes primero</option>
+                <option value="fecha_asc">📅 Fecha: Antiguos primero</option>
+                <option value="monto_desc">💵 Monto: Mayor a Menor</option>
+                <option value="monto_asc">💵 Monto: Menor a Mayor</option>
+                <option value="socio_asc">👤 Socio (A - Z)</option>
+              </select>
+            </div>
+
             <div class="flex items-center gap-1.5">
               <div class="flex-1">
                 <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">Buscar Hash</label>
-                <input type="text" x-model="filtroHash" @input.debounce.300ms="cargarComprobantes()" placeholder="Buscar Hash..." class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none" />
+                <input type="text" x-model="filtroHash" @input.debounce.300ms="cargarComprobantes()" placeholder="Buscar..." class="w-full bg-[#1a1d33] border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2 py-1.5 outline-none" />
               </div>
               <label class="flex items-center gap-1 px-2 py-2 bg-[#1a1d33] border border-slate-700/80 rounded-lg cursor-pointer text-[10px] text-slate-300 mt-3 shrink-0">
                 <input type="checkbox" x-model="soloDuplicados" @change="cargarComprobantes()" class="rounded bg-slate-800 border-slate-600 text-purple-600">
@@ -184,7 +196,7 @@
 
           <!-- 📱 VISTA MÓVIL COMPROBANTES -->
           <div class="grid grid-cols-1 gap-2.5 md:hidden overflow-y-auto flex-1 pb-4">
-            <template x-for="item in comprobantes" :key="item.hash_largo">
+            <template x-for="item in comprobantesFiltradosYOrdenados" :key="item.hash_largo">
               <div class="flex flex-row bg-[#131525] border border-slate-800/80 rounded-xl p-2.5 shadow-md relative gap-2.5">
                 <div class="w-[30%] shrink-0 flex flex-col justify-start">
                   <div class="relative aspect-square w-full">
@@ -301,7 +313,7 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60 font-medium text-[11px]">
-                  <template x-for="item in comprobantes" :key="item.hash_largo">
+                  <template x-for="item in comprobantesFiltradosYOrdenados" :key="item.hash_largo">
                     <tr class="hover:bg-slate-800/30 transition-colors">
                       <td class="px-3 py-2 align-middle whitespace-nowrap">
                         <div class="flex items-center gap-1.5">
@@ -979,7 +991,7 @@
             <button type="button" @click="modalVistaPreviaAbierto = false" class="absolute top-0 right-0 sm:hidden text-slate-500 hover:text-slate-800 text-base font-bold">✕</button>
 
             <div class="pr-6 sm:pr-0">
-              <h1 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroSocio || filtroReporteNombre || 'SOCIO')"></h1>
+              <h1 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight" x-text="'Reporte de ' + (filtroSocio || 'SOCIO')"></h1>
               <div class="text-[11px] sm:text-xs text-emerald-950 font-bold mt-1">
                 <span>Saldo anterior:</span>
                 <span class="font-black text-xs sm:text-sm ml-1" x-text="formatMonto(saldoAnteriorReporte)"></span>
@@ -995,7 +1007,7 @@
             </div>
           </div>
 
-          <!-- TABLA QUE RESPETA 100% LOS COMPROBANTES FILTRADOS EN PANTALLA -->
+          <!-- TABLA QUE RESPETA 100% LOS COMPROBANTES FILTRADOS Y ORDENADOS EN PANTALLA -->
           <div class="overflow-y-auto flex-1 space-y-2 pr-1">
             <div class="flex items-center font-bold text-slate-600 border-b border-emerald-800/30 pb-1 text-[10px] sm:text-[11px]">
               <div class="w-16 sm:w-24 shrink-0">Fecha</div>
@@ -1003,7 +1015,7 @@
               <div class="w-16 sm:w-24 shrink-0 text-right">Saldos</div>
             </div>
 
-            <template x-for="c in comprobantes" :key="c.hash_largo">
+            <template x-for="c in comprobantesFiltradosYOrdenados" :key="c.hash_largo">
               <div class="flex items-start border-b border-dashed border-slate-300 py-1.5 text-[10px] sm:text-[11px]">
                 <div class="w-16 sm:w-24 shrink-0 text-slate-700 font-bold leading-tight" x-text="formatFechaVE(c.timestamp).split(',')[0]"></div>
                 <div class="flex-1 text-slate-800 px-1 leading-relaxed break-words">
@@ -1052,6 +1064,7 @@
         filtroFecha: '',
         filtroFechaFin: '',
         filtroHash: '',
+        filtroOrden: 'fecha_desc',
         soloDuplicados: false,
         modalAbierto: false,
         itemEdicion: null,
@@ -1069,7 +1082,6 @@
         filtroReporteFechaInicio: '',
         filtroReporteFechaFin: '',
         filtroReporteDesdeHash: '',
-        comprobantesReporte: [],
 
         saldoAnteriorReporte: 0.00,
         modalVistaPreviaAbierto: false,
@@ -1144,6 +1156,35 @@
           await this.cargarSocios();
           await this.cargarDirectorio();
           await this.cargarComprobantes();
+        },
+
+        get comprobantesFiltradosYOrdenados() {
+          if (!this.comprobantes || !this.comprobantes.length) return [];
+          let lista = [...this.comprobantes];
+
+          return lista.sort((a, b) => {
+            const tsA = parseInt(a.timestamp) || 0;
+            const tsB = parseInt(b.timestamp) || 0;
+            const montoA = parseFloat(this.obtenerMontoSocioCalculado(a)) || 0;
+            const montoB = parseFloat(this.obtenerMontoSocioCalculado(b)) || 0;
+            const socioA = (a.nombre_socio_1 || '').toUpperCase();
+            const socioB = (b.nombre_socio_1 || '').toUpperCase();
+
+            switch (this.filtroOrden) {
+              case 'fecha_asc':
+                return tsA - tsB;
+              case 'fecha_desc':
+                return tsB - tsA;
+              case 'monto_desc':
+                return Math.abs(montoB) - Math.abs(montoA);
+              case 'monto_asc':
+                return Math.abs(montoA) - Math.abs(montoB);
+              case 'socio_asc':
+                return socioA.localeCompare(socioB);
+              default:
+                return tsB - tsA;
+            }
+          });
         },
 
         async solicitarAccesoAdmin() {
@@ -1315,7 +1356,7 @@
                 movimiento: this.totalMontoSocioComprobantes,
                 nuevoSaldo: this.nuevoSaldoComprobantes,
                 moneda: this.monedaBaseSocioComprobantes,
-                comprobantes: this.comprobantes
+                comprobantes: this.comprobantesFiltradosYOrdenados
               })
             });
 
