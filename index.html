@@ -637,7 +637,7 @@
         </div>
       </template>
 
-      <!-- MODAL 1: AUDITAR COMPROBANTE -->
+      <!-- MODAL 1: AUDITAR COMPROBANTE CON EDICIÓN DE LOTE Y FECHA/HORA -->
       <div x-show="modalAbierto" class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" x-cloak>
         <div class="bg-[#131525] border border-slate-700/80 rounded-2xl w-full max-w-md p-4 space-y-3 shadow-2xl relative" @click.away="modalAbierto = false">
           
@@ -651,9 +651,16 @@
 
           <template x-if="itemEdicion">
             <div class="space-y-3">
-              <div>
-                <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Número de Tasa / Lote (Ej: T014)</label>
-                <input type="text" x-model="itemEdicion.lote_tasa_asignado" placeholder="Ej: T014" class="w-full bg-[#1a1d33] border border-purple-500/50 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold uppercase outline-none focus:border-purple-400">
+              <!-- NÚMERO DE LOTE Y FECHA/HORA EDITABLE -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] font-bold text-purple-400 uppercase mb-0.5">Número de Tasa / Lote (Ej: T014)</label>
+                  <input type="text" x-model="itemEdicion.lote_tasa_asignado" placeholder="Ej: T014" class="w-full bg-[#1a1d33] border border-purple-500/50 rounded-lg px-2.5 py-1.5 text-xs text-purple-300 font-mono font-bold uppercase outline-none focus:border-purple-400">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-cyan-400 uppercase mb-0.5">Fecha y Hora (VET)</label>
+                  <input type="datetime-local" x-model="itemEdicion.fecha_hora_input" class="w-full bg-[#1a1d33] border border-cyan-500/50 rounded-lg px-2 py-1.5 text-xs text-cyan-300 font-mono font-bold outline-none focus:border-cyan-400">
+                </div>
               </div>
 
               <div class="grid grid-cols-2 gap-2">
@@ -1227,7 +1234,8 @@
                 nombre_socio_1: item.nombre_socio_1,
                 nombre_socio_2: item.nombre_socio_2,
                 estado: item.estado,
-                conteo: item.conteo
+                conteo: item.conteo,
+                timestamp: item.timestamp
               })
             });
             const data = await res.json();
@@ -1913,10 +1921,18 @@
         },
 
         abrirModal(item) {
+          let dateInput = '';
+          if (item.timestamp) {
+            const d = new Date(item.timestamp * 1000);
+            const tzOffset = d.getTimezoneOffset() * 60000;
+            dateInput = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
+          }
+
           this.itemEdicion = { 
             ...item, 
             tipo_manual: item.tipo_op || this.getCodigoOperativo(item.nombre_socio_1, item.moneda) || 'D',
-            lote_tasa_asignado: item.lote_tasa_asignado || 'T360'
+            lote_tasa_asignado: item.lote_tasa_asignado || 'T360',
+            fecha_hora_input: dateInput
           };
           this.modalAbierto = true;
         },
@@ -1924,6 +1940,13 @@
         async guardarCambios() {
           if (!this.itemEdicion || !this.itemEdicion.hash_largo) return;
           try {
+            if (this.itemEdicion.fecha_hora_input) {
+              const ts = Math.floor(new Date(this.itemEdicion.fecha_hora_input).getTime() / 1000);
+              if (!isNaN(ts) && ts > 0) {
+                this.itemEdicion.timestamp = ts;
+              }
+            }
+
             const res = await fetch(`/api/comprobantes/${encodeURIComponent(this.itemEdicion.hash_largo)}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
