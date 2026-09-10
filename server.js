@@ -890,6 +890,7 @@ app.delete('/api/admin/cola/:hash_largo', async (req, res) => {
     await pool.query(`DELETE FROM cola_fb WHERE TRIM(LOWER(hash_largo)) = TRIM(LOWER($1));`, [targetHash]);
 
     await sincronizarComprobantesAuditadosFisico();
+
     res.json({ success: true, message: 'Registro eliminado permanentemente de todas las tablas.' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
