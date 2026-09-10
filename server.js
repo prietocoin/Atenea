@@ -22,8 +22,8 @@ const pool = new Pool({
 
 pool.on('error', (err) => console.error('⚠️ Error en PostgreSQL:', err.message));
 
-// REGLA UNIVERSAL DE TRUNCADO ESTRICTO
-function aplicarReglaPrecision(val) {
+// REGLA DE TRUNCADO EXCLUSIVA PARA TASAS
+function aplicarReglaPrecisionTasa(val) {
   if (val === null || val === undefined || isNaN(val) || val === 0) return 0;
   const num = parseFloat(val);
   if (num === 0) return 0;
@@ -33,17 +33,30 @@ function aplicarReglaPrecision(val) {
   const vRound = Math.round(v * 1e8) / 1e8;
 
   let res = 0;
-  if (vRound > 499.99) {
+  if (vRound > 99.99) {
     res = Math.trunc(vRound);
-  } else if (vRound > 0.99) {
-    res = Math.trunc(vRound * 100) / 100;
+  } else if (vRound >= 10.0) {
+    res = Math.trunc((vRound + 0.0000001) * 100) / 100;
   } else {
     const magnitud = Math.floor(Math.log10(vRound));
     const factor = Math.pow(10, 2 - magnitud);
-    res = Math.trunc(vRound * factor) / factor;
+    res = Math.trunc((vRound + 0.0000001) * factor) / factor;
   }
 
   return signo * res;
+}
+
+// REGLA DE TRUNCADO EXCLUSIVA PARA MONTOS (2 DECIMALES SIEMPRE, SIN VOLVERSE ENTERO)
+function aplicarPrecisionMonto(val) {
+  if (val === null || val === undefined || isNaN(val) || val === 0) return 0;
+  const num = parseFloat(val);
+  if (num === 0) return 0;
+
+  const signo = num < 0 ? -1 : 1;
+  const v = Math.abs(num);
+  const vRound = Math.round(v * 1e8) / 1e8;
+
+  return signo * (Math.trunc((vRound + 0.0000001) * 100) / 100);
 }
 
 function calcularTallaAutomatica(conteo) {
@@ -52,7 +65,7 @@ function calcularTallaAutomatica(conteo) {
   return 'L';
 }
 
-// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL CON TRUNCADO PURO Y LOTE MANUAL
+// SINCRONIZACIÓN FÍSICA EN DISCO POSTGRESQL
 async function sincronizarComprobantesAuditadosFisico() {
   try {
     const rawQuery = `
@@ -162,7 +175,7 @@ async function sincronizarComprobantesAuditadosFisico() {
     const { rows } = await pool.query(rawQuery);
 
     for (const r of rows) {
-      const monto = parseFloat(r.monto) || 0;
+      const monto = aplicarPrecisionMonto(r.monto);
       const tasaBaseOrigen = parseFloat(r.tasa_mercado_aplicada) || 1.0;
       const monOrig = (r.moneda || 'USDT').trim().toUpperCase();
 
@@ -185,24 +198,24 @@ async function sincronizarComprobantesAuditadosFisico() {
       const tasaCross1 = tasaBaseSocio1 > 0 ? (tasaBaseOrigen / tasaBaseSocio1) : tasaBaseOrigen;
       const tasa1Signed = tasaCross1 * factor1;
       
-      const tasa1 = aplicarReglaPrecision(tasa1Signed);
+      const tasa1 = aplicarReglaPrecisionTasa(tasa1Signed);
 
       let m1Raw = Math.abs(tasa1) > 0 ? (monto / Math.abs(tasa1)) : 0;
       if (factor1 < 0 || tasa1 < 0) m1Raw = -m1Raw;
-      const m1Socio = aplicarReglaPrecision(m1Raw);
-      const m1Usdt = tasaBaseSocio1 > 0 ? aplicarReglaPrecision(m1Socio / tasaBaseSocio1) : m1Socio;
+      const m1Socio = aplicarPrecisionMonto(m1Raw);
+      const m1Usdt = tasaBaseSocio1 > 0 ? aplicarPrecisionMonto(m1Socio / tasaBaseSocio1) : m1Socio;
 
       // SOCIO 2
       const tasaBaseSocio2 = parseFloat(r.tasa_base_socio_2) || 1.0;
       const tasaCross2 = tasaBaseSocio2 > 0 ? (tasaBaseOrigen / tasaBaseSocio2) : tasaBaseOrigen;
       const tasa2Signed = tasaCross2 * factor2;
 
-      const tasa2 = aplicarReglaPrecision(tasa2Signed);
+      const tasa2 = aplicarReglaPrecisionTasa(tasa2Signed);
 
       let m2Raw = Math.abs(tasa2) > 0 ? (monto / Math.abs(tasa2)) : 0;
       if (factor2 < 0 || tasa2 < 0) m2Raw = -m2Raw;
-      const m2Socio = aplicarReglaPrecision(m2Raw);
-      const m2Usdt = tasaBaseSocio2 > 0 ? aplicarReglaPrecision(m2Socio / tasaBaseSocio2) : m2Socio;
+      const m2Socio = aplicarPrecisionMonto(m2Raw);
+      const m2Usdt = tasaBaseSocio2 > 0 ? aplicarPrecisionMonto(m2Socio / tasaBaseSocio2) : m2Socio;
 
       await pool.query(`
         INSERT INTO comprobantes_auditados_fb (
